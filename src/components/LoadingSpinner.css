@@ -1,0 +1,55 @@
+:root {
+  --loader-color: #3b82f6;
+  --loader-track: rgba(255, 255, 255, 0.2);
+  --overlay-bg: rgba(10, 10, 10, 0.4);
+}
+
+/* Overlay com blur e fade */
+.loading-layer {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  backdrop-filter: blur(10px);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  opacity: 0;
+  transition: opacity 400ms ease;
+  z-index: 9999;
+}
+
+.loading-layer.fade-in {
+  opacity: 1;
+}
+
+.loading-layer.fade-out {
+  opacity: 0;
+}
+
+/* Loader */
+.loader-track {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 4px solid var(--loader-track);
+  position: relative;
+}
+
+/* Parte giratória */
+.loader-bar {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 4px solid transparent;
+  border-top-color: var(--loader-color);
+
+  animation: spin 1.1s linear infinite;
+}
+
+/* Giro contínuo e uniforme */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

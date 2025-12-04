@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 interface Player {
   id: string;
@@ -95,6 +96,8 @@ export function TelaJogadores() {
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       
+      <LoadingSpinner isLoading={loading} />
+
       <style>{`
         .players-grid-container {
           display: grid;
@@ -259,9 +262,7 @@ export function TelaJogadores() {
           </button>
         </div>
 
-        {loading ? (
-            <div style={{textAlign: 'center', padding: '50px', color: 'var(--text-gray)'}}>Carregando jogadores...</div>
-        ) : (
+        {!loading && (
             <div className="players-grid-container">
             {players.map((player, index) => (
                 <div key={player.id} className="player-card-item">
