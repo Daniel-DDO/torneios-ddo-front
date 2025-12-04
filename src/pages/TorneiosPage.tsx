@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../styles/TorneiosPage.css';
 
-// --- Interfaces ---
 interface Torneio {
   id: number;
   nome: string;
@@ -18,7 +18,6 @@ interface Player {
   posicao: number;
 }
 
-// --- Ícones ---
 const Icons = {
   Menu: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
   Dashboard: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
@@ -33,7 +32,8 @@ const Icons = {
 };
 
 export function TorneiosPage() {
-  // Estado do Tema: Verifica localStorage ou usa 'light' como padrão
+  const navigate = useNavigate();
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark';
@@ -41,7 +41,6 @@ export function TorneiosPage() {
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Efeito para aplicar o tema ao body e salvar no localStorage
   useEffect(() => {
     if (isDarkMode) {
       document.body.classList.add('dark-mode');
@@ -54,7 +53,6 @@ export function TorneiosPage() {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  // --- Dados Mockados ---
   const torneios: Torneio[] = [
     {
       id: 1,
@@ -102,7 +100,6 @@ export function TorneiosPage() {
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       
-      {/* --- Sidebar (Esquerda) --- */}
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="logo-area">
           <div className="logo-icon">
@@ -114,8 +111,8 @@ export function TorneiosPage() {
         </div>
 
         <nav className="nav-menu">
-          <a href="#" className="nav-item active"><Icons.Dashboard /> Dashboard</a>
-          <a href="#" className="nav-item"><Icons.Users /> Jogadores</a>
+          <a onClick={() => navigate('/')} className="nav-item active" style={{cursor: 'pointer'}}><Icons.Dashboard /> Dashboard</a>
+          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Users /> Jogadores</a>
           <a href="#" className="nav-item"><Icons.Trophy /> Torneios</a>
           <a href="#" className="nav-item"><Icons.Shield /> Títulos</a>
           <div className="nav-separator"></div>
@@ -125,7 +122,6 @@ export function TorneiosPage() {
         </nav>
       </aside>
 
-      {/* --- Conteúdo Principal (Direita) --- */}
       <main className="main-content">
         
         <header className="top-header compact">
@@ -144,7 +140,6 @@ export function TorneiosPage() {
           </div>
           
           <div className="header-actions">
-            {/* Botão de Alternar Tema com Emoji - Classe específica adicionada */}
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               💡
             </button>
@@ -153,7 +148,6 @@ export function TorneiosPage() {
           </div>
         </header>
 
-        {/* --- Hero Section --- */}
         <div className="hero-banner full-width-banner">
             <div className="hero-overlay"></div>
             <div className="hero-content">
@@ -170,7 +164,6 @@ export function TorneiosPage() {
 
         <div className="content-split">
           
-          {/* Coluna Esquerda: Lista de Torneios */}
           <div className="left-column">
             <div className="section-header">
               <h3>Torneios em Destaque</h3>
@@ -196,7 +189,6 @@ export function TorneiosPage() {
             </div>
           </div>
 
-          {/* Coluna Direita: Ranking */}
           <aside className="right-column">
             <div className="ranking-card">
               <div className="ranking-header">
