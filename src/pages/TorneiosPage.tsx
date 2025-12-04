@@ -86,6 +86,7 @@ export function TorneiosPage() {
     { id: 3, nome: 'OLS DDO', pontos: 2680, posicao: 3 },
     { id: 4, nome: 'Segredo_0', pontos: 2590, posicao: 4 },
     { id: 5, nome: 'Índio Mala', pontos: 2400, posicao: 5 },
+    { id: 6, nome: 'Deatch DDO', pontos: 2300, posicao: 6 },
   ];
 
   const getStatusLabel = (status: string) => {
@@ -113,6 +114,7 @@ export function TorneiosPage() {
         <nav className="nav-menu">
           <a onClick={() => navigate('/')} className="nav-item active" style={{cursor: 'pointer'}}><Icons.Dashboard /> Dashboard</a>
           <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Users /> Jogadores</a>
+          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Shield /> Clubes</a>
           <a href="#" className="nav-item"><Icons.Trophy /> Torneios</a>
           <a href="#" className="nav-item"><Icons.Shield /> Títulos</a>
           <div className="nav-separator"></div>
@@ -152,12 +154,12 @@ export function TorneiosPage() {
             <div className="hero-overlay"></div>
             <div className="hero-content">
             <span className="badge-live">Ao Vivo em Breve</span>
-            <h2>Grande Final Copa das Nações</h2>
+            <h2>Grande Final da Liga Real DDO</h2>
             <div className="matchup-text">
-                SEGREDO <span className="vs">VS</span> ÍNDIO MALA
+                LÚCIO <span className="vs">VS</span> DANIEL DDO
             </div>
             <div className="timer-pill">
-                Domingo 07/12 - 20:00H
+                Domingo 07/12 - 19:00H
             </div>
             </div>
         </div>

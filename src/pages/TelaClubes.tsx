@@ -1,23 +1,24 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-interface Player {
+// Interface atualizada para o payload do Clube
+interface Clube {
   id: string;
   nome: string;
-  discord: string;
-  finais: number;
-  titulos: number;
-  golsMarcados: number;
-  golsSofridos: number;
-  partidasJogadas: number;
-  statusJogador: string;
-  imagem: string | null;
-  saldoVirtual: number;
+  estadio: string;
+  imagem: string; // URL da imagem
+  ligaClube: string;
+  sigla: string;
+  corPrimaria: string;
+  corSecundaria: string;
+  ativo: boolean;
+  estrelas: number;
 }
 
+// Mesmos ícones da TelaJogadores
 const Icons = {
   Menu: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
   Dashboard: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
@@ -32,10 +33,10 @@ const Icons = {
   More: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
 };
 
-export function TelaJogadores() {
+export function TelaClubes() {
   const navigate = useNavigate();
 
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [clubes, setClubes] = useState<Clube[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -56,18 +57,18 @@ export function TelaJogadores() {
   }, [isDarkMode]);
 
   useEffect(() => {
-    fetchAllPlayers();
+    fetchAllClubes();
   }, []);
 
-  const fetchAllPlayers = async () => {
+  const fetchAllClubes = async () => {
     try {
       setLoading(true);
-      let allData: Player[] = [];
+      let allData: Clube[] = [];
       let page = 0;
       let hasMore = true;
 
       while (hasMore) {
-        const data = await API.get(`/jogador/all?page=${page}`);
+        const data = await API.get(`/clube/all?page=${page}`);
         
         if (data && data.conteudo) {
           allData = [...allData, ...data.conteudo];
@@ -77,15 +78,18 @@ export function TelaJogadores() {
           } else {
             page++;
           }
+        } else if (Array.isArray(data)) {
+          allData = data;
+          hasMore = false;
         } else {
           hasMore = false;
         }
       }
 
-      setPlayers(allData);
+      setClubes(allData);
 
     } catch (error) {
-      console.error("Erro ao buscar jogadores", error);
+      console.error("Erro ao buscar clubes", error);
     } finally {
       setLoading(false);
     }
@@ -151,7 +155,8 @@ export function TelaJogadores() {
           color: var(--primary);
           margin-bottom: 16px;
           border: 2px solid var(--border-color);
-          background-size: cover;
+          background-size: contain;
+          background-repeat: no-repeat;
           background-position: center;
         }
 
@@ -216,8 +221,8 @@ export function TelaJogadores() {
 
         <nav className="nav-menu">
           <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Dashboard /> Dashboard</a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item active" style={{cursor: 'pointer'}}><Icons.Users /> Jogadores</a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Shield /> Clubes</a>
+          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Users /> Jogadores</a>
+          <a onClick={() => navigate('/clubes')} className="nav-item active" style={{cursor: 'pointer'}}><Icons.Shield /> Clubes</a>
           <a href="#" className="nav-item"><Icons.Trophy /> Torneios</a>
           <a href="#" className="nav-item"><Icons.Shield /> Títulos</a>
           <div className="nav-separator"></div>
@@ -240,7 +245,7 @@ export function TelaJogadores() {
             </button>
             <div className="search-bar">
               <Icons.Search />
-              <input type="text" placeholder="Buscar jogador..." />
+              <input type="text" placeholder="Buscar clube..." />
             </div>
           </div>
           
@@ -255,44 +260,44 @@ export function TelaJogadores() {
 
         <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-             <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Jogadores Cadastrados</h2>
-             <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize todos os jogadores</p>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Clubes e Seleções</h2>
+              <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize os clubes e seleções oficiais</p>
           </div>
           <button className="t-btn" style={{background: 'var(--primary)', color: 'white', border: 'none'}}>
-            + Novo Jogador
+            + Novo Clube
           </button>
         </div>
 
         {!loading && (
             <div className="players-grid-container">
-            {players.map((player, index) => (
-                <div key={player.id} className="player-card-item">
+            {clubes.map((clube, index) => (
+                <div key={clube.id} className="player-card-item">
                 <div className="card-rank-badge">#{index + 1}</div>
                 
-                {player.imagem ? (
-                    <div className="card-avatar-large" style={{backgroundImage: `url(${player.imagem})`}}></div>
+                {clube.imagem ? (
+                    <div className="card-avatar-large" style={{backgroundImage: `url(${clube.imagem})`}}></div>
                 ) : (
-                    <div className="card-avatar-large">
-                        {player.nome.charAt(0)}
+                    <div className="card-avatar-large" style={{backgroundColor: clube.corPrimaria || 'var(--hover-bg)'}}>
+                        {clube.sigla || clube.nome.substring(0,2).toUpperCase()}
                     </div>
                 )}
                 
-                <div className="card-name">{player.nome}</div>
-                <div className="card-location">{player.discord || 'Jogador DDO'}</div>
+                <div className="card-name">{clube.nome}</div>
+                <div className="card-location">{clube.estadio || 'Sem estádio'}</div>
                 
                 <div className="card-stats-row">
                     <div className="stat-box">
-                    <span className="stat-val">{player.partidasJogadas}</span>
-                    <span className="stat-lbl">Partidas</span>
+                    <span className="stat-val">{clube.estrelas} ★</span>
+                    <span className="stat-lbl">Estrelas</span>
                     </div>
                     <div style={{width: '1px', background: 'var(--border-color)'}}></div>
                     <div className="stat-box">
-                    <span className="stat-val">{player.titulos}</span>
-                    <span className="stat-lbl">Títulos</span>
+                    <span className="stat-val">{clube.ligaClube || '-'}</span>
+                    <span className="stat-lbl">Liga</span>
                     </div>
                 </div>
 
-                <button className="btn-profile">Ver Perfil</button>
+                <button className="btn-profile">Ver Clube</button>
                 </div>
             ))}
             </div>
