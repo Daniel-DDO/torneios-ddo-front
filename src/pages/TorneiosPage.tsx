@@ -1,262 +1,236 @@
-import { useState, useEffect } from 'react'
-import { API } from '../services/api'
-import '../styles/TorneiosPage.css'
+import { useState, useEffect } from 'react';
+import '../styles/TorneiosPage.css';
 
+// --- Interfaces ---
 interface Torneio {
-  id: number
-  nome: string
-  descricao: string
-  status: 'em_andamento' | 'inscricoes_abertas' | 'finalizado'
-  imagem?: string
-  botao_texto?: string
-  botao_acao?: string
+  id: number;
+  nome: string;
+  descricao: string;
+  status: 'em_andamento' | 'inscricoes_abertas' | 'finalizado';
+  imagem?: string;
+  botao_texto?: string;
 }
 
 interface Player {
-  id: number
-  nome: string
-  pontos: number
-  posicao: number
+  id: number;
+  nome: string;
+  pontos: number;
+  posicao: number;
 }
 
+// --- Ícones ---
+const Icons = {
+  Menu: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
+  Dashboard: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
+  Users: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
+  Trophy: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17"></path><path d="M14 14.66V17"></path><path d="M12 2v1"></path><path d="M12 22v-3"></path><path d="M12 2a7 7 0 0 0-7 7c0 4.3 4 8 8 9a7 7 0 0 0 7-9 7 7 0 0 0-7-7z"></path></svg>,
+  Shield: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>,
+  Calendar: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
+  Wallet: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>,
+  Settings: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
+  Search: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
+  Bell: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
+};
+
 export function TorneiosPage() {
-  const [torneios, setTorneios] = useState<Torneio[]>([])
-  const [players, setPlayers] = useState<Player[]>([])
-  const [loading, setLoading] = useState(true)
+  // Estado do Tema: Verifica localStorage ou usa 'light' como padrão
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme === 'dark';
+  });
 
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Efeito para aplicar o tema ao body e salvar no localStorage
   useEffect(() => {
-    carregarDados()
-  }, [])
-
-  const carregarDados = async () => {
-    try {
-      setLoading(true)
-
-      // Tenta carregar dados do backend
-      // Ajuste os endpoints conforme sua API
-      const [torneiosData, playersData] = await Promise.allSettled([
-        API.get('/torneios'),
-        API.get('/players'),
-      ]).then((results) => [
-        results[0].status === 'fulfilled' ? results[0].value : [],
-        results[1].status === 'fulfilled' ? results[1].value : [],
-      ])
-
-      setTorneios(torneiosData)
-      setPlayers(playersData)
-
-      // Dados de fallback caso o backend não tenha dados
-      if (!torneiosData || torneiosData.length === 0) {
-        setTorneios(getDadosPadrao())
-      }
-      if (!playersData || playersData.length === 0) {
-        setPlayers(getPlayersPadrao())
-      }
-    } catch (err) {
-      console.error('Erro ao carregar dados:', err)
-      // Se falhar, usa dados padrão
-      setTorneios(getDadosPadrao())
-      setPlayers(getPlayersPadrao())
-    } finally {
-      setLoading(false)
+    if (isDarkMode) {
+      document.body.classList.add('dark-mode');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.body.classList.remove('dark-mode');
+      localStorage.setItem('theme', 'light');
     }
-  }
+  }, [isDarkMode]);
 
-  const getDadosPadrao = (): Torneio[] => [
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+  // --- Dados Mockados ---
+  const torneios: Torneio[] = [
     {
       id: 1,
       nome: 'Liga Real DDO',
-      descricao: 'A liga de pontos corridos mais disputada da comunidade. Quem levará a taça?',
+      descricao: 'A liga de pontos corridos mais disputada da comunidade.',
       status: 'em_andamento',
-      imagem:
-        'https://images.unsplash.com/photo-1518091043644-c1d4457512c6?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      imagem: 'https://images.unsplash.com/photo-1518091043644-c1d4457512c6?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
       botao_texto: 'Ver Tabela',
-      botao_acao: '/liga',
     },
     {
       id: 2,
-      nome: 'Copa das Nações DDO',
-      descricao: 'Escolha sua seleção e represente suas cores. Formato mata-mata.',
+      nome: 'Copa das Nações',
+      descricao: 'Escolha sua seleção e represente suas cores no mata-mata.',
       status: 'inscricoes_abertas',
-      imagem:
-        'https://images.unsplash.com/photo-1522778119026-d647f0565c6a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      imagem: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
       botao_texto: 'Inscrever-se',
-      botao_acao: '/inscricao',
     },
     {
       id: 3,
-      nome: 'Copa do Brasil DDO',
-      descricao: 'O caminho para o título nacional. Jogos de ida e volta emocionantes.',
+      nome: 'Copa do Brasil',
+      descricao: 'O caminho para o título nacional. Jogos de ida e volta.',
       status: 'em_andamento',
-      imagem:
-        'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      imagem: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
       botao_texto: 'Assistir Jogos',
-      botao_acao: '/jogos',
     },
-  ]
+  ];
 
-  const getPlayersPadrao = (): Player[] => [
+  const players: Player[] = [
     { id: 1, nome: 'Lúcio DDO', pontos: 2850, posicao: 1 },
     { id: 2, nome: 'Daniel DDO', pontos: 2720, posicao: 2 },
     { id: 3, nome: 'OLS DDO', pontos: 2680, posicao: 3 },
     { id: 4, nome: 'Segredo_0', pontos: 2590, posicao: 4 },
-  ]
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'em_andamento':
-        return 'status-live'
-      case 'inscricoes_abertas':
-        return 'status-open'
-      case 'finalizado':
-        return 'status-finished'
-      default:
-        return ''
-    }
-  }
+    { id: 5, nome: 'Índio Mala', pontos: 2400, posicao: 5 },
+  ];
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'em_andamento':
-        return 'Em Andamento'
-      case 'inscricoes_abertas':
-        return 'Inscrições Abertas'
-      case 'finalizado':
-        return 'Finalizado'
-      default:
-        return status
+      case 'em_andamento': return 'Ao Vivo';
+      case 'inscricoes_abertas': return 'Aberto';
+      case 'finalizado': return 'Fim';
+      default: return status;
     }
-  }
-
-  const getRankClass = (posicao: number) => {
-    switch (posicao) {
-      case 1:
-        return 'rank-1'
-      case 2:
-        return 'rank-2'
-      case 3:
-        return 'rank-3'
-      default:
-        return ''
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="page-wrapper">
-        <div style={{ textAlign: 'center', padding: '2rem', color: '#a0a0a0' }}>
-          Carregando torneios...
-        </div>
-      </div>
-    )
-  }
+  };
 
   return (
-    <div className="page-wrapper">
-      <header>
-        <div className="logo">
-          Torneios <span>DDO</span>
+    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+      
+      {/* --- Sidebar (Esquerda) --- */}
+      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+        <div className="logo-area">
+          <div className="logo-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+               <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
+            </svg>
+          </div>
+          <span className="logo-text">Torneios <span>DDO</span></span>
         </div>
 
-        <nav>
-          <ul className="nav-links">
-            <li>
-              <a href="#">Torneios</a>
-            </li>
-            <li>
-              <a href="#">Ranking</a>
-            </li>
-            <li>
-              <a href="#">Regras</a>
-            </li>
-          </ul>
+        <nav className="nav-menu">
+          <a href="#" className="nav-item active"><Icons.Dashboard /> Dashboard</a>
+          <a href="#" className="nav-item"><Icons.Users /> Jogadores</a>
+          <a href="#" className="nav-item"><Icons.Trophy /> Torneios</a>
+          <a href="#" className="nav-item"><Icons.Shield /> Títulos</a>
+          <div className="nav-separator"></div>
+          <a href="#" className="nav-item"><Icons.Calendar /> Partidas</a>
+          <a href="#" className="nav-item"><Icons.Wallet /> Minha conta</a>
+          <a href="#" className="nav-item"><Icons.Settings /> Suporte</a>
         </nav>
+      </aside>
 
-        <a href="#" className="yt-btn">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
-          </svg>
-          DDO
-        </a>
-      </header>
-
-      <section className="hero">
-        <div className="hero-content">
-          <h1>Grande Final Copa das Nações</h1>
-          <span className="matchup">
-            SEGREDO <span style={{ fontSize: '2rem', color: 'white', verticalAlign: 'middle', opacity: 0.7 }}>VS</span> ÍNDIO MALA
-          </span>
-
-          <div className="timer-box">
-            <div className="timer-title">Domingo 07/12 - 20:00H</div>
-            <div className="timer-display" id="countdown">
-              00:00:00
+      {/* --- Conteúdo Principal (Direita) --- */}
+      <main className="main-content">
+        
+        <header className="top-header compact">
+          <div className="left-header">
+            <button 
+              className="toggle-btn menu-toggle" 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              title="Alternar Menu"
+            >
+              <Icons.Menu />
+            </button>
+            <div className="search-bar">
+              <Icons.Search />
+              <input type="text" placeholder="Buscar..." />
             </div>
-            <div className="timer-sub">Faltam 3 dias para o confronto</div>
           </div>
+          
+          <div className="header-actions">
+            {/* Botão de Alternar Tema com Emoji - Classe específica adicionada */}
+            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
+              💡
+            </button>
+            <button className="icon-btn"><Icons.Bell /></button>
+            <div className="user-avatar-mini">A</div>
+          </div>
+        </header>
+
+        {/* --- Hero Section --- */}
+        <div className="hero-banner full-width-banner">
+            <div className="hero-overlay"></div>
+            <div className="hero-content">
+            <span className="badge-live">Ao Vivo em Breve</span>
+            <h2>Grande Final Copa das Nações</h2>
+            <div className="matchup-text">
+                SEGREDO <span className="vs">VS</span> ÍNDIO MALA
+            </div>
+            <div className="timer-pill">
+                Domingo 07/12 - 20:00H
+            </div>
+            </div>
         </div>
-      </section>
 
-      <div className="container">
-        <main>
-          <div className="section-title">Torneios Ativos (PES 2017)</div>
+        <div className="content-split">
+          
+          {/* Coluna Esquerda: Lista de Torneios */}
+          <div className="left-column">
+            <div className="section-header">
+              <h3>Torneios em Destaque</h3>
+              <a href="#" className="view-all">Ver todos</a>
+            </div>
 
-          <div className="tournament-grid">
-            {torneios.map((torneio) => (
-              <div key={torneio.id} className="card">
-                <div
-                  className="card-img"
-                  style={{ backgroundImage: `url('${torneio.imagem}')` }}
-                >
-                  <span className="game-tag">PES 2017</span>
+            <div className="tournaments-list">
+              {torneios.map(torneio => (
+                <div key={torneio.id} className="tournament-row">
+                  <div className="t-image" style={{backgroundImage: `url(${torneio.imagem})`}}></div>
+                  <div className="t-info">
+                    <h4>{torneio.nome}</h4>
+                    <p>{torneio.descricao}</p>
+                  </div>
+                  <div className="t-status">
+                     <span className={`status-pill ${torneio.status}`}>
+                       {getStatusLabel(torneio.status)}
+                     </span>
+                  </div>
+                  <button className="t-btn">{torneio.botao_texto}</button>
                 </div>
-                <div className="card-body">
-                  <span className={`status-badge ${getStatusBadge(torneio.status)}`}>
-                    {getStatusLabel(torneio.status)}
-                  </span>
-                  <h3 className="card-title">{torneio.nome}</h3>
-                  <p className="card-info">{torneio.descricao}</p>
-                  <a href="#" className="btn">
-                    {torneio.botao_texto || 'Ver Mais'}
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        </main>
-
-        <aside>
-          <div className="section-title">Top Players DDO</div>
-          <div className="ranking-box">
-            <div className="rank-header">Rank Global</div>
-            {players.map((player) => (
-              <div key={player.id} className="rank-item">
-                <span className={`rank-pos ${getRankClass(player.posicao)}`}>
-                  {player.posicao}
-                </span>
-                <div className="rank-info">
-                  <span className="player-name">{player.nome}</span>
-                  <span className="player-pts">{player.pontos} pts</span>
-                </div>
-              </div>
-            ))}
-
-            <div style={{ padding: '15px', textAlign: 'center', borderTop: '1px solid #252836' }}>
-              <a
-                href="#"
-                style={{
-                  color: '#0079ff',
-                  textDecoration: 'none',
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                }}
-              >
-                Ver Ranking Completo →
-              </a>
+              ))}
             </div>
           </div>
-        </aside>
-      </div>
+
+          {/* Coluna Direita: Ranking */}
+          <aside className="right-column">
+            <div className="ranking-card">
+              <div className="ranking-header">
+                <h3>Top Players</h3>
+                <span>Global</span>
+              </div>
+              
+              <div className="leader-graph">
+                 <div className="bar bar-2"><span>2</span></div>
+                 <div className="bar bar-1"><span>1</span></div>
+                 <div className="bar bar-3"><span>3</span></div>
+              </div>
+
+              <div className="players-list">
+                {players.map((player) => (
+                  <div key={player.id} className="player-row">
+                    <div className="player-rank">#{player.posicao}</div>
+                    <div className="player-avatar">
+                      {player.nome.charAt(0)}
+                    </div>
+                    <div className="player-details">
+                      <span className="p-name">{player.nome}</span>
+                      <span className="p-location">Brasil</span>
+                    </div>
+                    <div className="player-points">
+                      {player.pontos}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
+        </div>
+      </main>
     </div>
-  )
+  );
 }
