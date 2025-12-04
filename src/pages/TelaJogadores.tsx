@@ -55,16 +55,34 @@ export function TelaJogadores() {
   }, [isDarkMode]);
 
   useEffect(() => {
-    fetchPlayers();
+    fetchAllPlayers();
   }, []);
 
-  const fetchPlayers = async () => {
+  const fetchAllPlayers = async () => {
     try {
       setLoading(true);
-      const data = await API.get('/jogador/all');
-      if (data && data.conteudo) {
-        setPlayers(data.conteudo);
+      let allData: Player[] = [];
+      let page = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const data = await API.get(`/jogador/all?page=${page}`);
+        
+        if (data && data.conteudo) {
+          allData = [...allData, ...data.conteudo];
+          
+          if (data.ultimaPagina === true) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
+        }
       }
+
+      setPlayers(allData);
+
     } catch (error) {
       console.error("Erro ao buscar jogadores", error);
     } finally {
