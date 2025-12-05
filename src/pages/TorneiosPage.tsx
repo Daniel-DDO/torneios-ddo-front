@@ -150,79 +150,81 @@ export function TorneiosPage() {
           </div>
         </header>
 
-        <div className="hero-banner full-width-banner">
-            <div className="hero-overlay"></div>
-            <div className="hero-content">
-            <span className="badge-live">Ao Vivo em Breve</span>
-            <h2>Grande Final da Liga Real DDO</h2>
-            <div className="matchup-text">
-                LÚCIO <span className="vs">VS</span> DANIEL DDO
-            </div>
-            <div className="timer-pill">
-                Domingo 07/12 - 19:00H
-            </div>
-            </div>
-        </div>
-
-        <div className="content-split">
-          
-          <div className="left-column">
-            <div className="section-header">
-              <h3>Torneios em Destaque</h3>
-              <a href="#" className="view-all">Ver todos</a>
-            </div>
-
-            <div className="tournaments-list">
-              {torneios.map(torneio => (
-                <div key={torneio.id} className="tournament-row">
-                  <div className="t-image" style={{backgroundImage: `url(${torneio.imagem})`}}></div>
-                  <div className="t-info">
-                    <h4>{torneio.nome}</h4>
-                    <p>{torneio.descricao}</p>
-                  </div>
-                  <div className="t-status">
-                     <span className={`status-pill ${torneio.status}`}>
-                       {getStatusLabel(torneio.status)}
-                     </span>
-                  </div>
-                  <button className="t-btn">{torneio.botao_texto}</button>
-                </div>
-              ))}
-            </div>
+        <div className="page-content">
+          <div className="hero-banner full-width-banner">
+              <div className="hero-overlay"></div>
+              <div className="hero-content">
+              <span className="badge-live">Ao Vivo em Breve</span>
+              <h2>Grande Final da Liga Real DDO</h2>
+              <div className="matchup-text">
+                  LÚCIO <span className="vs">VS</span> DANIEL DDO
+              </div>
+              <div className="timer-pill">
+                  Domingo 07/12 - 19:00H
+              </div>
+              </div>
           </div>
 
-          <aside className="right-column">
-            <div className="ranking-card">
-              <div className="ranking-header">
-                <h3>Top Players</h3>
-                <span>Global</span>
-              </div>
-              
-              <div className="leader-graph">
-                 <div className="bar bar-2"><span>2</span></div>
-                 <div className="bar bar-1"><span>1</span></div>
-                 <div className="bar bar-3"><span>3</span></div>
+          <div className="content-split">
+            
+            <div className="left-column">
+              <div className="section-header">
+                <h3>Torneios em Destaque</h3>
+                <a href="#" className="view-all">Ver todos</a>
               </div>
 
-              <div className="players-list">
-                {players.map((player) => (
-                  <div key={player.id} className="player-row">
-                    <div className="player-rank">#{player.posicao}</div>
-                    <div className="player-avatar">
-                      {player.nome.charAt(0)}
+              <div className="tournaments-list">
+                {torneios.map(torneio => (
+                  <div key={torneio.id} className="tournament-row">
+                    <div className="t-image" style={{backgroundImage: `url(${torneio.imagem})`}}></div>
+                    <div className="t-info">
+                      <h4>{torneio.nome}</h4>
+                      <p>{torneio.descricao}</p>
                     </div>
-                    <div className="player-details">
-                      <span className="p-name">{player.nome}</span>
-                      <span className="p-location">Brasil</span>
+                    <div className="t-status">
+                        <span className={`status-pill ${torneio.status}`}>
+                          {getStatusLabel(torneio.status)}
+                        </span>
                     </div>
-                    <div className="player-points">
-                      {player.pontos}
-                    </div>
+                    <button className="t-btn">{torneio.botao_texto}</button>
                   </div>
                 ))}
               </div>
             </div>
-          </aside>
+
+            <aside className="right-column">
+              <div className="ranking-card">
+                <div className="ranking-header">
+                  <h3>Top Players</h3>
+                  <span>Global</span>
+                </div>
+                
+                <div className="leader-graph">
+                    <div className="bar bar-2"><span>2</span></div>
+                    <div className="bar bar-1"><span>1</span></div>
+                    <div className="bar bar-3"><span>3</span></div>
+                </div>
+
+                <div className="players-list">
+                  {players.map((player) => (
+                    <div key={player.id} className="player-row">
+                      <div className="player-rank">#{player.posicao}</div>
+                      <div className="player-avatar">
+                        {player.nome.charAt(0)}
+                      </div>
+                      <div className="player-details">
+                        <span className="p-name">{player.nome}</span>
+                        <span className="p-location">Brasil</span>
+                      </div>
+                      <div className="player-points">
+                        {player.pontos}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </aside>
+          </div>
         </div>
       </main>
     </div>

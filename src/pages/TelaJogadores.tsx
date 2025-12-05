@@ -99,6 +99,11 @@ export function TelaJogadores() {
       <LoadingSpinner isLoading={loading} />
 
       <style>{`
+        /* Configurações específicas de layout para o Sticky Header */
+        .page-content {
+          padding: 2rem 3rem;
+        }
+
         .players-grid-container {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -202,6 +207,10 @@ export function TelaJogadores() {
           background: var(--primary);
           color: white;
         }
+
+        @media (max-width: 768px) {
+          .page-content { padding: 1rem; }
+        }
       `}</style>
 
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
@@ -253,50 +262,52 @@ export function TelaJogadores() {
           </div>
         </header>
 
-        <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-             <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Jogadores Cadastrados</h2>
-             <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize todos os jogadores</p>
-          </div>
-          <button className="t-btn" style={{background: 'var(--primary)', color: 'white', border: 'none'}}>
-            + Novo Jogador
-          </button>
-        </div>
-
-        {!loading && (
-            <div className="players-grid-container">
-            {players.map((player, index) => (
-                <div key={player.id} className="player-card-item">
-                <div className="card-rank-badge">#{index + 1}</div>
-                
-                {player.imagem ? (
-                    <div className="card-avatar-large" style={{backgroundImage: `url(${player.imagem})`}}></div>
-                ) : (
-                    <div className="card-avatar-large">
-                        {player.nome.charAt(0)}
-                    </div>
-                )}
-                
-                <div className="card-name">{player.nome}</div>
-                <div className="card-location">{player.discord || 'Jogador DDO'}</div>
-                
-                <div className="card-stats-row">
-                    <div className="stat-box">
-                    <span className="stat-val">{player.partidasJogadas}</span>
-                    <span className="stat-lbl">Partidas</span>
-                    </div>
-                    <div style={{width: '1px', background: 'var(--border-color)'}}></div>
-                    <div className="stat-box">
-                    <span className="stat-val">{player.titulos}</span>
-                    <span className="stat-lbl">Títulos</span>
-                    </div>
-                </div>
-
-                <button className="btn-profile">Ver Perfil</button>
-                </div>
-            ))}
+        <div className="page-content">
+            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Jogadores Cadastrados</h2>
+                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize todos os jogadores</p>
             </div>
-        )}
+            <button className="t-btn" style={{background: 'var(--primary)', color: 'white', border: 'none'}}>
+                + Novo Jogador
+            </button>
+            </div>
+
+            {!loading && (
+                <div className="players-grid-container">
+                {players.map((player, index) => (
+                    <div key={player.id} className="player-card-item">
+                    <div className="card-rank-badge">#{index + 1}</div>
+                    
+                    {player.imagem ? (
+                        <div className="card-avatar-large" style={{backgroundImage: `url(${player.imagem})`}}></div>
+                    ) : (
+                        <div className="card-avatar-large">
+                            {player.nome.charAt(0)}
+                        </div>
+                    )}
+                    
+                    <div className="card-name">{player.nome}</div>
+                    <div className="card-location">{player.discord || 'Jogador DDO'}</div>
+                    
+                    <div className="card-stats-row">
+                        <div className="stat-box">
+                        <span className="stat-val">{player.partidasJogadas}</span>
+                        <span className="stat-lbl">Partidas</span>
+                        </div>
+                        <div style={{width: '1px', background: 'var(--border-color)'}}></div>
+                        <div className="stat-box">
+                        <span className="stat-val">{player.titulos}</span>
+                        <span className="stat-lbl">Títulos</span>
+                        </div>
+                    </div>
+
+                    <button className="btn-profile">Ver Perfil</button>
+                    </div>
+                ))}
+                </div>
+            )}
+        </div>
 
       </main>
     </div>

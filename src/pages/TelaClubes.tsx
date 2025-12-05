@@ -4,12 +4,11 @@ import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-// Interface atualizada para o payload do Clube
 interface Clube {
   id: string;
   nome: string;
   estadio: string;
-  imagem: string; // URL da imagem
+  imagem: string;
   ligaClube: string;
   sigla: string;
   corPrimaria: string;
@@ -18,7 +17,6 @@ interface Clube {
   estrelas: number;
 }
 
-// Mesmos ícones da TelaJogadores
 const Icons = {
   Menu: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
   Dashboard: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
@@ -103,6 +101,10 @@ export function TelaClubes() {
       <LoadingSpinner isLoading={loading} />
 
       <style>{`
+        .page-content {
+          padding: 2rem 3rem;
+        }
+
         .players-grid-container {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -207,6 +209,10 @@ export function TelaClubes() {
           background: var(--primary);
           color: white;
         }
+
+        @media (max-width: 768px) {
+          .page-content { padding: 1rem; }
+        }
       `}</style>
 
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
@@ -258,50 +264,52 @@ export function TelaClubes() {
           </div>
         </header>
 
-        <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-              <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Clubes e Seleções</h2>
-              <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize os clubes e seleções oficiais</p>
-          </div>
-          <button className="t-btn" style={{background: 'var(--primary)', color: 'white', border: 'none'}}>
-            + Novo Clube
-          </button>
-        </div>
-
-        {!loading && (
-            <div className="players-grid-container">
-            {clubes.map((clube, index) => (
-                <div key={clube.id} className="player-card-item">
-                <div className="card-rank-badge">#{index + 1}</div>
-                
-                {clube.imagem ? (
-                    <div className="card-avatar-large" style={{backgroundImage: `url(${clube.imagem})`}}></div>
-                ) : (
-                    <div className="card-avatar-large" style={{backgroundColor: clube.corPrimaria || 'var(--hover-bg)'}}>
-                        {clube.sigla || clube.nome.substring(0,2).toUpperCase()}
-                    </div>
-                )}
-                
-                <div className="card-name">{clube.nome}</div>
-                <div className="card-location">{clube.estadio || 'Sem estádio'}</div>
-                
-                <div className="card-stats-row">
-                    <div className="stat-box">
-                    <span className="stat-val">{clube.estrelas} ★</span>
-                    <span className="stat-lbl">Estrelas</span>
-                    </div>
-                    <div style={{width: '1px', background: 'var(--border-color)'}}></div>
-                    <div className="stat-box">
-                    <span className="stat-val">{clube.ligaClube || '-'}</span>
-                    <span className="stat-lbl">Liga</span>
-                    </div>
-                </div>
-
-                <button className="btn-profile">Ver Clube</button>
-                </div>
-            ))}
+        <div className="page-content">
+            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Clubes e Seleções</h2>
+                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize os clubes e seleções oficiais</p>
             </div>
-        )}
+            <button className="t-btn" style={{background: 'var(--primary)', color: 'white', border: 'none'}}>
+                + Novo Clube
+            </button>
+            </div>
+
+            {!loading && (
+                <div className="players-grid-container">
+                {clubes.map((clube, index) => (
+                    <div key={clube.id} className="player-card-item">
+                    <div className="card-rank-badge">#{index + 1}</div>
+                    
+                    {clube.imagem ? (
+                        <div className="card-avatar-large" style={{backgroundImage: `url(${clube.imagem})`}}></div>
+                    ) : (
+                        <div className="card-avatar-large" style={{backgroundColor: clube.corPrimaria || 'var(--hover-bg)'}}>
+                            {clube.sigla || clube.nome.substring(0,2).toUpperCase()}
+                        </div>
+                    )}
+                    
+                    <div className="card-name">{clube.nome}</div>
+                    <div className="card-location">{clube.estadio || 'Sem estádio'}</div>
+                    
+                    <div className="card-stats-row">
+                        <div className="stat-box">
+                        <span className="stat-val">{clube.estrelas} ★</span>
+                        <span className="stat-lbl">Estrelas</span>
+                        </div>
+                        <div style={{width: '1px', background: 'var(--border-color)'}}></div>
+                        <div className="stat-box">
+                        <span className="stat-val">{clube.ligaClube || '-'}</span>
+                        <span className="stat-lbl">Liga</span>
+                        </div>
+                    </div>
+
+                    <button className="btn-profile">Ver Clube</button>
+                    </div>
+                ))}
+                </div>
+            )}
+        </div>
 
       </main>
     </div>
