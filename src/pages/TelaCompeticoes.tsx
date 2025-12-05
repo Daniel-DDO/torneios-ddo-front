@@ -3,19 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
-import PopupClubes from '../components/PopupClubes';
 
-interface Clube {
+// Interface do Objeto de Competição
+interface Competicao {
   id: string;
   nome: string;
-  estadio: string;
   imagem: string;
-  ligaClube: string;
-  sigla: string;
-  corPrimaria: string;
-  corSecundaria: string;
-  ativo: boolean;
-  estrelas: number;
+  divisao: string;
+  valor: number;
+  descricao: string;
+}
+
+// Nova interface para tratar a resposta do Back-end com "conteudo"
+interface CompeticaoResponse {
+  conteudo: Competicao[];
 }
 
 const Icons = {
@@ -32,12 +33,11 @@ const Icons = {
   More: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
 };
 
-export function TelaClubes() {
+export function TelaCompeticoes() {
   const navigate = useNavigate();
 
-  const [clubes, setClubes] = useState<Clube[]>([]);
+  const [competicoes, setCompeticoes] = useState<Competicao[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedClubId, setSelectedClubId] = useState<string | null>(null);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -57,50 +57,33 @@ export function TelaClubes() {
   }, [isDarkMode]);
 
   useEffect(() => {
-    fetchAllClubes();
+    fetchAllCompeticoes();
   }, []);
 
-  const fetchAllClubes = async () => {
+  const fetchAllCompeticoes = async () => {
     try {
       setLoading(true);
-      let allData: Clube[] = [];
-      let page = 0;
-      let hasMore = true;
+      // Aqui dizemos ao TS que o retorno pode ser do tipo esperado
+      const response = await API.get(`/competicao/all`);
 
-      while (hasMore) {
-        const data = await API.get(`/clube/all?page=${page}`);
-        
-        if (data && data.conteudo) {
-          allData = [...allData, ...data.conteudo];
-          
-          if (data.ultimaPagina === true) {
-            hasMore = false;
-          } else {
-            page++;
-          }
-        } else if (Array.isArray(data)) {
-          allData = data;
-          hasMore = false;
-        } else {
-          hasMore = false;
-        }
+      // Verifica se a resposta tem a propriedade 'conteudo' (formato novo)
+      if (response && response.conteudo) {
+        setCompeticoes(response.conteudo);
+      } 
+      // Fallback: Se por acaso voltar um array direto (formato antigo/segurança)
+      else if (Array.isArray(response)) {
+        setCompeticoes(response);
+      } 
+      else {
+        // Se não for nem um nem outro, inicia vazio para não quebrar
+        setCompeticoes([]);
       }
-
-      setClubes(allData);
-
     } catch (error) {
-      console.error("Erro ao buscar clubes", error);
+      console.error("Erro ao buscar competições", error);
+      setCompeticoes([]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleVerClube = (id: string) => {
-    setSelectedClubId(id);
-  };
-
-  const handleClosePopup = () => {
-    setSelectedClubId(null);
   };
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
@@ -109,10 +92,6 @@ export function TelaClubes() {
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       
       <LoadingSpinner isLoading={loading} />
-
-      {selectedClubId && (
-        <PopupClubes clubId={selectedClubId} onClose={handleClosePopup} />
-      )}
 
       <style>{`
         .page-content {
@@ -242,8 +221,8 @@ export function TelaClubes() {
         <nav className="nav-menu">
           <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Dashboard /> Dashboard</a>
           <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Users /> Jogadores</a>
-          <a onClick={() => navigate('/clubes')} className="nav-item active" style={{cursor: 'pointer'}}><Icons.Shield /> Clubes</a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Trophy /> Competições</a>
+          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Shield /> Clubes</a>
+          <a onClick={() => navigate('/competicoes')} className="nav-item active" style={{cursor: 'pointer'}}><Icons.Trophy /> Competições</a>
           <a href="#" className="nav-item"><Icons.Shield /> Títulos</a>
           <div className="nav-separator"></div>
           <a href="#" className="nav-item"><Icons.Calendar /> Partidas</a>
@@ -265,7 +244,7 @@ export function TelaClubes() {
             </button>
             <div className="search-bar">
               <Icons.Search />
-              <input type="text" placeholder="Buscar clube..." />
+              <input type="text" placeholder="Buscar competição..." />
             </div>
           </div>
           
@@ -281,44 +260,47 @@ export function TelaClubes() {
         <div className="page-content">
             <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Clubes e Seleções</h2>
-                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize os clubes e seleções oficiais</p>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Competições</h2>
+                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize as competições oficiais</p>
             </div>
             <button className="t-btn" style={{background: 'var(--primary)', color: 'white', border: 'none'}}>
-                + Novo Clube
+                + Nova Competição
             </button>
             </div>
 
             {!loading && (
                 <div className="players-grid-container">
-                {clubes.map((clube, index) => (
-                    <div key={clube.id} className="player-card-item">
+                {competicoes.map((competicao, index) => (
+                    <div key={competicao.id} className="player-card-item">
                     <div className="card-rank-badge">#{index + 1}</div>
                     
-                    {clube.imagem ? (
-                        <div className="card-avatar-large" style={{backgroundImage: `url(${clube.imagem})`}}></div>
+                    {competicao.imagem ? (
+                        <div className="card-avatar-large" style={{backgroundImage: `url(${competicao.imagem})`}}></div>
                     ) : (
-                        <div className="card-avatar-large" style={{backgroundColor: clube.corPrimaria || 'var(--hover-bg)'}}>
-                            {clube.sigla || clube.nome.substring(0,2).toUpperCase()}
+                        <div className="card-avatar-large">
+                            {competicao.nome.substring(0,2).toUpperCase()}
                         </div>
                     )}
                     
-                    <div className="card-name">{clube.nome}</div>
-                    <div className="card-location">{clube.estadio || 'Sem estádio'}</div>
+                    <div className="card-name">{competicao.nome}</div>
+                    {/* Exibe parte da descrição como se fosse "location" */}
+                    <div className="card-location" title={competicao.descricao}>
+                        {competicao.descricao ? competicao.descricao.substring(0, 40) + '...' : 'Sem descrição'}
+                    </div>
                     
                     <div className="card-stats-row">
                         <div className="stat-box">
-                        <span className="stat-val">{clube.estrelas} ★</span>
-                        <span className="stat-lbl">Estrelas</span>
+                        <span className="stat-val">{competicao.divisao}</span>
+                        <span className="stat-lbl">Divisão</span>
                         </div>
                         <div style={{width: '1px', background: 'var(--border-color)'}}></div>
                         <div className="stat-box">
-                        <span className="stat-val">{clube.ligaClube || '-'}</span>
-                        <span className="stat-lbl">Liga</span>
+                        <span className="stat-val">{competicao.valor}</span>
+                        <span className="stat-lbl">Valor</span>
                         </div>
                     </div>
 
-                    <button className="btn-profile" onClick={() => handleVerClube(clube.id)}>Ver Clube</button>
+                    <button className="btn-profile">Ver Competição</button>
                     </div>
                 ))}
                 </div>
