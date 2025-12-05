@@ -1,8 +1,9 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
+import PopupClubes from '../components/PopupClubes';
 
 interface Clube {
   id: string;
@@ -36,6 +37,7 @@ export function TelaClubes() {
 
   const [clubes, setClubes] = useState<Clube[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedClubId, setSelectedClubId] = useState<string | null>(null);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -93,12 +95,24 @@ export function TelaClubes() {
     }
   };
 
+  const handleVerClube = (id: string) => {
+    setSelectedClubId(id);
+  };
+
+  const handleClosePopup = () => {
+    setSelectedClubId(null);
+  };
+
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       
       <LoadingSpinner isLoading={loading} />
+
+      {selectedClubId && (
+        <PopupClubes clubId={selectedClubId} onClose={handleClosePopup} />
+      )}
 
       <style>{`
         .page-content {
@@ -304,7 +318,7 @@ export function TelaClubes() {
                         </div>
                     </div>
 
-                    <button className="btn-profile">Ver Clube</button>
+                    <button className="btn-profile" onClick={() => handleVerClube(clube.id)}>Ver Clube</button>
                     </div>
                 ))}
                 </div>
