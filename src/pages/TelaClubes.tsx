@@ -257,7 +257,7 @@ export function TelaClubes() {
           <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Dashboard /> Dashboard</a>
           <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Users /> Jogadores</a>
           <a onClick={() => navigate('/clubes')} className="nav-item active" style={{cursor: 'pointer'}}><Icons.Shield /> Clubes</a>
-          <a href="#" className="nav-item"><Icons.Trophy /> Torneios</a>
+          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Trophy /> Competições</a>
           <a href="#" className="nav-item"><Icons.Shield /> Títulos</a>
           <div className="nav-separator"></div>
           <a href="#" className="nav-item"><Icons.Calendar /> Partidas</a>
