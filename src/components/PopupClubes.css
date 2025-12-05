@@ -1,117 +1,225 @@
-
 .popup-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    opacity: 0;
-    animation: fadeIn 0.3s forwards;
-  }
-  
-  .popup-overlay.fade-out {
-    animation: fadeOut 0.3s forwards;
-  }
-  
-  .popup-content {
-    background-color: #fff;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-    width: 90%;
-    max-width: 500px;
-    position: relative;
-    transform: scale(0.9);
-    animation: scaleIn 0.3s forwards;
-  }
-  
-  .popup-overlay.fade-out .popup-content {
-    animation: scaleOut 0.3s forwards;
-  }
-  
-  .popup-close-btn {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background: transparent;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #888;
-  }
-  
-  .popup-header {
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  
-  .popup-club-image {
-    width: 100px;
-    height: 100px;
-    margin: 0 auto 15px;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-  }
-  
-  .popup-club-name {
-    font-size: 28px;
-    font-weight: 700;
-    margin: 0;
-  }
-  
-  .popup-club-league {
-    font-size: 16px;
-    color: #666;
-    margin-top: 5px;
-  }
-  
-  .popup-club-info {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .info-item {
-    display: flex;
-    justify-content: space-between;
-    font-size: 16px;
-  }
-  
-  .info-label {
-    font-weight: 600;
-    color: #444;
-  }
-  
-  .info-value {
-    color: #222;
-  }
-  
-  @keyframes fadeIn {
-    to {
-      opacity: 1;
-    }
-  }
-  
-  @keyframes fadeOut {
-    to {
-      opacity: 0;
-    }
-  }
-  
-  @keyframes scaleIn {
-    to {
-      transform: scale(1);
-    }
-  }
-  
-  @keyframes scaleOut {
-    to {
-      transform: scale(0.9);
-    }
-  }
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 0;
+  animation: fadeIn 0.3s forwards;
+}
+
+.popup-overlay.fade-out {
+  animation: fadeOut 0.3s forwards;
+  pointer-events: none;
+}
+
+.popup-content {
+  background-color: var(--bg-card, #fff);
+  color: var(--text-primary, #333);
+  padding: 40px;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 550px;
+  position: relative;
+  transform: scale(0.95);
+  animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  border: 2px solid transparent;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.popup-overlay.fade-out .popup-content {
+  animation: scaleOut 0.3s forwards;
+}
+
+.popup-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+  background-color: var(--hover-bg, #f0f0f0);
+  border: 1px solid var(--border-color, #eee);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-gray, #666);
+  transition: background-color 0.2s, color 0.2s, transform 0.2s;
+  z-index: 10;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.popup-close-btn svg {
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+.popup-close-btn:hover {
+  background-color: #ff4d4d;
+  color: white;
+  border-color: #ff4d4d;
+  transform: scale(1.1);
+}
+
+.popup-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  color: var(--text-gray, #888);
+  width: 100%;
+}
+
+.popup-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--hover-bg, #e0e0e0);
+  border-top-color: var(--primary, #007bff);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.popup-body-animate {
+  animation: slideUp 0.4s ease forwards;
+  width: 100%;
+}
+
+.popup-body-animate.fade-out-content {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.popup-header-clean {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.popup-club-image-wrapper {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  padding: 5px;
+  border: 2px solid transparent;
+  background-color: var(--bg-main, #fff);
+  margin-bottom: 15px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.popup-club-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.popup-club-name {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  color: var(--text-dark, #000);
+}
+
+.popup-club-league-badge {
+  background: var(--hover-bg, #eee);
+  color: var(--text-gray, #555);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.popup-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.stat-card {
+  background-color: var(--hover-bg, #f8f9fa);
+  padding: 15px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border-color, #eee);
+  transition: transform 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary, #007bff);
+}
+
+.stat-icon {
+  font-size: 1.5rem;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-gray, #888);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dark, #222);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes scaleOut {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(0.9); opacity: 0; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

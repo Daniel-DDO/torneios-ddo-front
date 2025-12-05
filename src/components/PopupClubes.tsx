@@ -23,67 +23,108 @@ interface PopupClubesProps {
 
 const PopupClubes: React.FC<PopupClubesProps> = ({ clubId, onClose }) => {
   const [clube, setClube] = useState<Clube | null>(null);
+  const [loading, setLoading] = useState(true);
   const [fadeout, setFadeout] = useState(false);
 
   useEffect(() => {
     const fetchClube = async () => {
       try {
+        setLoading(true);
         const response = await API.get(`/clube/${clubId}`);
-        setClube(response.data);
+        setClube(response);
       } catch (error) {
-        console.error('Erro ao buscar os detalhes do clube:', error);
+        console.error('Erro ao buscar clube:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchClube();
+    if (clubId) {
+      fetchClube();
+    }
   }, [clubId]);
 
   const handleClose = () => {
     setFadeout(true);
-    setTimeout(onClose, 300);
+    setTimeout(() => {
+      onClose();
+    }, 300);
   };
 
-  if (!clube) {
-    return null;
-  }
-
-  const popupStyle = {
-    borderTop: `10px solid ${clube.corPrimaria}`,
-    boxShadow: `0 8px 30px ${clube.corPrimaria}50`,
+  const getBorderColor = () => {
+    if (loading) return 'var(--border-color)';
+    return clube?.corPrimaria || 'var(--primary)';
   };
 
-  const headerStyle = {
-    backgroundColor: clube.corPrimaria,
-    color: clube.corSecundaria,
+  const popupContentStyle = {
+    borderColor: getBorderColor(),
+    boxShadow: `0 0 20px ${getBorderColor()}40` 
   };
 
   return (
     <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
-      <div className="popup-content" style={popupStyle}>
-        <button className="popup-close-btn" onClick={handleClose}>×</button>
-        <div className="popup-header" style={headerStyle}>
-            <div className="popup-club-image" style={{ backgroundImage: `url(${clube.imagem})` }}></div>
-            <h2 className="popup-club-name">{clube.nome}</h2>
-            <p className="popup-club-league">{clube.ligaClube}</p>
-        </div>
-        <div className="popup-club-info">
-          <div className="info-item">
-            <span className="info-label">Estádio:</span>
-            <span className="info-value">{clube.estadio}</span>
+      <div className="popup-content" style={popupContentStyle}>
+        <button className="popup-close-btn" onClick={handleClose}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+
+        {loading ? (
+          <div className="popup-loading-container">
+            <div className="popup-spinner"></div>
+            <p>Carregando informações...</p>
           </div>
-          <div className="info-item">
-            <span className="info-label">Sigla:</span>
-            <span className="info-value">{clube.sigla}</span>
+        ) : clube ? (
+          <div className={`popup-body-animate ${fadeout ? 'fade-out-content' : ''}`}>
+            <div className="popup-header-clean">
+              <div className="popup-club-image-wrapper" style={{borderColor: clube.corPrimaria}}>
+                 <div className="popup-club-image" style={{ backgroundImage: `url(${clube.imagem})` }}></div>
+              </div>
+              <h2 className="popup-club-name">{clube.nome}</h2>
+              <span className="popup-club-league-badge">{clube.ligaClube}</span>
+            </div>
+
+            <div className="popup-stats-grid">
+              <div className="stat-card">
+                <span className="stat-icon">🏟️</span>
+                <div className="stat-info">
+                  <span className="stat-label">Estádio</span>
+                  <span className="stat-value">{clube.estadio}</span>
+                </div>
+              </div>
+              
+              <div className="stat-card">
+                <span className="stat-icon">🏷️</span>
+                <div className="stat-info">
+                  <span className="stat-label">Sigla</span>
+                  <span className="stat-value">{clube.sigla}</span>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <span className="stat-icon">⭐</span>
+                <div className="stat-info">
+                  <span className="stat-label">Estrelas</span>
+                  <span className="stat-value">{clube.estrelas}</span>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <span className="stat-icon">🏆</span>
+                <div className="stat-info">
+                  <span className="stat-label">Títulos</span>
+                  <span className="stat-value">{clube.titulos}</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="info-item">
-            <span className="info-label">Estrelas:</span>
-            <span className="info-value">{clube.estrelas}</span>
+        ) : (
+          <div className="popup-error">
+            <p>Não foi possível carregar os dados.</p>
           </div>
-          <div className="info-item">
-            <span className="info-label">Títulos:</span>
-            <span className="info-value">{clube.titulos}</span>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
