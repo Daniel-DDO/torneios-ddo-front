@@ -18,6 +18,20 @@ interface Clube {
   estrelas: number;
 }
 
+const LIGA_NAMES: { [key: string]: string } = {
+  LALIGA: "LaLiga",
+  PREMIER_LEAGUE: "Premier League",
+  SERIEA: "Serie A",
+  BUNDESLIGA: "Bundesliga",
+  LIGUEONE: "Ligue One",
+  BRASILEIRAO: "Brasileirão",
+  ARGENTINA: "Liga Argentina",
+  MLS: "Major League Soccer",
+  SAUDI_PRO_LEAGUE: "Saudi Pro League",
+  SELECAO: "Seleção",
+  OUTROS: "Outros"
+};
+
 const Icons = {
   Menu: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
   Dashboard: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
@@ -313,7 +327,7 @@ export function TelaClubes() {
                         </div>
                         <div style={{width: '1px', background: 'var(--border-color)'}}></div>
                         <div className="stat-box">
-                        <span className="stat-val">{clube.ligaClube || '-'}</span>
+                        <span className="stat-val">{LIGA_NAMES[clube.ligaClube] || clube.ligaClube || '-'}</span>
                         <span className="stat-lbl">Liga</span>
                         </div>
                     </div>

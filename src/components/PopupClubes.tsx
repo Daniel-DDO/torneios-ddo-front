@@ -16,6 +16,20 @@ interface Clube {
   titulos: number;
 }
 
+const LIGA_NAMES: { [key: string]: string } = {
+  LALIGA: "LaLiga",
+  PREMIER_LEAGUE: "Premier League",
+  SERIEA: "Serie A",
+  BUNDESLIGA: "Bundesliga",
+  LIGUEONE: "Ligue One",
+  BRASILEIRAO: "Brasileirão",
+  ARGENTINA: "Liga Argentina",
+  MLS: "Major League Soccer",
+  SAUDI_PRO_LEAGUE: "Saudi Pro League",
+  SELECAO: "Seleção",
+  OUTROS: "Outros"
+};
+
 interface PopupClubesProps {
   clubId: string;
   onClose: () => void;
@@ -80,10 +94,12 @@ const PopupClubes: React.FC<PopupClubesProps> = ({ clubId, onClose }) => {
           <div className={`popup-body-animate ${fadeout ? 'fade-out-content' : ''}`}>
             <div className="popup-header-clean">
               <div className="popup-club-image-wrapper" style={{borderColor: clube.corPrimaria}}>
-                 <div className="popup-club-image" style={{ backgroundImage: `url(${clube.imagem})` }}></div>
+                <div className="popup-club-image" style={{ backgroundImage: `url(${clube.imagem})` }}></div>
               </div>
               <h2 className="popup-club-name">{clube.nome}</h2>
-              <span className="popup-club-league-badge">{clube.ligaClube}</span>
+              <span className="popup-club-league-badge">
+                {LIGA_NAMES[clube.ligaClube] || clube.ligaClube}
+              </span>
             </div>
 
             <div className="popup-stats-grid">
