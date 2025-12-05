@@ -63,19 +63,16 @@ export function TelaCompeticoes() {
   const fetchAllCompeticoes = async () => {
     try {
       setLoading(true);
-      // Aqui dizemos ao TS que o retorno pode ser do tipo esperado
-      const response = await API.get(`/competicao/all`);
+      
+      const response = await API.get(`/competicao/all`) as CompeticaoResponse | Competicao[];
 
-      // Verifica se a resposta tem a propriedade 'conteudo' (formato novo)
-      if (response && response.conteudo) {
+      if ('conteudo' in response) {
         setCompeticoes(response.conteudo);
       } 
-      // Fallback: Se por acaso voltar um array direto (formato antigo/segurança)
       else if (Array.isArray(response)) {
         setCompeticoes(response);
       } 
       else {
-        // Se não for nem um nem outro, inicia vazio para não quebrar
         setCompeticoes([]);
       }
     } catch (error) {
