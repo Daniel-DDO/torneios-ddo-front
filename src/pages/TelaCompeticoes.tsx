@@ -4,6 +4,7 @@ import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
+import PopupUser from '../components/PopupUser';
 
 interface Competicao {
   id: string;
@@ -18,7 +19,7 @@ interface UserData {
   id: string;
   nome: string;
   discord: string;
-  imagem?: string;
+  imagem: string | null;
   cargo: string;
   saldoVirtual: number;
   titulos: number;
@@ -48,6 +49,7 @@ export function TelaCompeticoes() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [showUserPopup, setShowUserPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -105,6 +107,7 @@ export function TelaCompeticoes() {
         localStorage.removeItem('token');
         localStorage.removeItem('user_data');
         setCurrentUser(null);
+        setShowUserPopup(false);
     }
   };
 
@@ -279,8 +282,7 @@ export function TelaCompeticoes() {
             {currentUser ? (
               <div 
                 className="user-avatar-mini" 
-                onClick={handleLogout}
-                title="Clique para sair"
+                onClick={() => setShowUserPopup(true)}
                 style={{
                   backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
                   backgroundSize: 'cover',
@@ -372,6 +374,14 @@ export function TelaCompeticoes() {
         <PopupLogin 
           onClose={() => setShowLoginPopup(false)} 
           onLoginSuccess={handleLoginSuccess} 
+        />
+      )}
+
+      {showUserPopup && currentUser && (
+        <PopupUser 
+          user={currentUser}
+          onClose={() => setShowUserPopup(false)}
+          onLogout={handleLogout}
         />
       )}
     </div>

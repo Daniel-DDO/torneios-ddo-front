@@ -1,0 +1,142 @@
+.user-popup-width {
+    max-width: 380px;
+}
+
+.popup-user-image-wrapper {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    padding: 4px;
+    border: 3px solid var(--primary, #007bff);
+    background-color: var(--bg-main, #fff);
+    margin-bottom: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.popup-user-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Grid de Estatísticas */
+.user-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin: 20px 0;
+    width: 100%;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: var(--hover-bg, #f8f9fa);
+    padding: 10px 5px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color, #eee);
+    transition: transform 0.2s;
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary, #007bff);
+}
+
+.stat-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text-dark, #000);
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--text-gray, #666);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+/* Lista de Detalhes */
+.user-details-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 25px;
+}
+
+.detail-row {
+    display: flex;
+    align-items: center;
+    background-color: #fff;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color, #eee);
+}
+
+.detail-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background-color: var(--hover-bg, #f0f2f5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-gray, #555);
+    margin-right: 12px;
+}
+
+.detail-info {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.detail-info label {
+    font-size: 0.75rem;
+    color: var(--text-gray, #888);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.detail-info span {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary, #333);
+}
+
+.money-value {
+    color: #27ae60 !important; /* Verde para dinheiro */
+}
+
+/* Botão de Logout */
+.logout-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid #fab1a0;
+    background-color: #fff;
+    color: #d63031;
+    font-size: 0.95rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    margin-top: auto;
+}
+
+.logout-btn:hover {
+    background-color: #d63031;
+    color: white;
+    border-color: #d63031;
+    box-shadow: 0 4px 10px rgba(214, 48, 49, 0.2);
+    transform: translateY(-2px);
+}

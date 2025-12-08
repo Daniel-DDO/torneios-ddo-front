@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
+import PopupUser from '../components/PopupUser';
 
 interface Torneio {
   id: number;
@@ -23,7 +24,7 @@ interface UserData {
   id: string;
   nome: string;
   discord: string;
-  imagem?: string;
+  imagem: string | null;
   cargo: 'PROPRIETARIO' | 'DIRETOR' | 'ADMINISTRADOR' | 'JOGADOR';
   saldoVirtual: number;
   titulos: number;
@@ -49,6 +50,7 @@ export function TorneiosPage() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [showUserPopup, setShowUserPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -77,6 +79,15 @@ export function TorneiosPage() {
 
   const handleLoginSuccess = (userData: UserData) => {
     setCurrentUser(userData);
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("Deseja realmente sair?")) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user_data');
+        setCurrentUser(null);
+        setShowUserPopup(false);
+    }
   };
 
   const torneios: Torneio[] = [
@@ -176,6 +187,7 @@ export function TorneiosPage() {
             {currentUser ? (
               <div 
                 className="user-avatar-mini"
+                onClick={() => setShowUserPopup(true)}
                 style={{
                   backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
                   backgroundSize: 'cover',
@@ -186,7 +198,7 @@ export function TorneiosPage() {
                   justifyContent: 'center',
                   color: 'white',
                   fontWeight: 'bold',
-                  cursor: 'default'
+                  cursor: 'pointer'
                 }}
               >
                 {!currentUser.imagem && currentUser.nome.charAt(0)}
@@ -294,6 +306,14 @@ export function TorneiosPage() {
         <PopupLogin 
           onClose={() => setShowLoginPopup(false)} 
           onLoginSuccess={handleLoginSuccess} 
+        />
+      )}
+
+      {showUserPopup && currentUser && (
+        <PopupUser 
+          user={currentUser}
+          onClose={() => setShowUserPopup(false)}
+          onLogout={handleLogout}
         />
       )}
     </div>
