@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
+import PopupLogin from '../components/PopupLogin';
 
-// Interface do Objeto de Competição
 interface Competicao {
   id: string;
   nome: string;
@@ -14,9 +14,17 @@ interface Competicao {
   descricao: string;
 }
 
-// Nova interface para tratar a resposta do Back-end com "conteudo"
-interface CompeticaoResponse {
-  conteudo: Competicao[];
+interface UserData {
+  id: string;
+  nome: string;
+  discord: string;
+  imagem?: string;
+  cargo: string;
+  saldoVirtual: number;
+  titulos: number;
+  finais: number;
+  partidasJogadas: number;
+  golsMarcados: number;
 }
 
 const Icons = {
@@ -38,13 +46,14 @@ export function TelaCompeticoes() {
 
   const [competicoes, setCompeticoes] = useState<Competicao[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark';
   });
-
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -57,6 +66,10 @@ export function TelaCompeticoes() {
   }, [isDarkMode]);
 
   useEffect(() => {
+    const storedUser = localStorage.getItem('user_data');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
     fetchAllCompeticoes();
   }, []);
 
@@ -64,9 +77,9 @@ export function TelaCompeticoes() {
     try {
       setLoading(true);
       
-      const response = await API.get(`/competicao/all`) as CompeticaoResponse | Competicao[];
+      const response = await API.get(`/competicao/all`) as any;
 
-      if ('conteudo' in response) {
+      if (response && response.conteudo) {
         setCompeticoes(response.conteudo);
       } 
       else if (Array.isArray(response)) {
@@ -80,6 +93,18 @@ export function TelaCompeticoes() {
       setCompeticoes([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLoginSuccess = (userData: UserData) => {
+    setCurrentUser(userData);
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("Deseja realmente sair?")) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user_data');
+        setCurrentUser(null);
     }
   };
 
@@ -250,7 +275,45 @@ export function TelaCompeticoes() {
               💡
             </button>
             <button className="icon-btn"><Icons.Bell /></button>
-            <div className="user-avatar-mini">A</div>
+            
+            {currentUser ? (
+              <div 
+                className="user-avatar-mini" 
+                onClick={handleLogout}
+                title="Clique para sair"
+                style={{
+                  backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundColor: currentUser.imagem ? 'transparent' : 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                {!currentUser.imagem && currentUser.nome.charAt(0)}
+              </div>
+            ) : (
+              <button 
+                className="login-btn-header" 
+                onClick={() => setShowLoginPopup(true)}
+                style={{
+                  background: 'var(--primary)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  marginLeft: '10px'
+                }}
+              >
+                Login
+              </button>
+            )}
           </div>
         </header>
 
@@ -280,7 +343,6 @@ export function TelaCompeticoes() {
                     )}
                     
                     <div className="card-name">{competicao.nome}</div>
-                    {/* Exibe parte da descrição como se fosse "location" */}
                     <div className="card-location" title={competicao.descricao}>
                         {competicao.descricao ? competicao.descricao.substring(0, 40) + '...' : 'Sem descrição'}
                     </div>
@@ -305,6 +367,13 @@ export function TelaCompeticoes() {
         </div>
 
       </main>
+
+      {showLoginPopup && (
+        <PopupLogin 
+          onClose={() => setShowLoginPopup(false)} 
+          onLoginSuccess={handleLoginSuccess} 
+        />
+      )}
     </div>
   );
 }

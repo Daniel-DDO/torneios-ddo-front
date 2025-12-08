@@ -4,6 +4,7 @@ import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PopupClubes from '../components/PopupClubes';
+import PopupLogin from '../components/PopupLogin';
 
 interface Clube {
   id: string;
@@ -16,6 +17,19 @@ interface Clube {
   corSecundaria: string;
   ativo: boolean;
   estrelas: number;
+}
+
+interface UserData {
+  id: string;
+  nome: string;
+  discord: string;
+  imagem?: string;
+  cargo: string;
+  saldoVirtual: number;
+  titulos: number;
+  finais: number;
+  partidasJogadas: number;
+  golsMarcados: number;
 }
 
 const LIGA_NAMES: { [key: string]: string } = {
@@ -52,13 +66,14 @@ export function TelaClubes() {
   const [clubes, setClubes] = useState<Clube[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedClubId, setSelectedClubId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark';
   });
-
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -71,6 +86,10 @@ export function TelaClubes() {
   }, [isDarkMode]);
 
   useEffect(() => {
+    const storedUser = localStorage.getItem('user_data');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
     fetchAllClubes();
   }, []);
 
@@ -82,7 +101,7 @@ export function TelaClubes() {
       let hasMore = true;
 
       while (hasMore) {
-        const data = await API.get(`/clube/all?page=${page}`);
+        const data = await API.get(`/clube/all?page=${page}`) as any;
         
         if (data && data.conteudo) {
           allData = [...allData, ...data.conteudo];
@@ -115,6 +134,18 @@ export function TelaClubes() {
 
   const handleClosePopup = () => {
     setSelectedClubId(null);
+  };
+
+  const handleLoginSuccess = (userData: UserData) => {
+    setCurrentUser(userData);
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("Deseja realmente sair?")) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user_data');
+        setCurrentUser(null);
+    }
   };
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
@@ -288,7 +319,45 @@ export function TelaClubes() {
               💡
             </button>
             <button className="icon-btn"><Icons.Bell /></button>
-            <div className="user-avatar-mini">A</div>
+            
+            {currentUser ? (
+              <div 
+                className="user-avatar-mini" 
+                onClick={handleLogout}
+                title="Clique para sair"
+                style={{
+                  backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundColor: currentUser.imagem ? 'transparent' : 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                {!currentUser.imagem && currentUser.nome.charAt(0)}
+              </div>
+            ) : (
+              <button 
+                className="login-btn-header" 
+                onClick={() => setShowLoginPopup(true)}
+                style={{
+                  background: 'var(--primary)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  marginLeft: '10px'
+                }}
+              >
+                Login
+              </button>
+            )}
           </div>
         </header>
 
@@ -340,6 +409,13 @@ export function TelaClubes() {
         </div>
 
       </main>
+
+      {showLoginPopup && (
+        <PopupLogin 
+          onClose={() => setShowLoginPopup(false)} 
+          onLoginSuccess={handleLoginSuccess} 
+        />
+      )}
     </div>
   );
 }

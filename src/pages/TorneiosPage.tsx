@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/TorneiosPage.css';
+import PopupLogin from '../components/PopupLogin';
 
 interface Torneio {
   id: number;
@@ -18,6 +19,19 @@ interface Player {
   posicao: number;
 }
 
+interface UserData {
+  id: string;
+  nome: string;
+  discord: string;
+  imagem?: string;
+  cargo: 'PROPRIETARIO' | 'DIRETOR' | 'ADMINISTRADOR' | 'JOGADOR';
+  saldoVirtual: number;
+  titulos: number;
+  finais: number;
+  partidasJogadas: number;
+  golsMarcados: number;
+}
+
 const Icons = {
   Menu: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
   Dashboard: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
@@ -33,13 +47,21 @@ const Icons = {
 
 export function TorneiosPage() {
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark';
   });
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user_data');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -52,6 +74,10 @@ export function TorneiosPage() {
   }, [isDarkMode]);
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+  const handleLoginSuccess = (userData: UserData) => {
+    setCurrentUser(userData);
+  };
 
   const torneios: Torneio[] = [
     {
@@ -146,7 +172,43 @@ export function TorneiosPage() {
               💡
             </button>
             <button className="icon-btn"><Icons.Bell /></button>
-            <div className="user-avatar-mini">A</div>
+            
+            {currentUser ? (
+              <div 
+                className="user-avatar-mini"
+                style={{
+                  backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundColor: currentUser.imagem ? 'transparent' : 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  cursor: 'default'
+                }}
+              >
+                {!currentUser.imagem && currentUser.nome.charAt(0)}
+              </div>
+            ) : (
+              <button 
+                className="login-btn-header" 
+                onClick={() => setShowLoginPopup(true)}
+                style={{
+                  background: 'var(--primary)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  marginLeft: '10px'
+                }}
+              >
+                Login
+              </button>
+            )}
           </div>
         </header>
 
@@ -227,6 +289,13 @@ export function TorneiosPage() {
           </div>
         </div>
       </main>
+
+      {showLoginPopup && (
+        <PopupLogin 
+          onClose={() => setShowLoginPopup(false)} 
+          onLoginSuccess={handleLoginSuccess} 
+        />
+      )}
     </div>
   );
 }

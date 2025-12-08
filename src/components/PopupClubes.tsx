@@ -44,7 +44,7 @@ const PopupClubes: React.FC<PopupClubesProps> = ({ clubId, onClose }) => {
     const fetchClube = async () => {
       try {
         setLoading(true);
-        const response = await API.get(`/clube/${clubId}`);
+        const response = await API.get(`/clube/${clubId}`) as unknown as Clube;
         setClube(response);
       } catch (error) {
         console.error('Erro ao buscar clube:', error);

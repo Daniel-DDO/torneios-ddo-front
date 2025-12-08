@@ -1,60 +1,54 @@
-// Serviço de configuração da API Backend
-const API_BASE_URL = 'https://torneios-ddo-back.onrender.com'
+import axios from 'axios';
+
+const API_BASE_URL = 'https://torneios-ddo-back.onrender.com';
+
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+axiosInstance.interceptors.response.use(
+  (response) => {
+    return response.data;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export const API = {
-  baseURL: API_BASE_URL,
-
-  async get(endpoint: string) {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`)
-      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`)
-      return await response.json()
-    } catch (error) {
-      console.error('GET Error:', error)
-      throw error
-    }
+  get(endpoint: string, params?: Record<string, any>) {
+    return axiosInstance.get(endpoint, { params });
   },
 
-  async post(endpoint: string, data?: Record<string, any>) {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data || {}),
-      })
-      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`)
-      return await response.json()
-    } catch (error) {
-      console.error('POST Error:', error)
-      throw error
-    }
+  post(endpoint: string, data?: Record<string, any>) {
+    return axiosInstance.post(endpoint, data);
   },
 
-  async put(endpoint: string, data?: Record<string, any>) {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data || {}),
-      })
-      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`)
-      return await response.json()
-    } catch (error) {
-      console.error('PUT Error:', error)
-      throw error
-    }
+  put(endpoint: string, data?: Record<string, any>) {
+    return axiosInstance.put(endpoint, data);
   },
 
-  async delete(endpoint: string) {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: 'DELETE',
-      })
-      if (!response.ok) throw new Error(`HTTP Error: ${response.status}`)
-      return await response.json()
-    } catch (error) {
-      console.error('DELETE Error:', error)
-      throw error
-    }
+  delete(endpoint: string) {
+    return axiosInstance.delete(endpoint);
   },
-}
+
+  patch(endpoint: string, data?: Record<string, any>) {
+    return axiosInstance.patch(endpoint, data);
+  }
+};
