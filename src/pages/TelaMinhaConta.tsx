@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API } from '../services/api'; // Importação mantida, assumindo que é usada em outro lugar ou será usada
+import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
@@ -78,10 +78,7 @@ export function TelaMinhaConta() {
             const storedUser = localStorage.getItem('user_data');
             if (storedUser) {
                 try {
-                    // Tenta fazer o parse do JSON
                     const parsedData = JSON.parse(storedUser);
-
-                    // Verifica se já está no formato UserSession (token e jogador aninhado) ou é só PlayerData
                     const sessionData: UserSession = parsedData.token && parsedData.jogador
                         ? parsedData
                         : { token: '', jogador: parsedData as PlayerData }; 
@@ -92,25 +89,20 @@ export function TelaMinhaConta() {
                     localStorage.removeItem('user_data');
                 }
             }
-            // Simulação de carregamento de dados (API) para o `loading`
-            // Se fosse carregar da API, faria o fetch aqui:
-            // try { const response = await API.get('/me'); setCurrentUser(response.data); } catch (e) {}
-            
             setLoading(false);
         };
         loadUserData();
     }, []);
 
     const handleLoginSuccess = (userData: any) => {
-        // Assume que userData pode ser a sessão completa ou apenas o objeto jogador
         const sessionData: UserSession = userData.token && userData.jogador ? userData : {
-            token: userData.token || 'simulated_token', // Adiciona um token simulado se não houver um
+            token: userData.token || 'simulated_token',
             jogador: userData.jogador || userData as PlayerData
         };
 
         setCurrentUser(sessionData);
         localStorage.setItem('user_data', JSON.stringify(sessionData));
-        setShowLoginPopup(false); // Fecha o popup após o login
+        setShowLoginPopup(false);
     };
 
     const handleLogout = () => {
@@ -167,6 +159,8 @@ export function TelaMinhaConta() {
                     position: relative;
                     width: 160px;
                     height: 160px;
+                    min-width: 160px;
+                    min-height: 160px;
                     border-radius: 50%;
                     border: 4px solid var(--bg-body);
                     box-shadow: var(--shadow-md);
@@ -174,6 +168,7 @@ export function TelaMinhaConta() {
                     cursor: pointer;
                     overflow: hidden;
                     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    z-index: 1;
                 }
 
                 .avatar-wrapper:hover {
@@ -194,6 +189,7 @@ export function TelaMinhaConta() {
                     font-size: 4rem;
                     color: white;
                     font-weight: 700;
+                    border-radius: 50%;
                 }
 
                 .avatar-overlay {
@@ -212,6 +208,7 @@ export function TelaMinhaConta() {
                     text-align: center;
                     padding: 10px;
                     backdrop-filter: blur(3px);
+                    border-radius: 50%;
                 }
 
                 .avatar-wrapper:hover .avatar-overlay {
@@ -512,7 +509,8 @@ export function TelaMinhaConta() {
                                     justifyContent: 'center',
                                     color: 'white',
                                     fontWeight: 'bold',
-                                    cursor: 'pointer'
+                                    cursor: 'pointer',
+                                    borderRadius: '50%'
                                 }}
                             >
                                 {!jogador.imagem && jogador.nome.charAt(0)}
