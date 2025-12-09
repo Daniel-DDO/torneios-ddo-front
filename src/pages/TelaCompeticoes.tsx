@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -42,15 +43,38 @@ const Icons = {
   More: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
 };
 
+const fetchAllCompeticoesService = async (): Promise<Competicao[]> => {
+  try {
+    const response = await API.get(`/competicao/all`);
+    const data = (response && (response as any).data) ? (response as any).data : response;
+
+    if (data && data.conteudo) {
+      return data.conteudo as Competicao[];
+    } else if (Array.isArray(data)) {
+      return data as Competicao[];
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error("Erro ao buscar competições", error);
+    return [];
+  }
+};
+
 export function TelaCompeticoes() {
   const navigate = useNavigate();
 
-  const [competicoes, setCompeticoes] = useState<Competicao[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: competicoes = [], isLoading: loading } = useQuery<Competicao[]>({
+    queryKey: ['competicoes'],
+    queryFn: fetchAllCompeticoesService,
+    staleTime: 1000 * 60 * 5,
+  });
+
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -72,31 +96,7 @@ export function TelaCompeticoes() {
     if (storedUser) {
       setCurrentUser(JSON.parse(storedUser));
     }
-    fetchAllCompeticoes();
   }, []);
-
-  const fetchAllCompeticoes = async () => {
-    try {
-      setLoading(true);
-      
-      const response = await API.get(`/competicao/all`) as any;
-
-      if (response && response.conteudo) {
-        setCompeticoes(response.conteudo);
-      } 
-      else if (Array.isArray(response)) {
-        setCompeticoes(response);
-      } 
-      else {
-        setCompeticoes([]);
-      }
-    } catch (error) {
-      console.error("Erro ao buscar competições", error);
-      setCompeticoes([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLoginSuccess = (userData: UserData) => {
     setCurrentUser(userData);
@@ -112,6 +112,10 @@ export function TelaCompeticoes() {
   };
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+  const filteredCompeticoes = competicoes.filter((competicao: Competicao) =>
+    competicao.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -269,7 +273,12 @@ export function TelaCompeticoes() {
             </button>
             <div className="search-bar">
               <Icons.Search />
-              <input type="text" placeholder="Buscar competição..." />
+              <input 
+                type="text" 
+                placeholder="Buscar competição..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
           
@@ -332,7 +341,7 @@ export function TelaCompeticoes() {
 
             {!loading && (
                 <div className="players-grid-container">
-                {competicoes.map((competicao, index) => (
+                {filteredCompeticoes.map((competicao: Competicao, index: number) => (
                     <div key={competicao.id} className="player-card-item">
                     <div className="card-rank-badge">#{index + 1}</div>
                     

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -48,11 +49,41 @@ const Icons = {
   More: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
 };
 
+const fetchAllPlayersService = async () => {
+  let allData: Player[] = [];
+  let page = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const response = await API.get(`/jogador/all?page=${page}`);
+    const data = (response && (response as any).data) ? (response as any).data : response;
+    
+    if (data && data.conteudo) {
+      allData = [...allData, ...data.conteudo];
+      if (data.ultimaPagina === true) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    } else if (Array.isArray(data)) {
+      allData = data;
+      hasMore = false;
+    } else {
+      hasMore = false;
+    }
+  }
+  return allData;
+};
+
 export function TelaJogadores() {
   const navigate = useNavigate();
 
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: players = [], isLoading: loading } = useQuery({
+    queryKey: ['jogadores'], 
+    queryFn: fetchAllPlayersService,
+    staleTime: 1000 * 60 * 5, 
+  });
+
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
@@ -80,43 +111,7 @@ export function TelaJogadores() {
     if (storedUser) {
       setCurrentUser(JSON.parse(storedUser));
     }
-    fetchAllPlayers();
   }, []);
-
-  const fetchAllPlayers = async () => {
-    try {
-      setLoading(true);
-      let allData: Player[] = [];
-      let page = 0;
-      let hasMore = true;
-
-      while (hasMore) {
-        const data = await API.get(`/jogador/all?page=${page}`) as any;
-        
-        if (data && data.conteudo) {
-          allData = [...allData, ...data.conteudo];
-          
-          if (data.ultimaPagina === true) {
-            hasMore = false;
-          } else {
-            page++;
-          }
-        } else if (Array.isArray(data)) {
-          allData = data;
-          hasMore = false;
-        } else {
-          hasMore = false;
-        }
-      }
-
-      setPlayers(allData);
-
-    } catch (error) {
-      console.error("Erro ao buscar jogadores", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLoginSuccess = (userData: UserData) => {
     setCurrentUser(userData);
