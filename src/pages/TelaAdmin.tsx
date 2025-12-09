@@ -5,6 +5,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupAutorizar from '../components/PopupAutorizar';
+import PopupCadastrarJogador from '../components/PopupCadastrarJogador';
 
 interface UserData {
   id: string;
@@ -44,6 +45,7 @@ export function TelaAdmin() {
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [showAuthPopup, setShowAuthPopup] = useState(false);
+  const [showCadastrarJogadorPopup, setShowCadastrarJogadorPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -266,7 +268,7 @@ export function TelaAdmin() {
             </div>
 
             {/* Cadastrar jogador */}
-            <div className="action-card" onClick={() => console.log('Cadastrar jogador')}>
+            <div className="action-card" onClick={() => setShowCadastrarJogadorPopup(true)}>
                 <div className="action-icon"><Icons.UserPlus /></div>
                 <h4 className="action-title">Cadastrar jogador</h4>
                 <p className="action-desc">Cadastre os novos jogadores aqui</p>
@@ -330,6 +332,12 @@ export function TelaAdmin() {
         <PopupAutorizar
           adminId={currentUser.id}
           onClose={() => setShowAuthPopup(false)}
+        />
+      )}
+
+    {showCadastrarJogadorPopup && (
+        <PopupCadastrarJogador
+          onClose={() => setShowCadastrarJogadorPopup(false)}
         />
       )}
     </div>
