@@ -393,7 +393,12 @@ export function TelaJogadores() {
                         </div>
                     </div>
 
-                    <button className="btn-profile">Ver Perfil</button>
+                    <button 
+                        className="btn-profile" 
+                        onClick={() => navigate(`/jogador/${player.id}`)}
+                    >
+                        Ver Perfil
+                    </button>
                     </div>
                 ))}
                 </div>

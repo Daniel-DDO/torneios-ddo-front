@@ -18,6 +18,10 @@ interface Player {
   statusJogador: string;
   imagem: string | null;
   saldoVirtual: number;
+  // Campos extras vindos do JSON
+  cargo: string;
+  descricao: string | null;
+  insignias: any[];
 }
 
 interface UserData {
@@ -87,8 +91,15 @@ export function TelaPerfilJogador() {
   const fetchPlayerDetails = async (playerId: string) => {
     try {
       setLoading(true);
-      const response = await API.get(`/jogador/${playerId}`);
-      setPlayer(response.data as Player);
+      // Aqui estava o erro: a API provavelmente já retorna os dados desembrulhados
+      const data = await API.get(`/jogador/${playerId}`);
+      
+      // Se data já for o objeto, usamos ele diretamente.
+      // Se for um AxiosResponse, usamos data.data.
+      // A verificação abaixo garante que pegamos o objeto correto.
+      const playerData = (data && (data as any).data) ? (data as any).data : data;
+
+      setPlayer(playerData as Player);
     } catch (error) {
       console.error("Erro ao buscar detalhes do jogador", error);
       alert("Jogador não encontrado ou erro de conexão.");
@@ -379,6 +390,9 @@ export function TelaPerfilJogador() {
                                 </span>
                                 <span className="tag-badge">Saldo: $ {player.saldoVirtual.toLocaleString()}</span>
                             </div>
+                             {player.descricao && (
+                                <p style={{marginTop: '0.5rem', color: 'var(--text-gray)'}}>{player.descricao}</p>
+                             )}
                         </div>
 
                         <div style={{ textAlign: 'right', padding: '1rem' }}>

@@ -5,6 +5,7 @@ import { TelaClubes } from './pages/TelaClubes';
 import { TelaCompeticoes } from './pages/TelaCompeticoes';
 import { TelaMinhaConta } from './pages/TelaMinhaConta';
 import { TelaAdmin } from './pages/TelaAdmin';
+import { TelaPerfilJogador } from './pages/TelaPerfilJogador';
 import './App.css';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
         <Route path="/competicoes" element={<TelaCompeticoes />} />
         <Route path="/minha-conta" element={<TelaMinhaConta />} />
         <Route path="/admin" element={<TelaAdmin />} />
+        <Route path="/jogador/:id" element={<TelaPerfilJogador />} />
 
       </Routes>
     </Router>
