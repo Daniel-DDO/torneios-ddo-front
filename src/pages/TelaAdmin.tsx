@@ -4,6 +4,7 @@ import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import PopupAutorizar from '../components/PopupAutorizar';
 
 interface UserData {
   id: string;
@@ -42,6 +43,7 @@ export function TelaAdmin() {
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
+  const [showAuthPopup, setShowAuthPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -247,7 +249,10 @@ export function TelaAdmin() {
           <div className="admin-grid-actions">
             
             {/* Autorizar jogador */}
-            <div className="action-card" onClick={() => console.log('Autorizar jogador')}>
+            <div 
+                className="action-card" 
+                onClick={() => setShowAuthPopup(true)} 
+            >
                 <div className="action-icon"><Icons.Key /></div>
                 <h4 className="action-title">Autorizar jogador</h4>
                 <p className="action-desc">Gerar código para conta reivindicada</p>
@@ -318,6 +323,13 @@ export function TelaAdmin() {
           user={currentUser}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
+        />
+      )}
+
+      {showAuthPopup && currentUser && (
+        <PopupAutorizar
+          adminId={currentUser.id}
+          onClose={() => setShowAuthPopup(false)}
         />
       )}
     </div>

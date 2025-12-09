@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API } from '../services/api';
 import './PopupReivindicar.css';
 
 interface ReivindicarData {
@@ -17,6 +18,9 @@ const PopupReivindicar: React.FC<PopupReivindicarProps> = ({ onClose, onSubmit }
   const [fadeout, setFadeout] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
     discord: '',
@@ -41,21 +45,40 @@ const PopupReivindicar: React.FC<PopupReivindicarProps> = ({ onClose, onSubmit }
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const getPasswordStatusClass = () => {
+    if (!formData.confirmarSenha) return '';
+    return formData.novaSenha === formData.confirmarSenha ? 'input-success' : 'input-error';
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     
-    // Validações
     if (!formData.discord || !formData.codigo || !formData.novaSenha || !formData.confirmarSenha) {
-      alert("Preencha todos os campos obrigatórios.");
+      setError("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    if (formData.novoEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.novoEmail)) {
+        setError("Por favor, insira um endereço de e-mail válido.");
+        return;
+      }
+    }
+
+    if (formData.novaSenha.length < 8) {
+      setError("A senha deve ter pelo menos 8 caracteres.");
       return;
     }
 
     if (formData.novaSenha !== formData.confirmarSenha) {
-      alert("As senhas não coincidem!");
+      setError("As senhas não coincidem!");
       return;
     }
-    
-    // Remove o confirmarSenha antes de enviar (opcional, dependendo do backend)
+
+    setLoading(true);
+
     const dataToSend: ReivindicarData = {
         discord: formData.discord,
         codigo: formData.codigo,
@@ -63,8 +86,17 @@ const PopupReivindicar: React.FC<PopupReivindicarProps> = ({ onClose, onSubmit }
         novaSenha: formData.novaSenha
     };
 
-    onSubmit(dataToSend);
-    handleClose();
+    try {
+        await API.post('/jogador/reivindicar', dataToSend);
+        
+        onSubmit(dataToSend);
+        handleClose();
+    } catch (err: any) {
+        const msg = err.response?.data?.message || "Erro ao reivindicar conta. Verifique os dados.";
+        setError(msg);
+    } finally {
+        setLoading(false);
+    }
   };
 
   return (
@@ -107,28 +139,28 @@ const PopupReivindicar: React.FC<PopupReivindicarProps> = ({ onClose, onSubmit }
                 <div className="form-group">
                 <label htmlFor="discord">Discord <span className="required-star">*</span></label>
                 <input 
-                    className="reivindicar-input"
-                    type="text" 
-                    id="discord"
-                    name="discord"
-                    placeholder="SeuUser#0000"
-                    value={formData.discord}
-                    onChange={handleChange}
-                    required
+                  className="reivindicar-input"
+                  type="text" 
+                  id="discord"
+                  name="discord"
+                  placeholder="SeuUser"
+                  value={formData.discord}
+                  onChange={handleChange}
+                  required
                 />
                 </div>
 
                 <div className="form-group">
                 <label htmlFor="codigo">Código de Segurança <span className="required-star">*</span></label>
                 <input 
-                    className="reivindicar-input"
-                    type="text" 
-                    id="codigo"
-                    name="codigo"
-                    placeholder="Cole o código"
-                    value={formData.codigo}
-                    onChange={handleChange}
-                    required
+                  className="reivindicar-input"
+                  type="text" 
+                  id="codigo"
+                  name="codigo"
+                  placeholder="Cole o código"
+                  value={formData.codigo}
+                  onChange={handleChange}
+                  required
                 />
                 </div>
             </div>
@@ -137,7 +169,7 @@ const PopupReivindicar: React.FC<PopupReivindicarProps> = ({ onClose, onSubmit }
               <label htmlFor="novoEmail">Email de Acesso <span className="optional-badge">Opcional</span></label>
               <input 
                 className="reivindicar-input"
-                type="email" 
+                type="text" 
                 id="novoEmail"
                 name="novoEmail"
                 placeholder="exemplo@email.com"
@@ -155,7 +187,7 @@ const PopupReivindicar: React.FC<PopupReivindicarProps> = ({ onClose, onSubmit }
                             type={showPassword ? "text" : "password"}
                             id="novaSenha"
                             name="novaSenha"
-                            placeholder="Senha segura"
+                            placeholder="Mínimo 8 caracteres"
                             value={formData.novaSenha}
                             onChange={handleChange}
                             required
@@ -174,7 +206,7 @@ const PopupReivindicar: React.FC<PopupReivindicarProps> = ({ onClose, onSubmit }
                     <label htmlFor="confirmarSenha">Confirmar Senha <span className="required-star">*</span></label>
                     <div className="password-wrapper">
                         <input 
-                            className="reivindicar-input password-field"
+                            className={`reivindicar-input password-field ${getPasswordStatusClass()}`}
                             type={showConfirmPassword ? "text" : "password"}
                             id="confirmarSenha"
                             name="confirmarSenha"
@@ -194,8 +226,10 @@ const PopupReivindicar: React.FC<PopupReivindicarProps> = ({ onClose, onSubmit }
                 </div>
             </div>
 
-            <button type="submit" className="submit-claim-btn">
-              Confirmar e Acessar
+            {error && <div className="reivindicar-error-msg">{error}</div>}
+
+            <button type="submit" className="submit-claim-btn" disabled={loading}>
+              {loading ? <div className="popup-spinner-small"></div> : 'Confirmar e Acessar'}
             </button>
 
           </form>
