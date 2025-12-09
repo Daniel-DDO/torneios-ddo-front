@@ -42,10 +42,7 @@ const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
+    return `D$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const getRoleColor = (role: string) => {
@@ -129,7 +126,7 @@ const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
           </div>
 
           <button onClick={handleLogoutClick} className="logout-btn">
-             SAIR DA CONTA
+              SAIR DA CONTA
           </button>
 
         </div>

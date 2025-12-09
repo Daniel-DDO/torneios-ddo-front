@@ -4,7 +4,7 @@ import { API } from '../services/api';
 
 interface PopupLoginProps {
   onClose: () => void;
-  onLoginSuccess: (userData: any) => void; 
+  onLoginSuccess: (userData: any) => void;
 }
 
 const PopupLogin: React.FC<PopupLoginProps> = ({ onClose, onLoginSuccess }) => {

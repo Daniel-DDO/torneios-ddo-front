@@ -156,7 +156,7 @@ export function TorneiosPage() {
           <a href="#" className="nav-item"><Icons.Shield /> Títulos</a>
           <div className="nav-separator"></div>
           <a href="#" className="nav-item"><Icons.Calendar /> Partidas</a>
-          <a href="#" className="nav-item"><Icons.Wallet /> Minha conta</a>
+           <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}><Icons.Wallet /> Minha conta</a>
           <a href="#" className="nav-item"><Icons.Settings /> Suporte</a>
         </nav>
       </aside>

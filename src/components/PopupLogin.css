@@ -29,7 +29,7 @@
   transform: scale(0.95);
   animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   border: 2px solid transparent;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease, color 0.3s ease;
   min-height: 300px;
   display: flex;
   flex-direction: column;
@@ -102,7 +102,7 @@
   font-size: 1.8rem;
   font-weight: 800;
   margin: 0 0 5px 0;
-  color: var(--text-dark, #000);
+  color: var(--text-primary, #333);
 }
 
 .popup-club-league-badge {
@@ -116,128 +116,133 @@
 }
 
 .login-popup-width {
-    max-width: 400px;
+  max-width: 400px;
 }
 
 .login-form {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-    width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
 }
 
 .login-input-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
 }
 
 .login-input-group label {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-primary, #333); 
-    margin-left: 2px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary, #333); 
+  margin-left: 2px;
 }
 
 .login-input {
-    padding: 12px 16px;
-    border-radius: 12px;
-    border: 1px solid var(--border-color, #ccc);
-    background-color: var(--hover-bg, #f9f9f9);
-    color: var(--text-primary, #333);
-    font-size: 1rem;
-    transition: all 0.2s ease;
-    outline: none;
-    width: 100%;
-    box-sizing: border-box;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color, #ccc);
+  background-color: var(--hover-bg, #f9f9f9);
+  color: var(--text-primary, #333);
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.login-input::placeholder {
+  color: #999;
 }
 
 .login-input:focus {
-    border-color: var(--primary, #007bff);
-    background-color: var(--bg-card, #fff);
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+  border-color: var(--primary, #007bff);
+  background-color: var(--bg-card, #fff);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+  color: var(--text-primary, #333);
 }
 
 .password-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
 }
 
 .password-input {
-    padding-right: 45px; 
+  padding-right: 45px; 
 }
 
 .password-toggle-btn {
-    position: absolute;
-    right: 12px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--text-gray, #888);
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s;
-    height: 100%;
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-gray, #888);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  height: 100%;
 }
 
 .password-toggle-btn:hover {
-    color: var(--primary, #007bff);
+  color: var(--primary, #007bff);
 }
 
 .login-submit-btn {
-    margin-top: 15px;
-    padding: 14px;
-    border-radius: 12px;
-    border: none;
-    background-color: var(--primary, #007bff);
-    color: white;
-    font-size: 1rem;
-    font-weight: 800;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 4px 6px rgba(0, 123, 255, 0.2);
+  margin-top: 15px;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  background-color: var(--primary, #007bff);
+  color: white;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 6px rgba(0, 123, 255, 0.2);
 }
 
 .login-submit-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 123, 255, 0.3);
-    filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 123, 255, 0.3);
+  filter: brightness(1.1);
 }
 
 .login-submit-btn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .login-error-msg {
-    color: #d63031;
-    background-color: rgba(214, 48, 49, 0.1);
-    padding: 12px;
-    border-radius: 10px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    text-align: center;
-    border: 1px solid rgba(214, 48, 49, 0.2);
-    animation: slideUp 0.2s ease;
+  color: #d63031;
+  background-color: rgba(214, 48, 49, 0.1);
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+  border: 1px solid rgba(214, 48, 49, 0.2);
+  animation: slideUp 0.2s ease;
 }
 
 .popup-spinner-small {
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(255,255,255,0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -246,3 +251,55 @@
 @keyframes scaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.9); opacity: 0; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+@media (prefers-color-scheme: dark) {
+  .popup-content {
+    background-color: #1a1a1a;
+    color: #ffffff !important;
+    border-color: #333;
+  }
+  
+  .popup-club-name {
+    color: #ffffff !important;
+  }
+
+  .popup-club-league-badge {
+    background-color: #333;
+    color: #ffffff !important;
+  }
+
+  .login-input-group label {
+    color: #ffffff !important;
+  }
+
+  .login-input {
+    background-color: #2d2d2d;
+    color: #ffffff !important;
+    border-color: #404040;
+    caret-color: #ffffff;
+  }
+  
+  .login-input::placeholder {
+    color: #bbbbbb !important;
+  }
+  
+  .login-input:focus {
+    background-color: #333;
+    color: #ffffff !important;
+    border-color: var(--primary, #007bff);
+  }
+
+  .password-toggle-btn {
+    color: #bbbbbb;
+  }
+
+  .popup-club-image-wrapper {
+    background-color: #2d2d2d;
+  }
+  
+  .popup-close-btn {
+    background-color: #333;
+    border-color: #444;
+    color: #ffffff;
+  }
+}
