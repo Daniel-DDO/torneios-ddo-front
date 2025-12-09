@@ -1,10 +1,52 @@
+:root {
+  --pl-bg-overlay: rgba(0, 0, 0, 0.75);
+  --pl-bg-card: #ffffff;
+  --pl-text-primary: #333333;
+  --pl-text-secondary: #666666;
+  --pl-border: #e0e0e0;
+  
+  --pl-input-bg: #f9f9f9;
+  --pl-input-border: #cccccc;
+  --pl-input-text: #333333;
+  --pl-input-placeholder: #999999;
+  --pl-input-focus-border: #007bff;
+  
+  --pl-btn-close-bg: #f0f0f0;
+  --pl-btn-close-text: #666666;
+  
+  --pl-badge-bg: #eeeeee;
+  --pl-badge-text: #555555;
+  
+  --pl-club-img-bg: #ffffff;
+}
+
+body.dark-mode {
+  --pl-bg-card: #1a1a1a;
+  --pl-text-primary: #ffffff;
+  --pl-text-secondary: #aaaaaa;
+  --pl-border: #333333;
+  
+  --pl-input-bg: #2d2d2d;
+  --pl-input-border: #444444;
+  --pl-input-text: #ffffff;
+  --pl-input-placeholder: #bbbbbb;
+  
+  --pl-btn-close-bg: #333333;
+  --pl-btn-close-text: #ffffff;
+  
+  --pl-badge-bg: #333333;
+  --pl-badge-text: #ffffff;
+  
+  --pl-club-img-bg: #2d2d2d;
+}
+
 .popup-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.75);
+  background-color: var(--pl-bg-overlay);
   backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
@@ -20,16 +62,16 @@
 }
 
 .popup-content {
-  background-color: var(--bg-card, #fff);
-  color: var(--text-primary, #333);
+  background-color: var(--pl-bg-card);
+  color: var(--pl-text-primary);
   padding: 40px;
   border-radius: 20px;
   width: 90%;
   position: relative;
   transform: scale(0.95);
   animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  border: 2px solid transparent;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+  border: 1px solid var(--pl-border);
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   min-height: 300px;
   display: flex;
   flex-direction: column;
@@ -47,14 +89,14 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: var(--hover-bg, #f0f0f0);
-  border: 1px solid var(--border-color, #eee);
+  background-color: var(--pl-btn-close-bg);
+  border: 1px solid transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--text-gray, #666);
-  transition: background-color 0.2s, color 0.2s, transform 0.2s;
+  color: var(--pl-btn-close-text);
+  transition: all 0.2s;
   z-index: 10;
   padding: 0;
 }
@@ -62,7 +104,6 @@
 .popup-close-btn:hover {
   background-color: #ff4d4d;
   color: white;
-  border-color: #ff4d4d;
   transform: scale(1.1);
 }
 
@@ -90,7 +131,7 @@
   border-radius: 50%;
   padding: 5px;
   border: 2px solid transparent;
-  background-color: var(--bg-main, #fff);
+  background-color: var(--pl-club-img-bg);
   margin-bottom: 15px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   display: flex;
@@ -102,12 +143,12 @@
   font-size: 1.8rem;
   font-weight: 800;
   margin: 0 0 5px 0;
-  color: var(--text-primary, #333);
+  color: var(--pl-text-primary);
 }
 
 .popup-club-league-badge {
-  background: var(--hover-bg, #eee);
-  color: var(--text-gray, #555);
+  background: var(--pl-badge-bg);
+  color: var(--pl-badge-text);
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 0.9rem;
@@ -136,16 +177,17 @@
 .login-input-group label {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--text-primary, #333); 
+  color: var(--pl-text-primary);
   margin-left: 2px;
+  transition: color 0.3s;
 }
 
 .login-input {
   padding: 12px 16px;
   border-radius: 12px;
-  border: 1px solid var(--border-color, #ccc);
-  background-color: var(--hover-bg, #f9f9f9);
-  color: var(--text-primary, #333);
+  border: 1px solid var(--pl-input-border);
+  background-color: var(--pl-input-bg);
+  color: var(--pl-input-text);
   font-size: 1rem;
   transition: all 0.2s ease;
   outline: none;
@@ -154,14 +196,14 @@
 }
 
 .login-input::placeholder {
-  color: #999;
+  color: var(--pl-input-placeholder);
 }
 
 .login-input:focus {
-  border-color: var(--primary, #007bff);
-  background-color: var(--bg-card, #fff);
+  border-color: var(--pl-input-focus-border);
+  background-color: var(--pl-input-bg);
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
-  color: var(--text-primary, #333);
+  color: var(--pl-input-text);
 }
 
 .password-wrapper {
@@ -172,7 +214,7 @@
 }
 
 .password-input {
-  padding-right: 45px; 
+  padding-right: 45px;
 }
 
 .password-toggle-btn {
@@ -181,7 +223,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-gray, #888);
+  color: var(--pl-input-placeholder);
   padding: 4px;
   display: flex;
   align-items: center;
@@ -191,7 +233,7 @@
 }
 
 .password-toggle-btn:hover {
-  color: var(--primary, #007bff);
+  color: var(--pl-input-focus-border);
 }
 
 .login-submit-btn {
@@ -199,7 +241,7 @@
   padding: 14px;
   border-radius: 12px;
   border: none;
-  background-color: var(--primary, #007bff);
+  background-color: var(--pl-input-focus-border);
   color: white;
   font-size: 1rem;
   font-weight: 800;
@@ -251,55 +293,3 @@
 @keyframes scaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.9); opacity: 0; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
-
-@media (prefers-color-scheme: dark) {
-  .popup-content {
-    background-color: #1a1a1a;
-    color: #ffffff !important;
-    border-color: #333;
-  }
-  
-  .popup-club-name {
-    color: #ffffff !important;
-  }
-
-  .popup-club-league-badge {
-    background-color: #333;
-    color: #ffffff !important;
-  }
-
-  .login-input-group label {
-    color: #ffffff !important;
-  }
-
-  .login-input {
-    background-color: #2d2d2d;
-    color: #ffffff !important;
-    border-color: #404040;
-    caret-color: #ffffff;
-  }
-  
-  .login-input::placeholder {
-    color: #bbbbbb !important;
-  }
-  
-  .login-input:focus {
-    background-color: #333;
-    color: #ffffff !important;
-    border-color: var(--primary, #007bff);
-  }
-
-  .password-toggle-btn {
-    color: #bbbbbb;
-  }
-
-  .popup-club-image-wrapper {
-    background-color: #2d2d2d;
-  }
-  
-  .popup-close-btn {
-    background-color: #333;
-    border-color: #444;
-    color: #ffffff;
-  }
-}

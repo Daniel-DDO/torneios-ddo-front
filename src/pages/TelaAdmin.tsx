@@ -30,8 +30,10 @@ const Icons = {
   Search: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
   Bell: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
   Lock: () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
-  Alert: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>,
-  FileText: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+  Key: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>,
+  UserPlus: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>,
+  UserCheck: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
+  // Os outros ícones não estavam no objeto original, mas mantive a estrutura dos que foram adicionados no input.
 };
 
 export function TelaAdmin() {
@@ -110,53 +112,6 @@ export function TelaAdmin() {
         margin-bottom: 2rem;
     }
 
-    .admin-stats-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 20px;
-        margin-bottom: 32px;
-    }
-
-    .admin-stat-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius);
-        padding: 20px;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        transition: 0.2s;
-    }
-    
-    .admin-stat-card:hover {
-        transform: translateY(-2px);
-        border-color: var(--primary);
-    }
-
-    .stat-icon-wrapper {
-        width: 50px;
-        height: 50px;
-        border-radius: 12px;
-        background: var(--hover-bg);
-        color: var(--primary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .stat-info h4 {
-        font-size: 0.9rem;
-        color: var(--text-gray);
-        margin-bottom: 4px;
-        font-weight: 500;
-    }
-
-    .stat-info span {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--text-dark);
-    }
-
     .admin-grid-actions {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -172,6 +127,9 @@ export function TelaAdmin() {
         transition: all 0.2s;
         position: relative;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .action-card:hover {
@@ -200,21 +158,8 @@ export function TelaAdmin() {
         line-height: 1.5;
     }
 
-    .urgent-badge {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        background: #ff4757;
-        color: white;
-        font-size: 0.75rem;
-        font-weight: 700;
-        padding: 4px 8px;
-        border-radius: 12px;
-    }
-
     @media (max-width: 900px) {
         .page-content { padding: 1rem; }
-        .admin-stats-row { grid-template-columns: 1fr; }
     }
   `}</style>
 
@@ -294,81 +239,69 @@ export function TelaAdmin() {
             <div>
               <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Painel Administrativo</h2>
               <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>
-                Bem-vindo, {currentUser && currentUser.cargo ? currentUser.cargo.charAt(0) + currentUser.cargo.slice(1).toLowerCase() : 'Admin'}. Controle total do sistema.
+                Bem-vindo, {currentUser && currentUser.cargo ? currentUser.cargo.charAt(0) + currentUser.cargo.slice(1).toLowerCase() : 'Admin'}. Gerencie o sistema aqui.
               </p>
             </div>
           </div>
 
-          <div className="admin-stats-row">
-            <div className="admin-stat-card">
-              <div className="stat-icon-wrapper"><Icons.Users /></div>
-              <div className="stat-info">
-                <h4>Total Jogadores</h4>
-                <span>142</span>
-              </div>
-            </div>
-            <div className="admin-stat-card">
-              <div className="stat-icon-wrapper" style={{color: '#f1c40f'}}><Icons.Alert /></div>
-              <div className="stat-info">
-                <h4>Pendências</h4>
-                <span>3</span>
-              </div>
-            </div>
-            <div className="admin-stat-card">
-              <div className="stat-icon-wrapper" style={{color: '#2ecc71'}}><Icons.Trophy /></div>
-              <div className="stat-info">
-                <h4>Torneios Ativos</h4>
-                <span>2</span>
-              </div>
-            </div>
-            <div className="admin-stat-card">
-              <div className="stat-icon-wrapper" style={{color: '#9b59b6'}}><Icons.Wallet /></div>
-              <div className="stat-info">
-                <h4>Economia</h4>
-                <span>D$ 850k</span>
-              </div>
-            </div>
-          </div>
-
-          <h3 style={{marginBottom: '20px', color: 'var(--text-dark)'}}>Ações Rápidas</h3>
-          
           <div className="admin-grid-actions">
-            <div className="action-card">
-              <div className="action-icon"><Icons.Users /></div>
-              <h4 className="action-title">Gerenciar Usuários</h4>
-              <p className="action-desc">Editar permissões, aplicar banimentos e verificar novos cadastros.</p>
+            
+            {/* Autorizar jogador */}
+            <div className="action-card" onClick={() => console.log('Autorizar jogador')}>
+                <div className="action-icon"><Icons.Key /></div>
+                <h4 className="action-title">Autorizar jogador</h4>
+                <p className="action-desc">Gerar código para conta reivindicada</p>
             </div>
 
-            <div className="action-card">
-              <div className="urgent-badge">1 Pendente</div>
-              <div className="action-icon"><Icons.Shield /></div>
-              <h4 className="action-title">Verificar Partidas</h4>
-              <p className="action-desc">Aprovar ou rejeitar resultados de partidas enviadas pelos jogadores.</p>
+            {/* Recupere a senha */}
+            <div className="action-card" onClick={() => console.log('Recupere a senha')}>
+                <div className="action-icon"><Icons.Lock /></div>
+                <h4 className="action-title">Recupere a senha</h4>
+                <p className="action-desc">Gere e envie o pin para o jogador que esqueceu da sua senha</p>
             </div>
 
-            <div className="action-card">
-              <div className="action-icon"><Icons.Trophy /></div>
-              <h4 className="action-title">Criar Competição</h4>
-              <p className="action-desc">Configurar novas ligas, copas ou torneios de mata-mata.</p>
+            {/* Cadastrar jogador */}
+            <div className="action-card" onClick={() => console.log('Cadastrar jogador')}>
+                <div className="action-icon"><Icons.UserPlus /></div>
+                <h4 className="action-title">Cadastrar jogador</h4>
+                <p className="action-desc">Cadastre os novos jogadores aqui</p>
             </div>
 
-            <div className="action-card">
-              <div className="action-icon"><Icons.Wallet /></div>
-              <h4 className="action-title">Gestão Financeira</h4>
-              <p className="action-desc">Injetar saldo, aplicar multas e visualizar fluxo de D$.</p>
+            {/* Atualizar jogador */}
+            <div className="action-card" onClick={() => console.log('Atualizar jogador')}>
+                <div className="action-icon"><Icons.UserCheck /></div>
+                <h4 className="action-title">Atualizar jogador</h4>
+                <p className="action-desc">Aposentou? Voltou? Atualize o status dos jogadores aqui</p>
             </div>
 
-            <div className="action-card">
-              <div className="action-icon"><Icons.FileText /></div>
-              <h4 className="action-title">Logs do Sistema</h4>
-              <p className="action-desc">Auditoria de ações realizadas por outros membros da staff.</p>
+            {/* Gerenciar temporadas */}
+            <div className="action-card" onClick={() => console.log('Gerenciar temporadas')}>
+                <div className="action-icon"><Icons.Calendar /></div>
+                <h4 className="action-title">Gerenciar temporadas</h4>
+                <p className="action-desc">Visualize, crie e edite as temporadas</p>
             </div>
 
-            <div className="action-card">
-              <div className="action-icon"><Icons.Settings /></div>
-              <h4 className="action-title">Configurações Gerais</h4>
-              <p className="action-desc">Alterar banner principal, avisos e manutenção do site.</p>
+            {/* Gerenciar torneios */}
+            <div className="action-card" onClick={() => console.log('Gerenciar torneios')}>
+                <div className="action-icon"><Icons.Trophy /></div>
+                <h4 className="action-title">Gerenciar torneios</h4>
+                <p className="action-desc">Visualize, crie e edite os torneios</p>
             </div>
+
+            {/* Cadastrar clubes */}
+            <div className="action-card" onClick={() => console.log('Gerenciar clubes')}>
+                <div className="action-icon"><Icons.Shield /></div>
+                <h4 className="action-title">Cadastrar clubes</h4>
+                <p className="action-desc">Visualize e crie os clubes</p>
+            </div>
+
+            {/* Criar anúncio */}
+            <div className="action-card" onClick={() => console.log('Criar anúncio')}>
+                <div className="action-icon"><Icons.Trophy /></div>
+                <h4 className="action-title">Criar anúncio</h4>
+                <p className="action-desc">Visualize, crie e edite os anúncios</p>
+            </div>
+
           </div>
         </div>
       </main>

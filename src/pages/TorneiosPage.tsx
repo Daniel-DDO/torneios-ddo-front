@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import PopupReivindicar from '../components/PopupReivindicar';
 
 interface Torneio {
   id: number;
@@ -134,6 +135,8 @@ export function TorneiosPage() {
       default: return status;
     }
   };
+
+  const [showReivindicarPopup, setShowReivindicarPopup] = useState(false);
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -267,6 +270,37 @@ export function TorneiosPage() {
             </div>
 
             <aside className="right-column">
+              {!currentUser && (
+                <button 
+                  onClick={() => setShowReivindicarPopup(true)}
+                  style={{
+                    width: '100%',
+                    marginBottom: '20px',
+                    padding: '15px',
+                    background: 'linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%)', 
+                    border: 'none',
+                    borderRadius: '16px',
+                    color: 'white',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div style={{ textAlign: 'left' }}>
+                    <span style={{ display: 'block', fontSize: '0.8rem', opacity: 0.9, marginBottom: '2px' }}>Sou Jogador?</span>
+                    <span style={{ display: 'block', fontSize: '1rem', fontWeight: 'bold' }}>Reivindicar Conta</span>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.2)', padding: '8px', borderRadius: '10px' }}>
+                    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                  </div>
+                </button>
+              )}
               <div className="ranking-card">
                 <div className="ranking-header">
                   <h3>Top Players</h3>
@@ -316,6 +350,16 @@ export function TorneiosPage() {
           onLogout={handleLogout}
         />
       )}
+
+      {showReivindicarPopup && (
+      <PopupReivindicar 
+        onClose={() => setShowReivindicarPopup(false)}
+        onSubmit={(data) => {
+          console.log("Dados para Reivindicar:", data);
+          setShowReivindicarPopup(false);
+        }}
+      />
+    )}
     </div>
   );
 }
