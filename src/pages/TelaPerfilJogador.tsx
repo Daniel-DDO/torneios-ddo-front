@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
-import PopupCadastrarJogador from '../components/PopupCadastrarJogador';
 
 interface Player {
   id: string;
@@ -45,20 +44,20 @@ const Icons = {
   Settings: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
   Search: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
   Bell: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
-  More: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+  Back: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>,
+  Medal: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
 };
 
-export function TelaJogadores() {
+export function TelaPerfilJogador() {
   const navigate = useNavigate();
+  const { id } = useParams();
 
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
-  const [showCadastrarJogadorPopup, setShowCadastrarJogadorPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -80,39 +79,20 @@ export function TelaJogadores() {
     if (storedUser) {
       setCurrentUser(JSON.parse(storedUser));
     }
-    fetchAllPlayers();
-  }, []);
+    if (id) {
+        fetchPlayerDetails(id);
+    }
+  }, [id]);
 
-  const fetchAllPlayers = async () => {
+  const fetchPlayerDetails = async (playerId: string) => {
     try {
       setLoading(true);
-      let allData: Player[] = [];
-      let page = 0;
-      let hasMore = true;
-
-      while (hasMore) {
-        const data = await API.get(`/jogador/all?page=${page}`) as any;
-        
-        if (data && data.conteudo) {
-          allData = [...allData, ...data.conteudo];
-          
-          if (data.ultimaPagina === true) {
-            hasMore = false;
-          } else {
-            page++;
-          }
-        } else if (Array.isArray(data)) {
-          allData = data;
-          hasMore = false;
-        } else {
-          hasMore = false;
-        }
-      }
-
-      setPlayers(allData);
-
+      const response = await API.get(`/jogador/${playerId}`);
+      setPlayer(response.data as Player);
     } catch (error) {
-      console.error("Erro ao buscar jogadores", error);
+      console.error("Erro ao buscar detalhes do jogador", error);
+      alert("Jogador não encontrado ou erro de conexão.");
+      navigate('/jogadores');
     } finally {
       setLoading(false);
     }
@@ -133,10 +113,6 @@ export function TelaJogadores() {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const filteredPlayers = players.filter(player =>
-    player.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       
@@ -147,112 +123,132 @@ export function TelaJogadores() {
           padding: 2rem 3rem;
         }
 
-        .players-grid-container {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-          gap: 24px;
-          margin-top: 24px;
+        .profile-header-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
         }
 
-        .player-card-item {
-          background-color: var(--bg-card);
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius);
-          padding: 24px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-          transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-          position: relative;
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: var(--hover-bg);
+            border: 4px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary);
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
         }
 
-        .player-card-item:hover {
-          transform: translateY(-5px);
-          box-shadow: var(--shadow-md);
-          border-color: var(--primary);
+        .profile-info {
+            flex: 1;
         }
 
-        .card-rank-badge {
-          position: absolute;
-          top: 16px;
-          right: 16px;
-          background: var(--hover-bg);
-          color: var(--primary);
-          font-weight: 800;
-          padding: 4px 10px;
-          border-radius: 12px;
-          font-size: 0.8rem;
-          border: 1px solid var(--border-color);
+        .profile-name {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
         }
 
-        .card-avatar-large {
-          width: 80px;
-          height: 80px;
-          border-radius: 50%;
-          background: var(--hover-bg);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 2rem;
-          font-weight: 700;
-          color: var(--primary);
-          margin-bottom: 16px;
-          border: 2px solid var(--border-color);
-          background-size: cover;
-          background-position: center;
+        .profile-discord {
+            color: var(--text-gray);
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
         }
 
-        .card-name {
-          font-size: 1.1rem;
-          font-weight: 700;
-          color: var(--text-dark);
-          margin-bottom: 4px;
+        .profile-tags {
+            display: flex;
+            gap: 1rem;
         }
 
-        .card-location {
-          font-size: 0.85rem;
-          color: var(--text-gray);
-          margin-bottom: 16px;
+        .tag-badge {
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: var(--hover-bg);
+            color: var(--text-dark);
+            border: 1px solid var(--border-color);
         }
 
-        .card-stats-row {
-          display: flex;
-          justify-content: space-between;
-          width: 100%;
-          background: var(--hover-bg);
-          padding: 10px 16px;
-          border-radius: 12px;
-          margin-bottom: 16px;
+        .tag-status-active {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border-color: rgba(16, 185, 129, 0.2);
         }
 
-        .stat-box {
-          display: flex;
-          flex-direction: column;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
         }
 
-        .stat-val { font-weight: 700; color: var(--text-dark); font-size: 0.95rem; }
-        .stat-lbl { font-size: 0.7rem; color: var(--text-gray); text-transform: uppercase; }
-
-        .btn-profile {
-          width: 100%;
-          padding: 10px;
-          border-radius: 10px;
-          border: 1px solid var(--primary);
-          background: transparent;
-          color: var(--primary);
-          font-weight: 600;
-          cursor: pointer;
-          transition: 0.2s;
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transition: 0.2s;
         }
 
-        .btn-profile:hover {
-          background: var(--primary);
-          color: white;
+        .stat-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--primary);
+        }
+
+        .stat-icon-wrapper {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--hover-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .stat-value-big {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+
+        .stat-label-small {
+            font-size: 0.85rem;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 0.5rem;
         }
 
         @media (max-width: 768px) {
-          .page-content { padding: 1rem; }
+            .page-content { padding: 1rem; }
+            .profile-header-card { flex-direction: column; text-align: center; padding: 1.5rem; }
+            .profile-tags { justify-content: center; }
         }
       `}</style>
 
@@ -292,12 +288,7 @@ export function TelaJogadores() {
             </button>
             <div className="search-bar">
               <Icons.Search />
-              <input 
-                type="text" 
-                placeholder="Buscar jogador..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+              <input type="text" placeholder="Buscar..." disabled />
             </div>
           </div>
           
@@ -348,55 +339,97 @@ export function TelaJogadores() {
         </header>
 
         <div className="page-content">
-            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Jogadores Cadastrados</h2>
-                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize todos os jogadores</p>
-            </div>
-            {currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo) && (
+            <div style={{ marginBottom: '1.5rem' }}>
                 <button 
-                  className="t-btn" 
-                  onClick={() => setShowCadastrarJogadorPopup(true)}
-                  style={{background: 'var(--primary)', color: 'white', border: 'none'}}
+                    onClick={() => navigate('/jogadores')} 
+                    style={{ 
+                        background: 'none', 
+                        border: 'none', 
+                        color: 'var(--text-gray)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem', 
+                        cursor: 'pointer',
+                        fontWeight: 600
+                    }}
                 >
-                    + Novo Jogador
+                    <Icons.Back /> Voltar para lista
                 </button>
-            )}
             </div>
 
-            {!loading && (
-                <div className="players-grid-container">
-                {filteredPlayers.map((player, index) => (
-                    <div key={player.id} className="player-card-item">
-                    <div className="card-rank-badge">#{index + 1}</div>
-                    
-                    {player.imagem ? (
-                        <div className="card-avatar-large" style={{backgroundImage: `url(${player.imagem})`}}></div>
-                    ) : (
-                        <div className="card-avatar-large">
-                            {player.nome.charAt(0)}
+            {!loading && player && (
+                <>
+                    <div className="profile-header-card">
+                        {player.imagem ? (
+                            <div className="profile-avatar" style={{backgroundImage: `url(${player.imagem})`}}></div>
+                        ) : (
+                            <div className="profile-avatar">
+                                {player.nome.charAt(0)}
+                            </div>
+                        )}
+                        
+                        <div className="profile-info">
+                            <h1 className="profile-name">{player.nome}</h1>
+                            <div className="profile-discord">
+                                <span style={{opacity: 0.7}}>Discord:</span> {player.discord}
+                            </div>
+                            <div className="profile-tags">
+                                <span className={`tag-badge ${player.statusJogador === 'ATIVO' ? 'tag-status-active' : ''}`}>
+                                    {player.statusJogador}
+                                </span>
+                                <span className="tag-badge">Saldo: $ {player.saldoVirtual.toLocaleString()}</span>
+                            </div>
                         </div>
-                    )}
-                    
-                    <div className="card-name">{player.nome}</div>
-                    <div className="card-location">{player.discord || 'Jogador DDO'}</div>
-                    
-                    <div className="card-stats-row">
-                        <div className="stat-box">
-                        <span className="stat-val">{player.partidasJogadas}</span>
-                        <span className="stat-lbl">Partidas</span>
-                        </div>
-                        <div style={{width: '1px', background: 'var(--border-color)'}}></div>
-                        <div className="stat-box">
-                        <span className="stat-val">{player.titulos}</span>
-                        <span className="stat-lbl">Títulos</span>
+
+                        <div style={{ textAlign: 'right', padding: '1rem' }}>
+                             <Icons.Medal />
                         </div>
                     </div>
 
-                    <button className="btn-profile">Ver Perfil</button>
+                    <h3 style={{marginBottom: '1rem', color: 'var(--text-gray)'}}>Estatísticas da Carreira</h3>
+                    
+                    <div className="stats-grid">
+                        <div className="stat-card">
+                            <div className="stat-icon-wrapper"><Icons.Trophy /></div>
+                            <div className="stat-value-big">{player.titulos}</div>
+                            <div className="stat-label-small">Títulos Conquistados</div>
+                        </div>
+
+                        <div className="stat-card">
+                            <div className="stat-icon-wrapper"><Icons.Medal /></div>
+                            <div className="stat-value-big">{player.finais}</div>
+                            <div className="stat-label-small">Finais Disputadas</div>
+                        </div>
+
+                        <div className="stat-card">
+                            <div className="stat-icon-wrapper"><Icons.Calendar /></div>
+                            <div className="stat-value-big">{player.partidasJogadas}</div>
+                            <div className="stat-label-small">Partidas Jogadas</div>
+                        </div>
+
+                        <div className="stat-card">
+                            <div className="stat-icon-wrapper">⚽</div>
+                            <div className="stat-value-big">{player.golsMarcados}</div>
+                            <div className="stat-label-small">Gols Marcados</div>
+                        </div>
+
+                        <div className="stat-card">
+                            <div className="stat-icon-wrapper">🥅</div>
+                            <div className="stat-value-big">{player.golsSofridos}</div>
+                            <div className="stat-label-small">Gols Sofridos</div>
+                        </div>
+
+                         <div className="stat-card">
+                            <div className="stat-icon-wrapper">📊</div>
+                            <div className="stat-value-big">
+                                {player.partidasJogadas > 0 
+                                    ? ((player.golsMarcados / player.partidasJogadas).toFixed(2)) 
+                                    : '0.00'}
+                            </div>
+                            <div className="stat-label-small">Média de Gols</div>
+                        </div>
                     </div>
-                ))}
-                </div>
+                </>
             )}
         </div>
 
@@ -414,12 +447,6 @@ export function TelaJogadores() {
           user={currentUser}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
-        />
-      )}
-
-      {showCadastrarJogadorPopup && (
-        <PopupCadastrarJogador
-          onClose={() => setShowCadastrarJogadorPopup(false)}
         />
       )}
     </div>
