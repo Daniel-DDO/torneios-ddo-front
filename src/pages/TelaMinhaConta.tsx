@@ -97,18 +97,22 @@ const Icons = {
       <polyline points="17 21 17 13 7 13 7 21"></polyline>
       <polyline points="7 3 7 8 15 8"></polyline>
     </svg>
+  ),
+  Lock: () => (
+    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+    </svg>
   )
 };
 
 export function TelaMinhaConta() {
   const navigate = useNavigate();
-
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark';
@@ -147,188 +151,189 @@ export function TelaMinhaConta() {
   };
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
+  const isAdmin = currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       <LoadingSpinner isLoading={loading} />
 
       <style>{`
-        .page-content {
-          padding: 2rem 3rem;
-        }
-        
-        .account-grid {
-          display: grid;
-          grid-template-columns: 320px 1fr;
-          gap: 24px;
-          margin-top: 24px;
-        }
+    .page-content {
+      padding: 2rem 3rem;
+    }
+    
+    .account-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 24px;
+      margin-top: 24px;
+    }
 
-        .section-card {
-          background-color: var(--bg-card);
-          border: 1px solid var(--border-color);
-          border-radius: var(--radius);
-          padding: 24px;
-          height: fit-content;
-        }
+    .section-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 24px;
+      height: fit-content;
+    }
 
-        .profile-header {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-        }
+    .profile-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
 
-        .profile-avatar-xl {
-          width: 120px;
-          height: 120px;
-          border-radius: 50%;
-          background: var(--hover-bg);
-          border: 3px solid var(--border-color);
-          margin-bottom: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 2.5rem;
-          font-weight: 700;
-          color: var(--primary);
-          background-size: cover;
-          background-position: center;
-        }
+    .profile-avatar-xl {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: var(--hover-bg);
+      border: 3px solid var(--border-color);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      background-size: cover;
+      background-position: center;
+    }
 
-        .profile-name {
-          font-size: 1.4rem;
-          font-weight: 700;
-          color: var(--text-dark);
-          margin-bottom: 4px;
-        }
+    .profile-name {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 4px;
+    }
 
-        .profile-role {
-          background: var(--hover-bg);
-          color: var(--primary);
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 0.85rem;
-          font-weight: 600;
-          margin-bottom: 24px;
-          border: 1px solid var(--border-color);
-        }
+    .profile-role {
+      background: var(--hover-bg);
+      color: var(--primary);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+      border: 1px solid var(--border-color);
+    }
 
-        .wallet-card {
-            background: linear-gradient(135deg, var(--bg-body), var(--hover-bg));
-            border-radius: 12px;
-            padding: 20px;
-            width: 100%;
-            margin-bottom: 24px;
-            border: 1px solid var(--border-color);
-        }
+    .wallet-card {
+        background: linear-gradient(135deg, var(--bg-body), var(--hover-bg));
+        border-radius: 12px;
+        padding: 20px;
+        width: 100%;
+        margin-bottom: 24px;
+        border: 1px solid var(--border-color);
+    }
 
-        .wallet-label {
-            font-size: 0.85rem;
-            color: var(--text-gray);
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+    .wallet-label {
+        font-size: 0.85rem;
+        color: var(--text-gray);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
-        .wallet-amount {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: var(--success);
-        }
+    .wallet-amount {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: var(--success);
+    }
 
-        .stats-summary {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            width: 100%;
-        }
+    .stats-summary {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        width: 100%;
+    }
 
-        .stat-mini-box {
-            background: var(--hover-bg);
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-        }
+    .stat-mini-box {
+        background: var(--hover-bg);
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+    }
 
-        .stat-mini-val { font-weight: 700; font-size: 1.1rem; color: var(--text-dark); }
-        .stat-mini-lbl { font-size: 0.75rem; color: var(--text-gray); }
+    .stat-mini-val { font-weight: 700; font-size: 1.1rem; color: var(--text-dark); }
+    .stat-mini-lbl { font-size: 0.75rem; color: var(--text-gray); }
 
-        .form-section-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 24px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border-color);
-        }
+    .form-section-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border-color);
+    }
 
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 24px;
-        }
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
 
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
 
-        .form-group label {
-            font-size: 0.9rem;
-            color: var(--text-gray);
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
+    .form-group label {
+        font-size: 0.9rem;
+        color: var(--text-gray);
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
 
-        .form-input {
-            padding: 12px 16px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            background: var(--bg-body);
-            color: var(--text-dark);
-            font-size: 0.95rem;
-            transition: all 0.2s;
-        }
+    .form-input {
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-body);
+        color: var(--text-dark);
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
 
-        .form-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
-        }
+    .form-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
+    }
 
-        .form-input:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
+    .form-input:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
 
-        .btn-save {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: 0.2s;
-            margin-top: 16px;
-        }
+    .btn-save {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: 0.2s;
+        margin-top: 16px;
+    }
 
-        .btn-save:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-        }
+    .btn-save:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+    }
 
-        @media (max-width: 900px) {
-            .account-grid { grid-template-columns: 1fr; }
-            .page-content { padding: 1rem; }
-        }
-      `}</style>
+    @media (max-width: 900px) {
+        .account-grid { grid-template-columns: 1fr; }
+        .page-content { padding: 1rem; }
+    }
+  `}</style>
 
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="logo-area">
@@ -370,6 +375,28 @@ export function TelaMinhaConta() {
           </div>
 
           <div className="header-actions">
+            {isAdmin && (
+              <button
+                onClick={() => navigate('/admin')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'var(--primary)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  marginRight: '12px'
+                }}
+              >
+                <Icons.Lock /> Painel do Adm
+              </button>
+            )}
+
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">💡</button>
             <button className="icon-btn"><Icons.Bell /></button>
 
