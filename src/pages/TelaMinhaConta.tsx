@@ -1,31 +1,31 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/TorneiosPage.css';
+import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 
-// Interface baseada no JSON fornecido
 interface UserData {
   id: string;
   nome: string;
   discord: string;
-  finais: number;
+  imagem: string | null;
+  cargo: string;
+  saldoVirtual: number;
   titulos: number;
+  finais: number;
+  partidasJogadas: number;
   golsMarcados: number;
   golsSofridos: number;
-  partidasJogadas: number;
-  criacaoConta: string;
-  modificacaoConta: string;
-  statusJogador: string;
-  contaReivindicada: boolean;
-  cargo: string;
-  imagem: string | null;
-  descricao: string | null;
-  suspensoAte: string | null;
   cartoesAmarelos: number;
   cartoesVermelhos: number;
-  saldoVirtual: number;
-  insignias: any[];
+  descricao: string | null;
+  contaReivindicada: boolean;
+  suspensoAte: string | null;
+  insignias: any[]; 
+  criacaoConta: string;
+  modificacaoConta?: string;
+  statusJogador: string;
 }
 
 const Icons = {
@@ -36,23 +36,22 @@ const Icons = {
   Shield: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>,
   Calendar: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
   Wallet: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>,
-  Settings: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
+  Settings: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
   Search: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
   Bell: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
-  Admin: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path><path d="M12 6v6l4 2"></path></svg>,
-  Edit: () => <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>,
-  Lock: () => <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
-  Camera: () => <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+  Lock: () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
+  Edit: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>,
+  Camera: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>,
+  Mail: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
 };
 
 export function TelaMinhaConta() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  // Estados de layout
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark';
@@ -68,16 +67,20 @@ export function TelaMinhaConta() {
     }
   }, [isDarkMode]);
 
-  // Carregar dados do usuário
   useEffect(() => {
     const storedUser = localStorage.getItem('user_data');
     if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setCurrentUser(parsedUser);
+      } catch (e) {
+        navigate('/');
+      }
     } else {
-      // Se não tiver logado, pode redirecionar ou mostrar popup
-      // setShowLoginPopup(true);
+      navigate('/');
     }
-  }, []);
+    setLoading(false);
+  }, [navigate]);
 
   const handleLoginSuccess = (userData: UserData) => {
     setCurrentUser(userData);
@@ -85,222 +88,321 @@ export function TelaMinhaConta() {
 
   const handleLogout = () => {
     if (window.confirm("Deseja realmente sair?")) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        setCurrentUser(null);
-        setShowUserPopup(false);
-        navigate('/');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_data');
+      setCurrentUser(null);
+      setShowUserPopup(false);
+      navigate('/');
     }
   };
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
+  
+  const isAdmin = currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
 
-  // Função auxiliar para formatar data
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR');
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
   };
 
-  // Verificação de permissão
-  const isAdmin = currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
+  const formatCurrency = (value: number) => {
+    return 'D$ ' + value.toLocaleString('pt-BR', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    });
+  };
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
-      
-      {/* Estilos Inline Específicos para layout desta tela */}
+      <LoadingSpinner isLoading={loading} />
+
       <style>{`
-        .profile-header {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-            background: var(--bg-card);
-            padding: 30px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            margin-bottom: 24px;
-            flex-wrap: wrap;
+        .page-content {
+          padding: 2rem 3rem;
+          display: flex;
+          justify-content: center;
         }
-        .profile-avatar {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background-color: var(--hover-bg);
-            background-size: cover;
-            background-position: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            color: var(--primary);
-            border: 3px solid var(--primary);
+
+        .profile-container {
+          width: 100%;
+          max-width: 900px;
+          display: flex;
+          flex-direction: column;
+          gap: 2rem;
         }
-        .profile-info h1 {
-            font-size: 1.8rem;
-            margin-bottom: 4px;
-            color: var(--text-dark);
+
+        .profile-header-card {
+          background: var(--bg-card);
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius);
+          padding: 3rem 2rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          position: relative;
+          box-shadow: var(--shadow-sm);
+          overflow: hidden;
         }
-        .profile-info p {
-            color: var(--text-gray);
-            margin-bottom: 8px;
+
+        .profile-bg-detail {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 120px;
+          background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+          opacity: 0.1;
+          z-index: 0;
         }
-        .role-badge {
-            background: var(--primary);
-            color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
+
+        .profile-avatar-large {
+          width: 140px;
+          height: 140px;
+          border-radius: 50%;
+          border: 4px solid var(--bg-card);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 3rem;
+          font-weight: 700;
+          color: white;
+          background-color: var(--primary);
+          background-position: center;
+          background-size: cover;
+          z-index: 1;
+          margin-bottom: 1.5rem;
+          position: relative;
         }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 30px;
+
+        .profile-badge {
+          position: absolute;
+          bottom: 5px;
+          right: 5px;
+          background: var(--success);
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          border: 3px solid var(--bg-card);
         }
-        .stat-card-detail {
-            background: var(--bg-card);
-            padding: 20px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
+
+        .profile-info {
+          text-align: center;
+          z-index: 1;
         }
-        .stat-card-detail .value {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: var(--text-dark);
+
+        .profile-name {
+          font-size: 2rem;
+          font-weight: 800;
+          color: var(--text-dark);
+          margin-bottom: 0.5rem;
         }
-        .stat-card-detail .label {
-            font-size: 0.85rem;
-            color: var(--text-gray);
-            margin-top: 4px;
+
+        .profile-discord {
+          color: var(--primary);
+          font-weight: 600;
+          font-size: 1.1rem;
+          margin-bottom: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
         }
+
+        .profile-role-tag {
+          display: inline-block;
+          padding: 4px 12px;
+          border-radius: 20px;
+          background: rgba(var(--primary-rgb), 0.1);
+          color: var(--primary);
+          font-size: 0.8rem;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          margin-bottom: 2rem;
+        }
+
+        .profile-stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1.5rem;
+          width: 100%;
+          margin-bottom: 2rem;
+        }
+
+        .stat-box {
+          background: var(--bg-main);
+          padding: 1.5rem;
+          border-radius: var(--radius);
+          text-align: center;
+          border: 1px solid var(--border-color);
+          transition: transform 0.2s;
+        }
+
+        .stat-box:hover {
+          transform: translateY(-2px);
+          border-color: var(--primary);
+        }
+
+        .stat-value {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: var(--text-dark);
+          margin-bottom: 4px;
+        }
+
+        .stat-value.money {
+          color: var(--success);
+        }
+
+        .stat-label {
+          font-size: 0.85rem;
+          color: var(--text-gray);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .profile-details-list {
+          width: 100%;
+          border-top: 1px solid var(--border-color);
+          padding-top: 2rem;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 2rem;
+        }
+
+        .detail-item label {
+          display: block;
+          font-size: 0.8rem;
+          color: var(--text-gray);
+          margin-bottom: 4px;
+        }
+
+        .detail-item span {
+          font-size: 1rem;
+          color: var(--text-dark);
+          font-weight: 500;
+        }
+
         .action-buttons-container {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 1rem;
+          width: 100%;
         }
+
         .action-btn {
-            flex: 1;
-            min-width: 200px;
-            padding: 16px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            color: var(--text-dark);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          padding: 12px 20px;
+          border-radius: var(--radius);
+          border: 1px solid var(--border-color);
+          background: var(--bg-card);
+          color: var(--text-dark);
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+          background: var(--primary);
+          color: white;
+          border-color: var(--primary);
+        }
+
+        .btn-admin-header {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
             font-weight: 600;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: 0.2s;
+            margin-right: 12px;
+            transition: opacity 0.2s;
+            font-size: 0.9rem;
         }
-        .action-btn:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-            background: var(--hover-bg);
-            transform: translateY(-2px);
+        
+        .btn-admin-header:hover {
+            opacity: 0.9;
         }
-        .details-section {
-            background: var(--bg-card);
-            padding: 24px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border-color);
-            margin-bottom: 24px;
-        }
-        .detail-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .detail-row:last-child { border-bottom: none; }
-        .detail-key { color: var(--text-gray); }
-        .detail-val { font-weight: 600; color: var(--text-dark); }
 
         @media (max-width: 768px) {
-            .profile-header { flex-direction: column; text-align: center; }
-            .action-buttons-container { flex-direction: column; }
+          .profile-details-list {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            text-align: center;
+          }
+          .action-buttons-container {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
 
-      {/* SIDEBAR (Mesma da TelaJogadores) */}
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="logo-area">
           <div className="logo-icon">
             <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-               <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
+              <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z" />
             </svg>
           </div>
           <span className="logo-text">Torneios <span>DDO</span></span>
         </div>
 
         <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Dashboard /> Dashboard</a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Users /> Jogadores</a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Shield /> Clubes</a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Trophy /> Competições</a>
+          <a onClick={() => navigate('/')} className="nav-item" style={{ cursor: 'pointer' }}><Icons.Dashboard /> Dashboard</a>
+          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{ cursor: 'pointer' }}><Icons.Users /> Jogadores</a>
+          <a onClick={() => navigate('/clubes')} className="nav-item" style={{ cursor: 'pointer' }}><Icons.Shield /> Clubes</a>
+          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{ cursor: 'pointer' }}><Icons.Trophy /> Competições</a>
           <a href="#" className="nav-item"><Icons.Shield /> Títulos</a>
           <div className="nav-separator"></div>
           <a href="#" className="nav-item"><Icons.Calendar /> Partidas</a>
-           {/* Active Class aqui */}
           <a onClick={() => navigate('/minha-conta')} className="nav-item active" style={{ cursor: 'pointer' }}><Icons.Wallet /> Minha conta</a>
           <a href="#" className="nav-item"><Icons.Settings /> Suporte</a>
+          
+          <div className="nav-separator"></div>
+          {isAdmin && (
+             <a onClick={() => navigate('/admin')} className="nav-item" style={{ cursor: 'pointer' }}>
+               <Icons.Lock /> Menu Adm
+             </a>
+          )}
         </nav>
       </aside>
 
       <main className="main-content">
-        
-        {/* HEADER */}
         <header className="top-header compact">
           <div className="left-header">
-            <button 
-              className="toggle-btn menu-toggle" 
+            <button
+              className="toggle-btn menu-toggle"
               onClick={() => setSidebarOpen(!sidebarOpen)}
               title="Alternar Menu"
             >
               <Icons.Menu />
             </button>
-            <h2 style={{ fontSize: '1.2rem', marginLeft: '10px' }}>Minha Conta</h2>
+            <div className="search-bar">
+              <Icons.Search />
+              <input type="text" placeholder="Buscar no sistema..." />
+            </div>
           </div>
-          
+
           <div className="header-actions">
-            
-            {/* LÓGICA DO BOTÃO DE ADMIN */}
             {isAdmin && (
-                <button 
-                    onClick={() => navigate('/admin')}
-                    style={{
-                        background: 'var(--text-dark)', 
-                        color: 'white', 
-                        border: 'none', 
-                        padding: '8px 16px', 
-                        borderRadius: '6px', 
-                        fontWeight: 600, 
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        marginRight: '12px'
-                    }}
-                >
-                    <Icons.Admin /> Painel do Admin
+                <button className="btn-admin-header" onClick={() => navigate('/admin')}>
+                    Painel do Adm
                 </button>
             )}
 
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              💡
-            </button>
+            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">💡</button>
             <button className="icon-btn"><Icons.Bell /></button>
-            
-            {currentUser ? (
-              <div 
-                className="user-avatar-mini" 
+
+            {currentUser && (
+              <div
+                className="user-avatar-mini"
                 onClick={() => setShowUserPopup(true)}
                 style={{
                   backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
@@ -317,146 +419,114 @@ export function TelaMinhaConta() {
               >
                 {!currentUser.imagem && currentUser.nome.charAt(0)}
               </div>
-            ) : (
-              <button 
-                className="login-btn-header" 
-                onClick={() => setShowLoginPopup(true)}
-                style={{
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginLeft: '10px'
-                }}
-              >
-                Login
-              </button>
             )}
           </div>
         </header>
 
-        {/* CONTEÚDO DA TELA */}
         <div className="page-content">
-            
-            {currentUser ? (
-                <>
-                    {/* Header do Perfil */}
-                    <div className="profile-header">
-                        <div className="profile-avatar" style={{backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none'}}>
-                             {!currentUser.imagem && currentUser.nome.charAt(0)}
-                        </div>
-                        <div className="profile-info">
-                            <span className="role-badge">{currentUser.cargo}</span>
-                            <h1>{currentUser.nome}</h1>
-                            <p style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <span style={{opacity: 0.7}}>Discord:</span> 
-                                <span style={{fontWeight: 600, color: '#5865F2'}}>{currentUser.discord}</span>
-                            </p>
-                            <p style={{ fontSize: '0.85rem' }}>Membro desde: {formatDate(currentUser.criacaoConta)}</p>
-                        </div>
-                        
-                        {/* Saldo em destaque */}
-                        <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                             <div style={{ fontSize: '0.9rem', color: 'var(--text-gray)' }}>Saldo Virtual</div>
-                             <div style={{ fontSize: '2rem', fontWeight: 800, color: '#2ecc71' }}>
-                                $ {currentUser.saldoVirtual.toLocaleString('pt-BR')}
-                             </div>
-                        </div>
-                    </div>
-
-                    {/* Grid de Estatísticas */}
-                    <h3 style={{ marginBottom: '16px', color: 'var(--text-gray)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Estatísticas</h3>
-                    <div className="stats-grid">
-                        <div className="stat-card-detail">
-                            <div className="value">{currentUser.partidasJogadas}</div>
-                            <div className="label">Partidas</div>
-                        </div>
-                        <div className="stat-card-detail">
-                            <div className="value">{currentUser.titulos}</div>
-                            <div className="label">Títulos</div>
-                        </div>
-                        <div className="stat-card-detail">
-                            <div className="value">{currentUser.golsMarcados}</div>
-                            <div className="label">Gols Marcados</div>
-                        </div>
-                        <div className="stat-card-detail">
-                            <div className="value">{currentUser.finais}</div>
-                            <div className="label">Finais</div>
-                        </div>
-                    </div>
-
-                    {/* Informações Detalhadas */}
-                    <div className="details-section">
-                        <div className="detail-row">
-                            <span className="detail-key">ID do Jogador</span>
-                            <span className="detail-val" style={{fontSize: '0.8rem', fontFamily: 'monospace'}}>{currentUser.id}</span>
-                        </div>
-                        <div className="detail-row">
-                            <span className="detail-key">Status</span>
-                            <span className="detail-val" style={{ color: currentUser.statusJogador === 'ATIVO' ? '#2ecc71' : 'red' }}>
-                                {currentUser.statusJogador}
-                            </span>
-                        </div>
-                        <div className="detail-row">
-                            <span className="detail-key">Cartões Amarelos</span>
-                            <span className="detail-val">{currentUser.cartoesAmarelos}</span>
-                        </div>
-                        <div className="detail-row">
-                            <span className="detail-key">Cartões Vermelhos</span>
-                            <span className="detail-val">{currentUser.cartoesVermelhos}</span>
-                        </div>
-                    </div>
-
-                    {/* Botões de Ação Solicitados */}
-                    <div className="action-buttons-container">
-                        <button className="action-btn">
-                            <Icons.Camera /> Alterar Foto
-                        </button>
-                        <button className="action-btn">
-                            <Icons.Edit /> Editar Perfil
-                        </button>
-                        <button className="action-btn">
-                            <Icons.Lock /> Atualizar Email e Senha
-                        </button>
-                    </div>
-                </>
-            ) : (
-                // State vazio/carregando se não tiver usuário
-                <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-gray)' }}>
-                    <h3>Faça login para ver sua conta</h3>
-                    <button 
-                        onClick={() => setShowLoginPopup(true)}
-                        style={{
-                            marginTop: '1rem',
-                            padding: '10px 20px',
-                            background: 'var(--primary)',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        Entrar agora
-                    </button>
+          {currentUser && (
+            <div className="profile-container">
+              
+              <div className="profile-header-card">
+                <div className="profile-bg-detail"></div>
+                
+                <div 
+                    className="profile-avatar-large"
+                    style={{
+                        backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none'
+                    }}
+                >
+                    {!currentUser.imagem && currentUser.nome.charAt(0)}
+                    <div className="profile-badge"></div>
                 </div>
-            )}
 
+                <div className="profile-info">
+                    <h1 className="profile-name">{currentUser.nome}</h1>
+                    <div className="profile-discord">
+                         <span style={{opacity: 0.7}}>#</span> {currentUser.discord}
+                    </div>
+                    <span className="profile-role-tag">
+                        {currentUser.cargo.replace('_', ' ')}
+                    </span>
+                </div>
+
+                <div className="profile-stats-grid">
+                    <div className="stat-box">
+                        <div className="stat-value money">{formatCurrency(currentUser.saldoVirtual)}</div>
+                        <div className="stat-label">Saldo Virtual</div>
+                    </div>
+
+                    <div className="stat-box">
+                        <div className="stat-value">{currentUser.partidasJogadas}</div>
+                        <div className="stat-label">Partidas</div>
+                    </div>
+
+                    <div className="stat-box">
+                        <div className="stat-value">{currentUser.titulos}</div>
+                        <div className="stat-label">Títulos</div>
+                    </div>
+
+                    <div className="stat-box">
+                        <div className="stat-value">{currentUser.golsMarcados}</div>
+                        <div className="stat-label">Gols Marcados</div>
+                    </div>
+
+                    <div className="stat-box">
+                        <div className="stat-value">{currentUser.golsSofridos}</div>
+                        <div className="stat-label">Gols Sofridos</div>
+                    </div>
+
+                    <div className="stat-box">
+                        <div className="stat-value">
+                            {currentUser.partidasJogadas > 0 
+                                ? (currentUser.golsMarcados / currentUser.partidasJogadas).toFixed(2).replace('.', ',') 
+                                : '0,00'}
+                        </div>
+                        <div className="stat-label">Média p/ Jogo</div>
+                    </div>
+                </div>
+
+                <div className="profile-details-list">
+                    <div className="detail-item">
+                        <label>ID do Jogador</label>
+                        <span style={{fontFamily: 'monospace', fontSize: '0.9rem'}}>{currentUser.id}</span>
+                    </div>
+                    <div className="detail-item">
+                        <label>Membro desde</label>
+                        <span>{formatDate(currentUser.criacaoConta)}</span>
+                    </div>
+                </div>
+              </div>
+
+              <div className="action-buttons-container">
+                  <button className="action-btn" onClick={() => console.log('Atualizar foto')}>
+                    <Icons.Camera />
+                    Atualizar foto do perfil
+                  </button>
+                  <button className="action-btn" onClick={() => console.log('Atualizar conta')}>
+                    <Icons.Edit />
+                    Atualizar conta
+                  </button>
+                  <button className="action-btn" onClick={() => console.log('Atualizar email')}>
+                    <Icons.Mail />
+                    Atualizar email e senha
+                  </button>
+              </div>
+
+            </div>
+          )}
         </div>
-
       </main>
 
       {showLoginPopup && (
-        <PopupLogin 
-          onClose={() => setShowLoginPopup(false)} 
-          onLoginSuccess={handleLoginSuccess} 
+        <PopupLogin
+          onClose={() => setShowLoginPopup(false)}
+          onLoginSuccess={handleLoginSuccess}
         />
       )}
 
       {showUserPopup && currentUser && (
-        <PopupUser 
+        <PopupUser
           user={currentUser}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
