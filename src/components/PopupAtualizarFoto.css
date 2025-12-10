@@ -225,30 +225,124 @@ body.dark-mode {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #888; 
 }
+/* ... MANTENHA O CSS ANTERIOR DAS VARIÁVEIS ATÉ A LINHA .avatar-count-info ... */
+/* ... Pode copiar o arquivo anterior até a linha 185 ... */
 
-/* --- Actions --- */
+/* --- Actions Footer (REFEITO) --- */
 
 .actions-footer {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid var(--pp-border); /* Separação visual sutil */
     gap: 15px;
-    margin-top: 10px;
 }
 
-.btn-cancel {
-    padding: 14px;
-    border-radius: 12px;
-    border: 1px solid var(--pp-border);
-    background: transparent;
-    color: var(--pp-text-secondary);
+.footer-left {
+    display: flex;
+    align-items: center;
+}
+
+.footer-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Base Button Styles */
+.btn-base {
+    height: 44px;
+    padding: 0 20px;
+    border-radius: 8px;
     font-weight: 600;
+    font-size: 0.95rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
-.btn-cancel:hover {
-    background: var(--pp-btn-close-bg);
+.btn-danger-ghost {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #ff4d4f;
+    padding: 0 15px; 
+}
+
+.btn-danger-ghost:hover {
+    background-color: rgba(255, 77, 79, 0.08);
+    border-color: rgba(255, 77, 79, 0.2);
+}
+
+.btn-danger-ghost:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+.btn-secondary {
+    background-color: transparent;
+    border: 1px solid var(--pp-border);
+    color: var(--pp-text-secondary);
+}
+
+.btn-secondary:hover {
+    background-color: var(--pp-btn-close-bg);
     color: var(--pp-text-primary);
+    border-color: var(--pp-text-secondary);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+    min-width: 140px;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3);
+    filter: brightness(1.05);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@media (max-width: 500px) {
+    .actions-footer {
+        flex-direction: column-reverse; 
+        gap: 15px;
+    }
+
+    .footer-left, .footer-right {
+        width: 100%;
+    }
+    
+    .footer-right {
+        flex-direction: column;
+    }
+
+    .btn-base {
+        width: 100%; 
+    }
 }
 
 .submit-claim-btn {

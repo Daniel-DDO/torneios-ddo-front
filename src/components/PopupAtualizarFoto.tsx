@@ -17,6 +17,7 @@ const PopupAtualizarFoto: React.FC<PopupAtualizarFotoProps> = ({ onClose, onUpda
   const [fadeout, setFadeout] = useState(false);
   const [loadingAvatares, setLoadingAvatares] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const [avatares, setAvatares] = useState<AvatarData[]>([]);
   const [selectedAvatarId, setSelectedAvatarId] = useState<string | null>(null);
@@ -80,6 +81,23 @@ const PopupAtualizarFoto: React.FC<PopupAtualizarFotoProps> = ({ onClose, onUpda
       const msg = err.response?.data?.message || "Erro ao atualizar a foto.";
       setError(msg);
       setSaving(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!window.confirm("Tem certeza que deseja remover sua foto de perfil?")) {
+        return;
+    }
+
+    setDeleting(true);
+    try {
+        await API.delete('/jogador/avatar');
+        onUpdateSuccess(''); 
+        handleClose();
+    } catch (err: any) {
+        console.error("Erro ao remover:", err);
+        setError("Erro ao remover a foto.");
+        setDeleting(false);
     }
   };
 
@@ -149,14 +167,43 @@ const PopupAtualizarFoto: React.FC<PopupAtualizarFotoProps> = ({ onClose, onUpda
             {error && <div className="reivindicar-error-msg">{error}</div>}
 
             <div className="actions-footer">
-              <button className="btn-cancel" onClick={handleClose}>Cancelar</button>
-              <button 
-                  className="submit-claim-btn btn-save-photo" 
-                  onClick={handleSubmit}
-                  disabled={saving || loadingAvatares || !selectedAvatarId}
-              >
-                  {saving ? <div className="popup-spinner-small"></div> : 'Salvar Alteração'}
-              </button>
+              
+              <div className="footer-left">
+                <button 
+                  type="button"
+                  className="btn-base btn-danger-ghost" 
+                  onClick={handleRemoveAvatar}
+                  disabled={saving || deleting || loadingAvatares}
+                  title="Remover foto atual"
+                >
+                   {deleting ? (
+                      <span className="btn-spinner" style={{borderColor: '#ff4d4f', borderTopColor: 'transparent'}}></span>
+                   ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      </svg>
+                   )}
+                </button>
+              </div>
+
+              <div className="footer-right">
+                <button 
+                    className="btn-base btn-secondary" 
+                    onClick={handleClose}
+                >
+                    Cancelar
+                </button>
+                
+                <button 
+                    className="btn-base btn-primary" 
+                    onClick={handleSubmit}
+                    disabled={saving || deleting || loadingAvatares || !selectedAvatarId}
+                >
+                    {saving ? <div className="btn-spinner"></div> : 'Salvar'}
+                </button>
+              </div>
+
             </div>
 
           </div>
