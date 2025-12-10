@@ -1,6 +1,26 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import {
+  Menu,
+  LayoutDashboard,
+  Users,
+  Trophy,
+  Shield,
+  Calendar,
+  Wallet,
+  Settings,
+  Search,
+  Bell,
+  Key,
+  Lock,
+  UserPlus,
+  UserCheck,
+  Gamepad2,
+  Star,
+  Lightbulb,
+  Megaphone
+} from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -28,28 +48,11 @@ interface Avatar {
   nome?: string;
 }
 
-const Icons = {
-  Menu: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
-  Dashboard: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
-  Users: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
-  Trophy: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17"></path><path d="M14 14.66V17"></path><path d="M12 2v1"></path><path d="M12 22v-3"></path><path d="M12 2a7 7 0 0 0-7 7c0 4.3 4 8 8 9a7 7 0 0 0 7-9 7 7 0 0 0-7-7z"></path></svg>,
-  Shield: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>,
-  Calendar: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
-  Wallet: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>,
-  Settings: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
-  Search: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
-  Bell: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
-  Lock: () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
-  Key: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>,
-  UserPlus: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>,
-  UserCheck: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
-};
-
 const fetchAvatarsService = async () => {
-    const response = await API.get('/api/avatares');
-    if (Array.isArray(response)) return response;
-    if (response.data && Array.isArray(response.data)) return response.data;
-    return [];
+  const response = await API.get('/api/avatares');
+  if (Array.isArray(response)) return response;
+  if (response.data && Array.isArray(response.data)) return response.data;
+  return [];
 };
 
 export function TelaAdmin() {
@@ -62,7 +65,7 @@ export function TelaAdmin() {
   const [showCadastrarJogadorPopup, setShowCadastrarJogadorPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  
+
   const { data: avatars = [] } = useQuery({
     queryKey: ['avatares'],
     queryFn: fetchAvatarsService,
@@ -72,7 +75,7 @@ export function TelaAdmin() {
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};
     avatars.forEach((avatar: Avatar) => {
-        map[avatar.id] = avatar.url;
+      map[avatar.id] = avatar.url;
     });
     return map;
   }, [avatars]);
@@ -98,6 +101,7 @@ export function TelaAdmin() {
       const parsedUser = JSON.parse(storedUser);
       setCurrentUser(parsedUser);
 
+      // Verifica se o cargo é de administrador/diretor/proprietário
       if (['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(parsedUser.cargo)) {
         setIsAuthorized(true);
       } else {
@@ -212,19 +216,35 @@ export function TelaAdmin() {
         </div>
 
         <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{ cursor: 'pointer' }}><Icons.Dashboard /> Dashboard</a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{ cursor: 'pointer' }}><Icons.Users /> Jogadores</a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{ cursor: 'pointer' }}><Icons.Shield /> Clubes</a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{ cursor: 'pointer' }}><Icons.Trophy /> Competições</a>
-          <a href="#" className="nav-item"><Icons.Shield /> Títulos</a>
+          <a onClick={() => navigate('/')} className="nav-item" style={{ cursor: 'pointer' }}>
+            <LayoutDashboard size={20} /> Dashboard
+          </a>
+          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{ cursor: 'pointer' }}>
+            <Users size={20} /> Jogadores
+          </a>
+          <a onClick={() => navigate('/clubes')} className="nav-item" style={{ cursor: 'pointer' }}>
+            <Shield size={20} /> Clubes
+          </a>
+          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{ cursor: 'pointer' }}>
+            <Trophy size={20} /> Competições
+          </a>
+          <a href="#" className="nav-item">
+            <Star size={20} /> Títulos
+          </a>
           <div className="nav-separator"></div>
-          <a href="#" className="nav-item"><Icons.Calendar /> Partidas</a>
-          <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}><Icons.Wallet /> Minha conta</a>
-          <a href="#" className="nav-item"><Icons.Settings /> Suporte</a>
+          <a href="#" className="nav-item">
+            <Gamepad2 size={20} /> Partidas
+          </a>
+          <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
+            <Wallet size={20} /> Minha conta
+          </a>
+          <a href="#" className="nav-item">
+            <Settings size={20} /> Suporte
+          </a>
           
           <div className="nav-separator"></div>
           <a className="nav-item active" style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 'bold' }}>
-            <Icons.Lock /> Menu Adm
+            <Lock size={18} /> Menu Adm
           </a>
         </nav>
       </aside>
@@ -237,17 +257,19 @@ export function TelaAdmin() {
               onClick={() => setSidebarOpen(!sidebarOpen)}
               title="Alternar Menu"
             >
-              <Icons.Menu />
+              <Menu size={24} />
             </button>
             <div className="search-bar">
-              <Icons.Search />
+              <Search size={20} />
               <input type="text" placeholder="Buscar no sistema..." />
             </div>
           </div>
 
           <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">💡</button>
-            <button className="icon-btn"><Icons.Bell /></button>
+            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
+              <Lightbulb size={20} />
+            </button>
+            <button className="icon-btn"><Bell size={20} /></button>
 
             {currentUser && (
               <div
@@ -288,49 +310,49 @@ export function TelaAdmin() {
                 className="action-card" 
                 onClick={() => setShowAuthPopup(true)} 
             >
-                <div className="action-icon"><Icons.Key /></div>
+                <div className="action-icon"><Key size={40} /></div>
                 <h4 className="action-title">Autorizar jogador</h4>
                 <p className="action-desc">Gerar código para conta reivindicada</p>
             </div>
 
             <div className="action-card" onClick={() => console.log('Recupere a senha')}>
-                <div className="action-icon"><Icons.Lock /></div>
-                <h4 className="action-title">Recupere a senha</h4>
+                <div className="action-icon"><Lock size={40} /></div>
+                <h4 className="action-title">Recuperar senha</h4>
                 <p className="action-desc">Gere e envie o pin para o jogador que esqueceu da sua senha</p>
             </div>
 
             <div className="action-card" onClick={() => setShowCadastrarJogadorPopup(true)}>
-                <div className="action-icon"><Icons.UserPlus /></div>
+                <div className="action-icon"><UserPlus size={40} /></div>
                 <h4 className="action-title">Cadastrar jogador</h4>
                 <p className="action-desc">Cadastre os novos jogadores aqui</p>
             </div>
 
             <div className="action-card" onClick={() => console.log('Atualizar jogador')}>
-                <div className="action-icon"><Icons.UserCheck /></div>
+                <div className="action-icon"><UserCheck size={40} /></div>
                 <h4 className="action-title">Atualizar jogador</h4>
                 <p className="action-desc">Aposentou? Voltou? Atualize o status dos jogadores aqui</p>
             </div>
 
             <div className="action-card" onClick={() => console.log('Gerenciar temporadas')}>
-                <div className="action-icon"><Icons.Calendar /></div>
+                <div className="action-icon"><Calendar size={40} /></div>
                 <h4 className="action-title">Gerenciar temporadas</h4>
                 <p className="action-desc">Visualize, crie e edite as temporadas</p>
             </div>
 
             <div className="action-card" onClick={() => console.log('Gerenciar torneios')}>
-                <div className="action-icon"><Icons.Trophy /></div>
+                <div className="action-icon"><Trophy size={40} /></div>
                 <h4 className="action-title">Gerenciar torneios</h4>
                 <p className="action-desc">Visualize, crie e edite os torneios</p>
             </div>
 
             <div className="action-card" onClick={() => console.log('Gerenciar clubes')}>
-                <div className="action-icon"><Icons.Shield /></div>
+                <div className="action-icon"><Shield size={40} /></div>
                 <h4 className="action-title">Cadastrar clubes</h4>
                 <p className="action-desc">Visualize e crie os clubes</p>
             </div>
 
             <div className="action-card" onClick={() => console.log('Criar anúncio')}>
-                <div className="action-icon"><Icons.Trophy /></div>
+                <div className="action-icon"><Megaphone size={40} /></div>
                 <h4 className="action-title">Criar anúncio</h4>
                 <p className="action-desc">Visualize, crie e edite os anúncios</p>
             </div>
@@ -364,7 +386,7 @@ export function TelaAdmin() {
         />
       )}
 
-    {showCadastrarJogadorPopup && (
+      {showCadastrarJogadorPopup && (
         <PopupCadastrarJogador
           onClose={() => setShowCadastrarJogadorPopup(false)}
         />

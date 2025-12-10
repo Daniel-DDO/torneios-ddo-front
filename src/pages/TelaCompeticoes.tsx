@@ -1,6 +1,20 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import {
+  Menu,
+  LayoutDashboard,
+  Users,
+  Trophy,
+  Shield,
+  Wallet,
+  Settings,
+  Search,
+  Bell,
+  Gamepad2,
+  Star,
+  Lightbulb
+} from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -35,23 +49,9 @@ interface Avatar {
   nome?: string;
 }
 
-const Icons = {
-  Menu: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
-  Dashboard: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
-  Users: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
-  Trophy: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17"></path><path d="M14 14.66V17"></path><path d="M12 2v1"></path><path d="M12 22v-3"></path><path d="M12 2a7 7 0 0 0-7 7c0 4.3 4 8 8 9a7 7 0 0 0 7-9 7 7 0 0 0-7-7z"></path></svg>,
-  Shield: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>,
-  Calendar: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
-  Wallet: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>,
-  Settings: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
-  Search: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
-  Bell: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
-  More: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
-};
-
 const fetchAllCompeticoesService = async (): Promise<Competicao[]> => {
   try {
-    const response = await API.get(`/competicao/all`);
+    const response = await API.get('/competicao/all');
     const data = (response && (response as any).data) ? (response as any).data : response;
 
     if (data && data.conteudo) {
@@ -68,15 +68,15 @@ const fetchAllCompeticoesService = async (): Promise<Competicao[]> => {
 };
 
 const fetchAvatarsService = async () => {
-    const response = await API.get('/api/avatares');
-    if (Array.isArray(response)) return response;
-    if (response.data && Array.isArray(response.data)) return response.data;
-    return [];
+  const response = await API.get('/api/avatares');
+  if (Array.isArray(response)) return response;
+  if (response.data && Array.isArray(response.data)) return response.data;
+  return [];
 };
 
 export function TelaCompeticoes() {
   const navigate = useNavigate();
-
+  
   const { data: competicoes = [], isLoading: loading } = useQuery<Competicao[]>({
     queryKey: ['competicoes'],
     queryFn: fetchAllCompeticoesService,
@@ -92,7 +92,7 @@ export function TelaCompeticoes() {
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};
     avatars.forEach((avatar: Avatar) => {
-        map[avatar.id] = avatar.url;
+      map[avatar.id] = avatar.url;
     });
     return map;
   }, [avatars]);
@@ -102,7 +102,6 @@ export function TelaCompeticoes() {
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark';
@@ -131,10 +130,10 @@ export function TelaCompeticoes() {
 
   const handleLogout = () => {
     if (window.confirm("Deseja realmente sair?")) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        setCurrentUser(null);
-        setShowUserPopup(false);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_data');
+      setCurrentUser(null);
+      setShowUserPopup(false);
     }
   };
 
@@ -151,7 +150,7 @@ export function TelaCompeticoes() {
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
-      
+
       <LoadingSpinner isLoading={loading} />
 
       <style>{`
@@ -280,15 +279,31 @@ export function TelaCompeticoes() {
         </div>
 
         <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Dashboard /> Dashboard</a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Users /> Jogadores</a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}><Icons.Shield /> Clubes</a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item active" style={{cursor: 'pointer'}}><Icons.Trophy /> Competições</a>
-          <a href="#" className="nav-item"><Icons.Shield /> Títulos</a>
+          <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}>
+            <LayoutDashboard size={20} /> Dashboard
+          </a>
+          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}>
+            <Users size={20} /> Jogadores
+          </a>
+          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
+            <Shield size={20} /> Clubes
+          </a>
+          <a onClick={() => navigate('/competicoes')} className="nav-item active" style={{cursor: 'pointer'}}>
+            <Trophy size={20} /> Competições
+          </a>
+          <a href="#" className="nav-item">
+            <Star size={20} /> Títulos
+          </a>
           <div className="nav-separator"></div>
-          <a href="#" className="nav-item"><Icons.Calendar /> Partidas</a>
-           <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}><Icons.Wallet /> Minha conta</a>
-          <a href="#" className="nav-item"><Icons.Settings /> Suporte</a>
+          <a href="#" className="nav-item">
+            <Gamepad2 size={20} /> Partidas
+          </a>
+           <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
+            <Wallet size={20} /> Minha conta
+          </a>
+          <a href="#" className="nav-item">
+            <Settings size={20} /> Suporte
+          </a>
         </nav>
       </aside>
 
@@ -301,10 +316,10 @@ export function TelaCompeticoes() {
               onClick={() => setSidebarOpen(!sidebarOpen)}
               title="Alternar Menu"
             >
-              <Icons.Menu />
+              <Menu size={24} />
             </button>
             <div className="search-bar">
-              <Icons.Search />
+              <Search size={20} />
               <input 
                 type="text" 
                 placeholder="Buscar competição..." 
@@ -316,9 +331,9 @@ export function TelaCompeticoes() {
           
           <div className="header-actions">
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              💡
+              <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Icons.Bell /></button>
+            <button className="icon-btn"><Bell size={20} /></button>
             
             {currentUser ? (
               <div 
