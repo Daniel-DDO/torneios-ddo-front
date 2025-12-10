@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
@@ -20,6 +22,12 @@ interface UserData {
   golsMarcados: number;
 }
 
+interface Avatar {
+  id: string;
+  url: string;
+  nome?: string;
+}
+
 const Icons = {
   Menu: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
   Dashboard: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
@@ -28,14 +36,20 @@ const Icons = {
   Shield: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>,
   Calendar: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
   Wallet: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>,
-  Settings: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
+  Settings: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
   Search: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
   Bell: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
   Lock: () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
   Key: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>,
   UserPlus: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>,
   UserCheck: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
-  // Os outros ícones não estavam no objeto original, mas mantive a estrutura dos que foram adicionados no input.
+};
+
+const fetchAvatarsService = async () => {
+    const response = await API.get('/api/avatares');
+    if (Array.isArray(response)) return response;
+    if (response.data && Array.isArray(response.data)) return response.data;
+    return [];
 };
 
 export function TelaAdmin() {
@@ -48,6 +62,21 @@ export function TelaAdmin() {
   const [showCadastrarJogadorPopup, setShowCadastrarJogadorPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  
+  const { data: avatars = [] } = useQuery({
+    queryKey: ['avatares'],
+    queryFn: fetchAvatarsService,
+    staleTime: 1000 * 60 * 60,
+  });
+
+  const avatarMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    avatars.forEach((avatar: Avatar) => {
+        map[avatar.id] = avatar.url;
+    });
+    return map;
+  }, [avatars]);
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark';
@@ -96,6 +125,11 @@ export function TelaAdmin() {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
+  const getCurrentUserAvatar = () => {
+    if (!currentUser?.imagem) return null;
+    return avatarMap[currentUser.imagem] || currentUser.imagem;
+  };
+
   if (!isAuthorized) {
     return <LoadingSpinner isLoading={true} />;
   }
@@ -105,67 +139,67 @@ export function TelaAdmin() {
       <LoadingSpinner isLoading={loading} />
 
       <style>{`
-    .page-content {
-      padding: 2rem 3rem;
-    }
+        .page-content {
+          padding: 2rem 3rem;
+        }
 
-    .admin-header-section {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-    }
+        .admin-header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
 
-    .admin-grid-actions {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 24px;
-    }
+        .admin-grid-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
 
-    .action-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius);
-        padding: 24px;
-        cursor: pointer;
-        transition: all 0.2s;
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-    }
+        .action-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
 
-    .action-card:hover {
-        border-color: var(--primary);
-        box-shadow: var(--shadow-md);
-        transform: translateY(-3px);
-    }
+        .action-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
+            transform: translateY(-3px);
+        }
 
-    .action-icon {
-        margin-bottom: 16px;
-        color: var(--primary);
-        width: 40px;
-        height: 40px;
-    }
+        .action-icon {
+            margin-bottom: 16px;
+            color: var(--primary);
+            width: 40px;
+            height: 40px;
+        }
 
-    .action-title {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: var(--text-dark);
-        margin-bottom: 8px;
-    }
+        .action-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+        }
 
-    .action-desc {
-        font-size: 0.9rem;
-        color: var(--text-gray);
-        line-height: 1.5;
-    }
+        .action-desc {
+            font-size: 0.9rem;
+            color: var(--text-gray);
+            line-height: 1.5;
+        }
 
-    @media (max-width: 900px) {
-        .page-content { padding: 1rem; }
-    }
-  `}</style>
+        @media (max-width: 900px) {
+            .page-content { padding: 1rem; }
+        }
+      `}</style>
 
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="logo-area">
@@ -220,10 +254,10 @@ export function TelaAdmin() {
                 className="user-avatar-mini"
                 onClick={() => setShowUserPopup(true)}
                 style={{
-                  backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
+                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  backgroundColor: currentUser.imagem ? 'transparent' : 'var(--primary)',
+                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -232,7 +266,7 @@ export function TelaAdmin() {
                   cursor: 'pointer'
                 }}
               >
-                {!currentUser.imagem && currentUser.nome.charAt(0)}
+                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
               </div>
             )}
           </div>
@@ -250,7 +284,6 @@ export function TelaAdmin() {
 
           <div className="admin-grid-actions">
             
-            {/* Autorizar jogador */}
             <div 
                 className="action-card" 
                 onClick={() => setShowAuthPopup(true)} 
@@ -260,49 +293,42 @@ export function TelaAdmin() {
                 <p className="action-desc">Gerar código para conta reivindicada</p>
             </div>
 
-            {/* Recupere a senha */}
             <div className="action-card" onClick={() => console.log('Recupere a senha')}>
                 <div className="action-icon"><Icons.Lock /></div>
                 <h4 className="action-title">Recupere a senha</h4>
                 <p className="action-desc">Gere e envie o pin para o jogador que esqueceu da sua senha</p>
             </div>
 
-            {/* Cadastrar jogador */}
             <div className="action-card" onClick={() => setShowCadastrarJogadorPopup(true)}>
                 <div className="action-icon"><Icons.UserPlus /></div>
                 <h4 className="action-title">Cadastrar jogador</h4>
                 <p className="action-desc">Cadastre os novos jogadores aqui</p>
             </div>
 
-            {/* Atualizar jogador */}
             <div className="action-card" onClick={() => console.log('Atualizar jogador')}>
                 <div className="action-icon"><Icons.UserCheck /></div>
                 <h4 className="action-title">Atualizar jogador</h4>
                 <p className="action-desc">Aposentou? Voltou? Atualize o status dos jogadores aqui</p>
             </div>
 
-            {/* Gerenciar temporadas */}
             <div className="action-card" onClick={() => console.log('Gerenciar temporadas')}>
                 <div className="action-icon"><Icons.Calendar /></div>
                 <h4 className="action-title">Gerenciar temporadas</h4>
                 <p className="action-desc">Visualize, crie e edite as temporadas</p>
             </div>
 
-            {/* Gerenciar torneios */}
             <div className="action-card" onClick={() => console.log('Gerenciar torneios')}>
                 <div className="action-icon"><Icons.Trophy /></div>
                 <h4 className="action-title">Gerenciar torneios</h4>
                 <p className="action-desc">Visualize, crie e edite os torneios</p>
             </div>
 
-            {/* Cadastrar clubes */}
             <div className="action-card" onClick={() => console.log('Gerenciar clubes')}>
                 <div className="action-icon"><Icons.Shield /></div>
                 <h4 className="action-title">Cadastrar clubes</h4>
                 <p className="action-desc">Visualize e crie os clubes</p>
             </div>
 
-            {/* Criar anúncio */}
             <div className="action-card" onClick={() => console.log('Criar anúncio')}>
                 <div className="action-icon"><Icons.Trophy /></div>
                 <h4 className="action-title">Criar anúncio</h4>
@@ -322,7 +348,10 @@ export function TelaAdmin() {
 
       {showUserPopup && currentUser && (
         <PopupUser
-          user={currentUser}
+          user={{
+            ...currentUser,
+            imagem: getCurrentUserAvatar()
+          }}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
         />

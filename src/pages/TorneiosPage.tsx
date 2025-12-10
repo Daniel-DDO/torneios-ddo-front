@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
@@ -34,6 +36,12 @@ interface UserData {
   golsMarcados: number;
 }
 
+interface Avatar {
+  id: string;
+  url: string;
+  nome?: string;
+}
+
 const Icons = {
   Menu: () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>,
   Dashboard: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
@@ -47,12 +55,33 @@ const Icons = {
   Bell: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
 };
 
+const fetchAvatarsService = async () => {
+    const response = await API.get('/api/avatares');
+    if (Array.isArray(response)) return response;
+    if (response.data && Array.isArray(response.data)) return response.data;
+    return [];
+};
+
 export function TorneiosPage() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const { data: avatars = [] } = useQuery({
+    queryKey: ['avatares'],
+    queryFn: fetchAvatarsService,
+    staleTime: 1000 * 60 * 60,
+  });
+
+  const avatarMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    avatars.forEach((avatar: Avatar) => {
+        map[avatar.id] = avatar.url;
+    });
+    return map;
+  }, [avatars]);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -89,6 +118,11 @@ export function TorneiosPage() {
         setCurrentUser(null);
         setShowUserPopup(false);
     }
+  };
+
+  const getCurrentUserAvatar = () => {
+    if (!currentUser?.imagem) return null;
+    return avatarMap[currentUser.imagem] || currentUser.imagem;
   };
 
   const torneios: Torneio[] = [
@@ -192,10 +226,10 @@ export function TorneiosPage() {
                 className="user-avatar-mini"
                 onClick={() => setShowUserPopup(true)}
                 style={{
-                  backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
+                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  backgroundColor: currentUser.imagem ? 'transparent' : 'var(--primary)',
+                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -204,7 +238,7 @@ export function TorneiosPage() {
                   cursor: 'pointer'
                 }}
               >
-                {!currentUser.imagem && currentUser.nome.charAt(0)}
+                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
               </div>
             ) : (
               <button 
@@ -345,7 +379,10 @@ export function TorneiosPage() {
 
       {showUserPopup && currentUser && (
         <PopupUser 
-          user={currentUser}
+          user={{
+            ...currentUser,
+            imagem: getCurrentUserAvatar()
+          }}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
         />

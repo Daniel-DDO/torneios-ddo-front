@@ -1,12 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { API } from '../services/api';
 import './PopupReivindicar.css';
+import './PopupAutorizar.css';
 
 interface ReivindicarData {
   discord: string;
   codigo: string;
   novoEmail: string;
   novaSenha: string;
+}
+
+interface JogadorBusca {
+  id: string;
+  discord: string;
+  nome: string;
+  imagem?: string;
 }
 
 interface PopupReivindicarProps {
@@ -21,6 +29,9 @@ const PopupReivindicar: React.FC<PopupReivindicarProps> = ({ onClose, onSubmit }
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const [suggestions, setSuggestions] = useState<JogadorBusca[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   const [formData, setFormData] = useState({
     discord: '',
@@ -37,12 +48,44 @@ const PopupReivindicar: React.FC<PopupReivindicarProps> = ({ onClose, onSubmit }
     }, 300);
   };
 
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (formData.discord.length >= 3) {
+        buscarJogadores(formData.discord);
+      } else if (formData.discord.length < 3) {
+        setSuggestions([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [formData.discord]);
+
+  const buscarJogadores = async (termo: string) => {
+    setIsSearching(true);
+    try {
+      const data = await API.get(`/jogador/buscar-autocomplete?termo=${termo}`) as any;
+      setSuggestions(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleSelectPlayer = (player: JogadorBusca) => {
+    setFormData(prev => ({
+      ...prev,
+      discord: player.discord
+    }));
+    setSuggestions([]);
   };
 
   const getPasswordStatusClass = () => {
@@ -136,18 +179,44 @@ const PopupReivindicar: React.FC<PopupReivindicarProps> = ({ onClose, onSubmit }
           <form onSubmit={handleSubmit} className="reivindicar-form">
             
             <div className="form-row-split">
-                <div className="form-group">
-                <label htmlFor="discord">Discord <span className="required-star">*</span></label>
-                <input 
-                  className="reivindicar-input"
-                  type="text" 
-                  id="discord"
-                  name="discord"
-                  placeholder="SeuUser"
-                  value={formData.discord}
-                  onChange={handleChange}
-                  required
-                />
+                <div className="form-group relative-container">
+                  <label htmlFor="discord">Discord <span className="required-star">*</span></label>
+                  <div className="input-icon-wrap">
+                    <input 
+                      className="reivindicar-input"
+                      type="text" 
+                      id="discord"
+                      name="discord"
+                      placeholder="SeuUser"
+                      value={formData.discord}
+                      onChange={handleChange}
+                      autoComplete="off"
+                      required
+                    />
+                    <div className="search-icon-right">
+                        {isSearching ? <div className="spinner-mini"></div> : null}
+                    </div>
+                  </div>
+
+                  {suggestions.length > 0 && (
+                    <div className="suggestions-list">
+                        {suggestions.map((player) => (
+                            <div 
+                                key={player.id} 
+                                className="suggestion-item"
+                                onClick={() => handleSelectPlayer(player)}
+                            >
+                                <div className="sug-avatar">
+                                    {player.imagem ? <img src={player.imagem} alt="" /> : player.nome.charAt(0)}
+                                </div>
+                                <div className="sug-info">
+                                    <span className="sug-discord">{player.discord}</span>
+                                    <span className="sug-name">{player.nome}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -215,7 +284,7 @@ const PopupReivindicar: React.FC<PopupReivindicarProps> = ({ onClose, onSubmit }
                             onChange={handleChange}
                             required
                         />
-                         <button type="button" className="password-toggle-btn" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                          <button type="button" className="password-toggle-btn" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
                             {showConfirmPassword ? (
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
                             ) : (

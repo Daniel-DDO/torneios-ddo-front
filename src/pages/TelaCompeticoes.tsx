@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { API } from '../services/api';
@@ -27,6 +27,12 @@ interface UserData {
   finais: number;
   partidasJogadas: number;
   golsMarcados: number;
+}
+
+interface Avatar {
+  id: string;
+  url: string;
+  nome?: string;
 }
 
 const Icons = {
@@ -61,6 +67,13 @@ const fetchAllCompeticoesService = async (): Promise<Competicao[]> => {
   }
 };
 
+const fetchAvatarsService = async () => {
+    const response = await API.get('/api/avatares');
+    if (Array.isArray(response)) return response;
+    if (response.data && Array.isArray(response.data)) return response.data;
+    return [];
+};
+
 export function TelaCompeticoes() {
   const navigate = useNavigate();
 
@@ -69,6 +82,20 @@ export function TelaCompeticoes() {
     queryFn: fetchAllCompeticoesService,
     staleTime: 1000 * 60 * 5,
   });
+
+  const { data: avatars = [] } = useQuery({
+    queryKey: ['avatares'],
+    queryFn: fetchAvatarsService,
+    staleTime: 1000 * 60 * 60,
+  });
+
+  const avatarMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    avatars.forEach((avatar: Avatar) => {
+        map[avatar.id] = avatar.url;
+    });
+    return map;
+  }, [avatars]);
 
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
@@ -116,6 +143,11 @@ export function TelaCompeticoes() {
   const filteredCompeticoes = competicoes.filter((competicao: Competicao) =>
     competicao.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getCurrentUserAvatar = () => {
+    if (!currentUser?.imagem) return null;
+    return avatarMap[currentUser.imagem] || currentUser.imagem;
+  };
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -293,10 +325,10 @@ export function TelaCompeticoes() {
                 className="user-avatar-mini" 
                 onClick={() => setShowUserPopup(true)}
                 style={{
-                  backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
+                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  backgroundColor: currentUser.imagem ? 'transparent' : 'var(--primary)',
+                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -305,7 +337,7 @@ export function TelaCompeticoes() {
                   cursor: 'pointer'
                 }}
               >
-                {!currentUser.imagem && currentUser.nome.charAt(0)}
+                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
               </div>
             ) : (
               <button 
@@ -341,38 +373,42 @@ export function TelaCompeticoes() {
 
             {!loading && (
                 <div className="players-grid-container">
-                {filteredCompeticoes.map((competicao: Competicao, index: number) => (
-                    <div key={competicao.id} className="player-card-item">
-                    <div className="card-rank-badge">#{index + 1}</div>
-                    
-                    {competicao.imagem ? (
-                        <div className="card-avatar-large" style={{backgroundImage: `url(${competicao.imagem})`}}></div>
-                    ) : (
-                        <div className="card-avatar-large">
-                            {competicao.nome.substring(0,2).toUpperCase()}
-                        </div>
-                    )}
-                    
-                    <div className="card-name">{competicao.nome}</div>
-                    <div className="card-location" title={competicao.descricao}>
-                        {competicao.descricao ? competicao.descricao.substring(0, 40) + '...' : 'Sem descrição'}
-                    </div>
-                    
-                    <div className="card-stats-row">
-                        <div className="stat-box">
-                        <span className="stat-val">{competicao.divisao}</span>
-                        <span className="stat-lbl">Divisão</span>
-                        </div>
-                        <div style={{width: '1px', background: 'var(--border-color)'}}></div>
-                        <div className="stat-box">
-                        <span className="stat-val">{competicao.valor}</span>
-                        <span className="stat-lbl">Valor</span>
-                        </div>
-                    </div>
+                {filteredCompeticoes.map((competicao: Competicao, index: number) => {
+                    const avatarUrl = competicao.imagem ? (avatarMap[competicao.imagem] || competicao.imagem) : null;
 
-                    <button className="btn-profile">Ver Competição</button>
-                    </div>
-                ))}
+                    return (
+                        <div key={competicao.id} className="player-card-item">
+                        <div className="card-rank-badge">#{index + 1}</div>
+                        
+                        {avatarUrl ? (
+                            <div className="card-avatar-large" style={{backgroundImage: `url(${avatarUrl})`}}></div>
+                        ) : (
+                            <div className="card-avatar-large">
+                                {competicao.nome.substring(0,2).toUpperCase()}
+                            </div>
+                        )}
+                        
+                        <div className="card-name">{competicao.nome}</div>
+                        <div className="card-location" title={competicao.descricao}>
+                            {competicao.descricao ? competicao.descricao.substring(0, 40) + '...' : 'Sem descrição'}
+                        </div>
+                        
+                        <div className="card-stats-row">
+                            <div className="stat-box">
+                            <span className="stat-val">{competicao.divisao}</span>
+                            <span className="stat-lbl">Divisão</span>
+                            </div>
+                            <div style={{width: '1px', background: 'var(--border-color)'}}></div>
+                            <div className="stat-box">
+                            <span className="stat-val">{competicao.valor}</span>
+                            <span className="stat-lbl">Valor</span>
+                            </div>
+                        </div>
+
+                        <button className="btn-profile">Ver Competição</button>
+                        </div>
+                    );
+                })}
                 </div>
             )}
         </div>
@@ -388,7 +424,10 @@ export function TelaCompeticoes() {
 
       {showUserPopup && currentUser && (
         <PopupUser 
-          user={currentUser}
+          user={{
+            ...currentUser,
+            imagem: getCurrentUserAvatar()
+          }}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
         />

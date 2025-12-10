@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { API } from '../services/api';
@@ -34,6 +34,12 @@ interface UserData {
   golsMarcados: number;
 }
 
+interface Avatar {
+  id: string;
+  url: string;
+  nome?: string;
+}
+
 const LIGA_NAMES: { [key: string]: string } = {
   LALIGA: "LaLiga",
   PREMIER_LEAGUE: "Premier League",
@@ -56,7 +62,7 @@ const Icons = {
   Shield: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>,
   Calendar: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
   Wallet: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>,
-  Settings: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
+  Settings: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
   Search: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
   Bell: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
   More: () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
@@ -89,6 +95,13 @@ const fetchAllClubesService = async () => {
   return allData;
 };
 
+const fetchAvatarsService = async () => {
+    const response = await API.get('/api/avatares');
+    if (Array.isArray(response)) return response;
+    if (response.data && Array.isArray(response.data)) return response.data;
+    return [];
+};
+
 export function TelaClubes() {
   const navigate = useNavigate();
 
@@ -97,6 +110,20 @@ export function TelaClubes() {
     queryFn: fetchAllClubesService,
     staleTime: 1000 * 60 * 5, 
   });
+
+  const { data: avatars = [] } = useQuery({
+    queryKey: ['avatares'],
+    queryFn: fetchAvatarsService,
+    staleTime: 1000 * 60 * 60,
+  });
+
+  const avatarMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    avatars.forEach((avatar: Avatar) => {
+        map[avatar.id] = avatar.url;
+    });
+    return map;
+  }, [avatars]);
 
   const [selectedClubId, setSelectedClubId] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
@@ -153,6 +180,11 @@ export function TelaClubes() {
   const filteredClubes = clubes.filter(clube =>
     clube.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getCurrentUserAvatar = () => {
+    if (!currentUser?.imagem) return null;
+    return avatarMap[currentUser.imagem] || currentUser.imagem;
+  };
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -334,10 +366,10 @@ export function TelaClubes() {
                 className="user-avatar-mini" 
                 onClick={() => setShowUserPopup(true)}
                 style={{
-                  backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
+                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  backgroundColor: currentUser.imagem ? 'transparent' : 'var(--primary)',
+                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -346,7 +378,7 @@ export function TelaClubes() {
                   cursor: 'pointer'
                 }}
               >
-                {!currentUser.imagem && currentUser.nome.charAt(0)}
+                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
               </div>
             ) : (
               <button 
@@ -382,36 +414,40 @@ export function TelaClubes() {
 
             {!loading && (
                 <div className="players-grid-container">
-                {filteredClubes.map((clube, index) => (
-                    <div key={clube.id} className="player-card-item">
-                    <div className="card-rank-badge">#{index + 1}</div>
-                    
-                    {clube.imagem ? (
-                        <div className="card-avatar-large" style={{backgroundImage: `url(${clube.imagem})`}}></div>
-                    ) : (
-                        <div className="card-avatar-large" style={{backgroundColor: clube.corPrimaria || 'var(--hover-bg)'}}>
-                            {clube.sigla || clube.nome.substring(0,2).toUpperCase()}
-                        </div>
-                    )}
-                    
-                    <div className="card-name">{clube.nome}</div>
-                    <div className="card-location">{clube.estadio || 'Sem estádio'}</div>
-                    
-                    <div className="card-stats-row">
-                        <div className="stat-box">
-                        <span className="stat-val">{clube.estrelas} ★</span>
-                        <span className="stat-lbl">Estrelas</span>
-                        </div>
-                        <div style={{width: '1px', background: 'var(--border-color)'}}></div>
-                        <div className="stat-box">
-                        <span className="stat-val">{LIGA_NAMES[clube.ligaClube] || clube.ligaClube || '-'}</span>
-                        <span className="stat-lbl">Liga</span>
-                        </div>
-                    </div>
+                {filteredClubes.map((clube, index) => {
+                    const avatarUrl = clube.imagem ? (avatarMap[clube.imagem] || clube.imagem) : null;
 
-                    <button className="btn-profile" onClick={() => handleVerClube(clube.id)}>Ver Clube</button>
-                    </div>
-                ))}
+                    return (
+                        <div key={clube.id} className="player-card-item">
+                        <div className="card-rank-badge">#{index + 1}</div>
+                        
+                        {avatarUrl ? (
+                            <div className="card-avatar-large" style={{backgroundImage: `url(${avatarUrl})`}}></div>
+                        ) : (
+                            <div className="card-avatar-large" style={{backgroundColor: clube.corPrimaria || 'var(--hover-bg)'}}>
+                                {clube.sigla || clube.nome.substring(0,2).toUpperCase()}
+                            </div>
+                        )}
+                        
+                        <div className="card-name">{clube.nome}</div>
+                        <div className="card-location">{clube.estadio || 'Sem estádio'}</div>
+                        
+                        <div className="card-stats-row">
+                            <div className="stat-box">
+                            <span className="stat-val">{clube.estrelas} ★</span>
+                            <span className="stat-lbl">Estrelas</span>
+                            </div>
+                            <div style={{width: '1px', background: 'var(--border-color)'}}></div>
+                            <div className="stat-box">
+                            <span className="stat-val">{LIGA_NAMES[clube.ligaClube] || clube.ligaClube || '-'}</span>
+                            <span className="stat-lbl">Liga</span>
+                            </div>
+                        </div>
+
+                        <button className="btn-profile" onClick={() => handleVerClube(clube.id)}>Ver Clube</button>
+                        </div>
+                    );
+                })}
                 </div>
             )}
         </div>
@@ -427,7 +463,10 @@ export function TelaClubes() {
 
       {showUserPopup && currentUser && (
         <PopupUser 
-          user={currentUser}
+          user={{
+            ...currentUser,
+            imagem: getCurrentUserAvatar()
+          }}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
         />
