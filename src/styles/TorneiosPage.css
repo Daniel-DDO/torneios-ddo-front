@@ -84,6 +84,7 @@ html, body {
   gap: 12px;
   margin-bottom: 3rem;
   padding-left: 0.5rem;
+  flex-shrink: 0;
 }
 
 .logo-icon {
@@ -113,6 +114,27 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 20px;
+}
+
+.nav-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.nav-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nav-menu::-webkit-scrollbar-thumb {
+  background-color: rgba(113, 128, 150, 0.2);
+  border-radius: 10px;
+}
+
+.nav-menu:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(113, 128, 150, 0.4);
 }
 
 .nav-item {
@@ -126,6 +148,7 @@ html, body {
   font-weight: 500;
   transition: all 0.2s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .nav-item:hover {
@@ -143,6 +166,7 @@ html, body {
   height: 1px;
   background-color: var(--border-color);
   margin: 1rem 0;
+  flex-shrink: 0;
 }
 
 .main-content {

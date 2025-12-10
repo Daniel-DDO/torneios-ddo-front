@@ -430,13 +430,6 @@ export function TelaMinhaConta() {
           <a href="#" className="nav-item">
             <Settings size={20} /> Suporte
           </a>
-          
-          <div className="nav-separator"></div>
-          {isAdmin && (
-             <a onClick={() => navigate('/admin')} className="nav-item" style={{ cursor: 'pointer' }}>
-               <Lock size={18} /> Menu Adm
-             </a>
-          )}
         </nav>
       </aside>
 
