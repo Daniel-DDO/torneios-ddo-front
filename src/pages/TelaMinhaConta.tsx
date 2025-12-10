@@ -17,7 +17,8 @@ import {
   Gamepad2,
   Star,
   Lightbulb,
-  Settings
+  Settings,
+  CalendarSync
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -415,6 +416,9 @@ export function TelaMinhaConta() {
           </a>
           <a href="#" className="nav-item">
             <Star size={20} /> Títulos
+          </a>
+          <a onClick={() => navigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
+            <CalendarSync size={20} /> Temporadas
           </a>
           <div className="nav-separator"></div>
           <a href="#" className="nav-item">
