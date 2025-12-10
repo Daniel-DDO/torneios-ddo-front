@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { type AxiosRequestConfig } from 'axios';
 
 const API_BASE_URL = 'https://torneios-ddo-back.onrender.com';
 
@@ -12,9 +12,11 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
     return config;
   },
   (error) => {
@@ -23,32 +25,30 @@ axiosInstance.interceptors.request.use(
 );
 
 axiosInstance.interceptors.response.use(
-  (response) => {
-    return response.data;
-  },
+  (response) => response,
   (error) => {
     return Promise.reject(error);
   }
 );
 
 export const API = {
-  get(endpoint: string, params?: Record<string, any>) {
-    return axiosInstance.get(endpoint, { params });
+  get(endpoint: string, config?: AxiosRequestConfig) {
+    return axiosInstance.get(endpoint, config);
   },
 
-  post(endpoint: string, data?: Record<string, any>) {
-    return axiosInstance.post(endpoint, data);
+  post(endpoint: string, data?: any, config?: AxiosRequestConfig) {
+    return axiosInstance.post(endpoint, data, config);
   },
 
-  put(endpoint: string, data?: Record<string, any>) {
-    return axiosInstance.put(endpoint, data);
+  put(endpoint: string, data?: any, config?: AxiosRequestConfig) {
+    return axiosInstance.put(endpoint, data, config);
   },
 
-  delete(endpoint: string) {
-    return axiosInstance.delete(endpoint);
+  delete(endpoint: string, config?: AxiosRequestConfig) {
+    return axiosInstance.delete(endpoint, config);
   },
 
-  patch(endpoint: string, data?: Record<string, any>) {
-    return axiosInstance.patch(endpoint, data);
+  patch(endpoint: string, data?: any, config?: AxiosRequestConfig) {
+    return axiosInstance.patch(endpoint, data, config);
   }
 };

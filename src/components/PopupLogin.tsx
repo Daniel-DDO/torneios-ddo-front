@@ -28,10 +28,12 @@ const PopupLogin: React.FC<PopupLoginProps> = ({ onClose, onLoginSuccess }) => {
     setLoading(true);
 
     try {
-      const data = await API.post('/jogador/login', {
+      const response = await API.post('/jogador/login', {
         login: login,
         senha: senha
-      }) as any;
+      });
+
+      const data = response.data;
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('user_data', JSON.stringify(data.jogador));
@@ -133,7 +135,7 @@ const PopupLogin: React.FC<PopupLoginProps> = ({ onClose, onLoginSuccess }) => {
             {error && <div className="login-error-msg">{error}</div>}
 
             <button type="submit" className="login-submit-btn" disabled={loading}>
-                {loading ? <div className="popup-spinner-small"></div> : 'ENTRAR NA CONTA'}
+              {loading ? <div className="popup-spinner-small"></div> : 'ENTRAR NA CONTA'}
             </button>
 
           </form>

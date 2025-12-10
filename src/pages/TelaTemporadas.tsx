@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Menu, 
   LayoutDashboard, 
@@ -20,13 +20,14 @@ import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import PopupNovaTemporada from '../components/PopupNovaTemporada';
 
 interface Season {
   id: string;
   nome: string;
   dataInicio: string;
   dataFim: string;
-  status: string;
+  ativa: boolean;
 }
 
 interface UserData {
@@ -48,12 +49,6 @@ interface Avatar {
   nome?: string;
 }
 
-const mockSeasons: Season[] = [
-  { id: '1', nome: 'Temporada 2024 - 1', dataInicio: '2024-01-01', dataFim: '2024-06-30', status: 'Em Andamento' },
-  { id: '2', nome: 'Temporada 2023 - 2', dataInicio: '2023-07-01', dataFim: '2023-12-31', status: 'Finalizada' },
-  { id: '3', nome: 'Temporada 2023 - 1', dataInicio: '2023-01-01', dataFim: '2023-06-30', status: 'Finalizada' },
-];
-
 const fetchAvatarsService = async () => {
   const response = await API.get('/api/avatares');
   if (Array.isArray(response)) return response;
@@ -61,13 +56,24 @@ const fetchAvatarsService = async () => {
   return [];
 };
 
+const fetchSeasonsService = async () => {
+  const response = await API.get('/temporada/all');
+  return response.data;
+};
+
 export function TelaTemporadas() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const { data: avatars = [] } = useQuery({
+  const { data: avatars = [] } = useQuery<Avatar[]>({
     queryKey: ['avatares'],
     queryFn: fetchAvatarsService,
     staleTime: 1000 * 60 * 60,
+  });
+
+  const { data: seasons = [] } = useQuery<Season[]>({
+    queryKey: ['temporadas'],
+    queryFn: fetchSeasonsService,
   });
 
   const avatarMap = useMemo(() => {
@@ -81,6 +87,7 @@ export function TelaTemporadas() {
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
+  const [showNovaTemporadaPopup, setShowNovaTemporadaPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -119,9 +126,30 @@ export function TelaTemporadas() {
     }
   };
 
+  const handleNovaTemporadaSubmit = () => {
+    queryClient.invalidateQueries({ queryKey: ['temporadas'] });
+  };
+
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const filteredSeasons = mockSeasons.filter(season =>
+  const getSeasonStatus = (startStr: string, endStr: string) => {
+    const now = new Date();
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+
+    if (now >= start && now <= end) {
+        return { label: 'ATUAL', className: 'status-atual' };
+    } else if (now > end) {
+        return { label: 'PASSADO', className: 'status-passado' };
+    } else {
+        return { label: 'EM BREVE', className: 'status-breve' };
+    }
+  };
+
+  const filteredSeasons = seasons.filter((season) =>
     season.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -171,6 +199,15 @@ export function TelaTemporadas() {
           font-size: 1rem;
         }
 
+        .custom-table tbody tr {
+          transition: background-color 0.2s;
+          cursor: pointer;
+        }
+
+        .custom-table tbody tr:hover {
+          background-color: var(--hover-bg);
+        }
+
         .custom-table tr:last-child td {
           border-bottom: none;
         }
@@ -184,14 +221,19 @@ export function TelaTemporadas() {
           text-transform: uppercase;
         }
 
-        .status-em-andamento {
-          background-color: rgba(0, 208, 156, 0.15);
-          color: var(--success);
+        .status-atual {
+          background-color: rgba(16, 185, 129, 0.15);
+          color: #10b981;
         }
 
-        .status-finalizada {
+        .status-passado {
           background-color: var(--border-color);
           color: var(--text-gray);
+        }
+
+        .status-breve {
+          background-color: rgba(59, 130, 246, 0.15);
+          color: #3b82f6;
         }
 
         @media (max-width: 768px) {
@@ -319,7 +361,7 @@ export function TelaTemporadas() {
             {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
                 <button 
                   className="t-btn" 
-                  onClick={() => console.log('Nova Temporada')}
+                  onClick={() => setShowNovaTemporadaPopup(true)}
                   style={{background: 'var(--primary)', color: 'white', border: 'none'}}
                 >
                     + Nova Temporada
@@ -338,18 +380,24 @@ export function TelaTemporadas() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSeasons.map((season) => (
-                    <tr key={season.id}>
-                      <td>{season.nome}</td>
-                      <td>{new Date(season.dataInicio).toLocaleDateString('pt-BR')}</td>
-                      <td>{new Date(season.dataFim).toLocaleDateString('pt-BR')}</td>
-                      <td>
-                        <span className={`status-badge ${season.status === 'Em Andamento' ? 'status-em-andamento' : 'status-finalizada'}`}>
-                          {season.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredSeasons.map((season) => {
+                    const statusInfo = getSeasonStatus(season.dataInicio, season.dataFim);
+                    return (
+                        <tr 
+                            key={season.id} 
+                            onClick={() => navigate(`/temporadas/${season.id}`)}
+                        >
+                          <td>{season.nome}</td>
+                          <td>{new Date(season.dataInicio).toLocaleDateString('pt-BR')}</td>
+                          <td>{new Date(season.dataFim).toLocaleDateString('pt-BR')}</td>
+                          <td>
+                            <span className={`status-badge ${statusInfo.className}`}>
+                              {statusInfo.label}
+                            </span>
+                          </td>
+                        </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -372,6 +420,13 @@ export function TelaTemporadas() {
           }}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
+        />
+      )}
+
+      {showNovaTemporadaPopup && (
+        <PopupNovaTemporada 
+          onClose={() => setShowNovaTemporadaPopup(false)} 
+          onSubmit={handleNovaTemporadaSubmit}
         />
       )}
     </div>
