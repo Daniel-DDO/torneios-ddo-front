@@ -10,7 +10,6 @@ import {
   Wallet, 
   Search, 
   Bell, 
-  Lock, 
   Edit, 
   Camera, 
   Mail, 

@@ -427,9 +427,11 @@ export function TelaClubes() {
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Clubes e Seleções</h2>
                 <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize os clubes e seleções oficiais</p>
             </div>
-            <button className="t-btn" style={{background: 'var(--primary)', color: 'white', border: 'none'}}>
-                + Novo Clube
-            </button>
+            {currentUser && ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo) && (
+              <button className="t-btn" style={{background: 'var(--primary)', color: 'white', border: 'none'}}>
+                  + Novo Clube
+              </button>
+            )}
             </div>
 
             {!loading && (

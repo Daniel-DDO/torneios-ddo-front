@@ -1,19 +1,19 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Menu,
-  LayoutDashboard,
-  Users,
-  Trophy,
-  Shield,
-  Wallet,
-  Settings,
-  Search,
-  Bell,
-  Gamepad2,
+import { 
+  Menu, 
+  LayoutDashboard, 
+  Users, 
+  Trophy, 
+  Shield, 
+  Wallet, 
+  Search, 
+  Bell, 
+  Gamepad2, 
   Star,
   Lightbulb,
+  Settings,
   CalendarSync
 } from 'lucide-react';
 import { API } from '../services/api';
@@ -22,13 +22,12 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 
-interface Competicao {
+interface Season {
   id: string;
   nome: string;
-  imagem: string;
-  divisao: string;
-  valor: number;
-  descricao: string;
+  dataInicio: string;
+  dataFim: string;
+  status: string;
 }
 
 interface UserData {
@@ -50,23 +49,11 @@ interface Avatar {
   nome?: string;
 }
 
-const fetchAllCompeticoesService = async (): Promise<Competicao[]> => {
-  try {
-    const response = await API.get('/competicao/all');
-    const data = (response && (response as any).data) ? (response as any).data : response;
-
-    if (data && data.conteudo) {
-      return data.conteudo as Competicao[];
-    } else if (Array.isArray(data)) {
-      return data as Competicao[];
-    } else {
-      return [];
-    }
-  } catch (error) {
-    console.error("Erro ao buscar competições", error);
-    return [];
-  }
-};
+const mockSeasons: Season[] = [
+  { id: '1', nome: 'Temporada 2024 - 1', dataInicio: '2024-01-01', dataFim: '2024-06-30', status: 'Em Andamento' },
+  { id: '2', nome: 'Temporada 2023 - 2', dataInicio: '2023-07-01', dataFim: '2023-12-31', status: 'Finalizada' },
+  { id: '3', nome: 'Temporada 2023 - 1', dataInicio: '2023-01-01', dataFim: '2023-06-30', status: 'Finalizada' },
+];
 
 const fetchAvatarsService = async () => {
   const response = await API.get('/api/avatares');
@@ -75,14 +62,8 @@ const fetchAvatarsService = async () => {
   return [];
 };
 
-export function TelaCompeticoes() {
+export function TelaTemporadas() {
   const navigate = useNavigate();
-  
-  const { data: competicoes = [], isLoading: loading } = useQuery<Competicao[]>({
-    queryKey: ['competicoes'],
-    queryFn: fetchAllCompeticoesService,
-    staleTime: 1000 * 60 * 5,
-  });
 
   const { data: avatars = [] } = useQuery({
     queryKey: ['avatares'],
@@ -93,7 +74,7 @@ export function TelaCompeticoes() {
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};
     avatars.forEach((avatar: Avatar) => {
-      map[avatar.id] = avatar.url;
+        map[avatar.id] = avatar.url;
     });
     return map;
   }, [avatars]);
@@ -103,6 +84,7 @@ export function TelaCompeticoes() {
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark';
@@ -131,17 +113,17 @@ export function TelaCompeticoes() {
 
   const handleLogout = () => {
     if (window.confirm("Deseja realmente sair?")) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user_data');
-      setCurrentUser(null);
-      setShowUserPopup(false);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user_data');
+        setCurrentUser(null);
+        setShowUserPopup(false);
     }
   };
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const filteredCompeticoes = competicoes.filter((competicao: Competicao) =>
-    competicao.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredSeasons = mockSeasons.filter(season =>
+    season.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getCurrentUserAvatar = () => {
@@ -151,121 +133,71 @@ export function TelaCompeticoes() {
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
-
-      <LoadingSpinner isLoading={loading} />
-
+      
       <style>{`
         .page-content {
           padding: 2rem 3rem;
         }
 
-        .players-grid-container {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-          gap: 24px;
-          margin-top: 24px;
-        }
-
-        .player-card-item {
+        .table-container {
           background-color: var(--bg-card);
-          border: 1px solid var(--border-color);
           border-radius: var(--radius);
-          padding: 24px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-          transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-          position: relative;
+          border: 1px solid var(--border-color);
+          overflow: hidden;
+          margin-top: 24px;
+          box-shadow: var(--shadow-sm);
         }
 
-        .player-card-item:hover {
-          transform: translateY(-5px);
-          box-shadow: var(--shadow-md);
-          border-color: var(--primary);
+        .custom-table {
+          width: 100%;
+          border-collapse: collapse;
         }
 
-        .card-rank-badge {
-          position: absolute;
-          top: 16px;
-          right: 16px;
-          background: var(--hover-bg);
-          color: var(--primary);
-          font-weight: 800;
-          padding: 4px 10px;
+        .custom-table th, .custom-table td {
+          padding: 16px 24px;
+          text-align: left;
+          border-bottom: 1px solid var(--border-color);
+        }
+
+        .custom-table th {
+          background-color: var(--hover-bg);
+          color: var(--text-gray);
+          font-weight: 600;
+          font-size: 0.9rem;
+          text-transform: uppercase;
+        }
+
+        .custom-table td {
+          color: var(--text-dark);
+          font-size: 1rem;
+        }
+
+        .custom-table tr:last-child td {
+          border-bottom: none;
+        }
+
+        .status-badge {
+          display: inline-block;
+          padding: 4px 12px;
           border-radius: 12px;
           font-size: 0.8rem;
-          border: 1px solid var(--border-color);
-        }
-
-        .card-avatar-large {
-          width: 80px;
-          height: 80px;
-          border-radius: 50%;
-          background: var(--hover-bg);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 2rem;
           font-weight: 700;
-          color: var(--primary);
-          margin-bottom: 16px;
-          border: 2px solid var(--border-color);
-          background-size: contain;
-          background-repeat: no-repeat;
-          background-position: center;
+          text-transform: uppercase;
         }
 
-        .card-name {
-          font-size: 1.1rem;
-          font-weight: 700;
-          color: var(--text-dark);
-          margin-bottom: 4px;
+        .status-em-andamento {
+          background-color: rgba(0, 208, 156, 0.15);
+          color: var(--success);
         }
 
-        .card-location {
-          font-size: 0.85rem;
+        .status-finalizada {
+          background-color: var(--border-color);
           color: var(--text-gray);
-          margin-bottom: 16px;
-        }
-
-        .card-stats-row {
-          display: flex;
-          justify-content: space-between;
-          width: 100%;
-          background: var(--hover-bg);
-          padding: 10px 16px;
-          border-radius: 12px;
-          margin-bottom: 16px;
-        }
-
-        .stat-box {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .stat-val { font-weight: 700; color: var(--text-dark); font-size: 0.95rem; }
-        .stat-lbl { font-size: 0.7rem; color: var(--text-gray); text-transform: uppercase; }
-
-        .btn-profile {
-          width: 100%;
-          padding: 10px;
-          border-radius: 10px;
-          border: 1px solid var(--primary);
-          background: transparent;
-          color: var(--primary);
-          font-weight: 600;
-          cursor: pointer;
-          transition: 0.2s;
-        }
-
-        .btn-profile:hover {
-          background: var(--primary);
-          color: white;
         }
 
         @media (max-width: 768px) {
           .page-content { padding: 1rem; }
+          .custom-table th, .custom-table td { padding: 12px; }
         }
       `}</style>
 
@@ -289,13 +221,13 @@ export function TelaCompeticoes() {
           <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
             <Shield size={20} /> Clubes
           </a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item active" style={{cursor: 'pointer'}}>
+          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
             <Trophy size={20} /> Competições
           </a>
           <a href="#" className="nav-item">
             <Star size={20} /> Títulos
           </a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
+          <a onClick={() => navigate('/temporadas')} className="nav-item active" style={{cursor: 'pointer'}}>
             <CalendarSync size={20} /> Temporadas
           </a>
           <div className="nav-separator"></div>
@@ -326,7 +258,7 @@ export function TelaCompeticoes() {
               <Search size={20} />
               <input 
                 type="text" 
-                placeholder="Buscar competição..." 
+                placeholder="Buscar temporada..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -382,56 +314,46 @@ export function TelaCompeticoes() {
         <div className="page-content">
             <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Competições</h2>
-                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize as competições oficiais</p>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Temporadas</h2>
+                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Gerencie as temporadas do torneio</p>
             </div>
             {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
-              <button className="t-btn" style={{background: 'var(--primary)', color: 'white', border: 'none'}}>
-                  + Nova Competição
-              </button>
+                <button 
+                  className="t-btn" 
+                  onClick={() => console.log('Nova Temporada')}
+                  style={{background: 'var(--primary)', color: 'white', border: 'none'}}
+                >
+                    + Nova Temporada
+                </button>
             )}
             </div>
 
-            {!loading && (
-                <div className="players-grid-container">
-                {filteredCompeticoes.map((competicao: Competicao, index: number) => {
-                    const avatarUrl = competicao.imagem ? (avatarMap[competicao.imagem] || competicao.imagem) : null;
-
-                    return (
-                        <div key={competicao.id} className="player-card-item">
-                        <div className="card-rank-badge">#{index + 1}</div>
-                        
-                        {avatarUrl ? (
-                            <div className="card-avatar-large" style={{backgroundImage: `url(${avatarUrl})`}}></div>
-                        ) : (
-                            <div className="card-avatar-large">
-                                {competicao.nome.substring(0,2).toUpperCase()}
-                            </div>
-                        )}
-                        
-                        <div className="card-name">{competicao.nome}</div>
-                        <div className="card-location" title={competicao.descricao}>
-                            {competicao.descricao ? competicao.descricao.substring(0, 40) + '...' : 'Sem descrição'}
-                        </div>
-                        
-                        <div className="card-stats-row">
-                            <div className="stat-box">
-                            <span className="stat-val">{competicao.divisao}</span>
-                            <span className="stat-lbl">Divisão</span>
-                            </div>
-                            <div style={{width: '1px', background: 'var(--border-color)'}}></div>
-                            <div className="stat-box">
-                            <span className="stat-val">{competicao.valor}</span>
-                            <span className="stat-lbl">Valor</span>
-                            </div>
-                        </div>
-
-                        <button className="btn-profile">Ver Competição</button>
-                        </div>
-                    );
-                })}
-                </div>
-            )}
+            <div className="table-container">
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Início</th>
+                    <th>Fim</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSeasons.map((season) => (
+                    <tr key={season.id}>
+                      <td>{season.nome}</td>
+                      <td>{new Date(season.dataInicio).toLocaleDateString('pt-BR')}</td>
+                      <td>{new Date(season.dataFim).toLocaleDateString('pt-BR')}</td>
+                      <td>
+                        <span className={`status-badge ${season.status === 'Em Andamento' ? 'status-em-andamento' : 'status-finalizada'}`}>
+                          {season.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
         </div>
 
       </main>
