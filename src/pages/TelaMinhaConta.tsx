@@ -4,6 +4,7 @@ import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import PopupAtualizarFoto from '../components/PopupAtualizarFoto';
 
 interface UserData {
   id: string;
@@ -52,6 +53,7 @@ export function TelaMinhaConta() {
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [showAvatarPopup, setShowAvatarPopup] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark';
@@ -93,6 +95,14 @@ export function TelaMinhaConta() {
       setCurrentUser(null);
       setShowUserPopup(false);
       navigate('/');
+    }
+  };
+
+  const handleAvatarUpdate = (novaUrl: string) => {
+    if (currentUser) {
+      const updatedUser = { ...currentUser, imagem: novaUrl };
+      setCurrentUser(updatedUser);
+      localStorage.setItem('user_data', JSON.stringify(updatedUser));
     }
   };
 
@@ -499,7 +509,7 @@ export function TelaMinhaConta() {
               </div>
 
               <div className="action-buttons-container">
-                  <button className="action-btn" onClick={() => console.log('Atualizar foto')}>
+                  <button className="action-btn" onClick={() => setShowAvatarPopup(true)}>
                     <Icons.Camera />
                     Atualizar foto do perfil
                   </button>
@@ -530,6 +540,13 @@ export function TelaMinhaConta() {
           user={currentUser}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
+        />
+      )}
+
+      {showAvatarPopup && (
+        <PopupAtualizarFoto
+          onClose={() => setShowAvatarPopup(false)}
+          onUpdateSuccess={handleAvatarUpdate}
         />
       )}
     </div>
