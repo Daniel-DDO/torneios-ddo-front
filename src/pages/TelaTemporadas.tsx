@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
-import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 
