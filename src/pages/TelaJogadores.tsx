@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { API } from '../services/api';
@@ -33,6 +33,12 @@ interface UserData {
   finais: number;
   partidasJogadas: number;
   golsMarcados: number;
+}
+
+interface Avatar {
+  id: string;
+  url: string;
+  nome?: string;
 }
 
 const Icons = {
@@ -75,14 +81,35 @@ const fetchAllPlayersService = async () => {
   return allData;
 };
 
+const fetchAvatarsService = async () => {
+    const response = await API.get('/api/avatares');
+    if (Array.isArray(response)) return response;
+    if (response.data && Array.isArray(response.data)) return response.data;
+    return [];
+};
+
 export function TelaJogadores() {
   const navigate = useNavigate();
 
-  const { data: players = [], isLoading: loading } = useQuery({
+  const { data: players = [], isLoading: loadingPlayers } = useQuery({
     queryKey: ['jogadores'], 
     queryFn: fetchAllPlayersService,
     staleTime: 1000 * 60 * 5, 
   });
+
+  const { data: avatars = [] } = useQuery({
+    queryKey: ['avatares'],
+    queryFn: fetchAvatarsService,
+    staleTime: 1000 * 60 * 60,
+  });
+
+  const avatarMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    avatars.forEach((avatar: Avatar) => {
+        map[avatar.id] = avatar.url;
+    });
+    return map;
+  }, [avatars]);
 
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
@@ -132,10 +159,15 @@ export function TelaJogadores() {
     player.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const getCurrentUserAvatar = () => {
+    if (!currentUser?.imagem) return null;
+    return avatarMap[currentUser.imagem] || currentUser.imagem;
+  };
+
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       
-      <LoadingSpinner isLoading={loading} />
+      <LoadingSpinner isLoading={loadingPlayers} />
 
       <style>{`
         .page-content {
@@ -307,10 +339,10 @@ export function TelaJogadores() {
                 className="user-avatar-mini" 
                 onClick={() => setShowUserPopup(true)}
                 style={{
-                  backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
+                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  backgroundColor: currentUser.imagem ? 'transparent' : 'var(--primary)',
+                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -319,7 +351,7 @@ export function TelaJogadores() {
                   cursor: 'pointer'
                 }}
               >
-                {!currentUser.imagem && currentUser.nome.charAt(0)}
+                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
               </div>
             ) : (
               <button 
@@ -359,43 +391,47 @@ export function TelaJogadores() {
             )}
             </div>
 
-            {!loading && (
+            {!loadingPlayers && (
                 <div className="players-grid-container">
-                {filteredPlayers.map((player, index) => (
-                    <div key={player.id} className="player-card-item">
-                    <div className="card-rank-badge">#{index + 1}</div>
+                {filteredPlayers.map((player, index) => {
+                    const avatarUrl = player.imagem ? (avatarMap[player.imagem] || player.imagem) : null;
                     
-                    {player.imagem ? (
-                        <div className="card-avatar-large" style={{backgroundImage: `url(${player.imagem})`}}></div>
-                    ) : (
-                        <div className="card-avatar-large">
-                            {player.nome.charAt(0)}
+                    return (
+                        <div key={player.id} className="player-card-item">
+                        <div className="card-rank-badge">#{index + 1}</div>
+                        
+                        {avatarUrl ? (
+                            <div className="card-avatar-large" style={{backgroundImage: `url(${avatarUrl})`}}></div>
+                        ) : (
+                            <div className="card-avatar-large">
+                                {player.nome.charAt(0)}
+                            </div>
+                        )}
+                        
+                        <div className="card-name">{player.nome}</div>
+                        <div className="card-location">{player.discord || 'Jogador DDO'}</div>
+                        
+                        <div className="card-stats-row">
+                            <div className="stat-box">
+                            <span className="stat-val">{player.partidasJogadas}</span>
+                            <span className="stat-lbl">Partidas</span>
+                            </div>
+                            <div style={{width: '1px', background: 'var(--border-color)'}}></div>
+                            <div className="stat-box">
+                            <span className="stat-val">{player.titulos}</span>
+                            <span className="stat-lbl">Títulos</span>
+                            </div>
                         </div>
-                    )}
-                    
-                    <div className="card-name">{player.nome}</div>
-                    <div className="card-location">{player.discord || 'Jogador DDO'}</div>
-                    
-                    <div className="card-stats-row">
-                        <div className="stat-box">
-                        <span className="stat-val">{player.partidasJogadas}</span>
-                        <span className="stat-lbl">Partidas</span>
-                        </div>
-                        <div style={{width: '1px', background: 'var(--border-color)'}}></div>
-                        <div className="stat-box">
-                        <span className="stat-val">{player.titulos}</span>
-                        <span className="stat-lbl">Títulos</span>
-                        </div>
-                    </div>
 
-                    <button 
-                        className="btn-profile" 
-                        onClick={() => navigate(`/jogador/${player.id}`)}
-                    >
-                        Ver Perfil
-                    </button>
-                    </div>
-                ))}
+                        <button 
+                            className="btn-profile" 
+                            onClick={() => navigate(`/jogador/${player.id}`)}
+                        >
+                            Ver Perfil
+                        </button>
+                        </div>
+                    );
+                })}
                 </div>
             )}
         </div>
@@ -411,7 +447,10 @@ export function TelaJogadores() {
 
       {showUserPopup && currentUser && (
         <PopupUser 
-          user={currentUser}
+          user={{
+            ...currentUser,
+            imagem: getCurrentUserAvatar()
+          }}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
         />
