@@ -1,21 +1,115 @@
-.user-popup-width {
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    animation: fadeIn 0.3s forwards;
+}
+
+.popup-overlay.fade-out {
+    animation: fadeOut 0.3s forwards;
+    pointer-events: none;
+}
+
+.user-popup-card {
+    background-color: var(--bg-card);
+    color: var(--text-dark);
+    padding: 30px;
+    border-radius: var(--radius);
+    width: 90%;
     max-width: 380px;
+    position: relative;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    transform: scale(0.95);
+    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    display: flex;
+    flex-direction: column;
+}
+
+body.dark-mode .user-popup-card {
+    background-color: #0a0a0c;
+    border-color: #252532;
+}
+
+.popup-overlay.fade-out .user-popup-card {
+    animation: scaleOut 0.3s forwards;
+}
+
+.popup-body-animate {
+    width: 100%;
+    animation: slideUp 0.4s ease forwards;
+}
+
+.popup-body-animate.fade-out-content {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.popup-close-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--hover-bg);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-gray);
+    transition: all 0.2s;
+    z-index: 10;
+}
+
+body.dark-mode .popup-close-btn {
+    background-color: #151520;
+    border: 1px solid #252532;
+}
+
+.popup-close-btn:hover {
+    background-color: #ff4757;
+    color: white;
+    transform: rotate(90deg);
+    border-color: #ff4757;
+}
+
+.popup-header-clean {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 25px;
+    text-align: center;
 }
 
 .popup-user-image-wrapper {
-    width: 90px;
-    height: 90px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
     padding: 4px;
-    border: 3px solid var(--primary, #007bff);
-    background-color: var(--bg-main, #fff);
-    margin-bottom: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border: 3px solid var(--role-color, var(--primary));
+    background-color: var(--bg-card);
+    margin-bottom: 15px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     position: relative;
+}
+
+body.dark-mode .popup-user-image-wrapper {
+    background-color: #0a0a0c;
 }
 
 .popup-user-img {
@@ -25,12 +119,46 @@
     object-fit: cover;
 }
 
-/* Grid de Estatísticas */
+.popup-user-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: var(--hover-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--role-color, var(--primary));
+}
+
+.popup-user-name {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin-bottom: 6px;
+}
+
+.popup-role-badge {
+    background-color: var(--hover-bg);
+    color: var(--role-color, var(--text-gray));
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid var(--role-color);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+body.dark-mode .popup-role-badge {
+    background-color: #151520;
+}
+
 .user-stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px;
-    margin: 20px 0;
+    gap: 12px;
+    margin-bottom: 25px;
     width: 100%;
 }
 
@@ -38,33 +166,37 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    background-color: var(--hover-bg, #f8f9fa);
-    padding: 10px 5px;
-    border-radius: 12px;
-    border: 1px solid var(--border-color, #eee);
-    transition: transform 0.2s;
+    background-color: var(--hover-bg);
+    padding: 12px 6px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+body.dark-mode .stat-item {
+    background-color: #151520;
+    border-color: #252532;
 }
 
 .stat-item:hover {
-    transform: translateY(-2px);
-    border-color: var(--primary, #007bff);
+    transform: translateY(-3px);
+    border-color: var(--role-color, var(--primary));
 }
 
 .stat-value {
-    font-size: 1.4rem;
+    font-size: 1.25rem;
     font-weight: 800;
-    color: var(--text-dark, #000);
+    color: var(--text-dark);
 }
 
 .stat-label {
-    font-size: 0.75rem;
-    color: var(--text-gray, #666);
+    font-size: 0.7rem;
+    color: var(--text-gray);
     text-transform: uppercase;
     font-weight: 600;
-    margin-top: 2px;
+    margin-top: 4px;
 }
 
-/* Lista de Detalhes */
 .user-details-list {
     display: flex;
     flex-direction: column;
@@ -76,67 +208,95 @@
 .detail-row {
     display: flex;
     align-items: center;
-    background-color: #fff;
-    padding: 12px;
-    border-radius: 12px;
-    border: 1px solid var(--border-color, #eee);
+    background-color: var(--bg-body);
+    padding: 12px 16px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+}
+
+body.dark-mode .detail-row {
+    background-color: #151520;
+    border-color: #252532;
 }
 
 .detail-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    background-color: var(--hover-bg, #f0f2f5);
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-gray, #555);
-    margin-right: 12px;
+    margin-right: 14px;
+    flex-shrink: 0;
+}
+
+.money-icon {
+    background-color: rgba(39, 174, 96, 0.1);
+    color: #27ae60;
+}
+
+.discord-icon {
+    background-color: rgba(88, 101, 242, 0.1);
+    color: #5865F2;
 }
 
 .detail-info {
     display: flex;
     flex-direction: column;
     text-align: left;
+    overflow: hidden;
 }
 
 .detail-info label {
-    font-size: 0.75rem;
-    color: var(--text-gray, #888);
+    font-size: 0.7rem;
+    color: var(--text-gray);
     font-weight: 600;
     text-transform: uppercase;
+    margin-bottom: 2px;
 }
 
 .detail-info span {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 700;
-    color: var(--text-primary, #333);
+    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .money-value {
-    color: #27ae60 !important; /* Verde para dinheiro */
+    color: #27ae60 !important;
 }
 
-/* Botão de Logout */
 .logout-btn {
     width: 100%;
     padding: 14px;
-    border-radius: 12px;
-    border: 1px solid #fab1a0;
-    background-color: #fff;
-    color: #d63031;
-    font-size: 0.95rem;
-    font-weight: 800;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 71, 87, 0.3);
+    background-color: transparent;
+    color: #ff4757;
+    font-size: 0.9rem;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
-    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
     margin-top: auto;
 }
 
 .logout-btn:hover {
-    background-color: #d63031;
+    background-color: #ff4757;
     color: white;
-    border-color: #d63031;
-    box-shadow: 0 4px 10px rgba(214, 48, 49, 0.2);
+    border-color: #ff4757;
+    box-shadow: 0 4px 12px rgba(255, 71, 87, 0.3);
     transform: translateY(-2px);
 }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes scaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.9); opacity: 0; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
