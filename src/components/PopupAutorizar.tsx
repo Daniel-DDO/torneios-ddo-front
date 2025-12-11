@@ -33,7 +33,7 @@ const PopupAutorizar: React.FC<PopupAutorizarProps> = ({ adminId, onClose }) => 
   };
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
+    const delayDebounceFn = setTimeout(() => {
       if (searchTerm.length >= 3 && !selectedPlayer) {
         buscarJogadores(searchTerm);
       } else if (searchTerm.length < 3) {
@@ -47,10 +47,19 @@ const PopupAutorizar: React.FC<PopupAutorizarProps> = ({ adminId, onClose }) => 
   const buscarJogadores = async (termo: string) => {
     setIsSearching(true);
     try {
-      const data = await API.get(`/jogador/buscar-autocomplete?termo=${termo}`) as any;
-      setSuggestions(data);
+      const response = await API.get(`/jogador/buscar-autocomplete?termo=${termo}`);
+      
+      const dados = (response && response.data) ? response.data : response;
+
+      if (Array.isArray(dados)) {
+        setSuggestions(dados);
+      } else {
+        console.warn("Formato inesperado da API:", dados);
+        setSuggestions([]);
+      }
     } catch (error) {
-      console.error(error);
+      console.error("Erro ao buscar jogadores:", error);
+      setSuggestions([]);
     } finally {
       setIsSearching(false);
     }
@@ -58,7 +67,7 @@ const PopupAutorizar: React.FC<PopupAutorizarProps> = ({ adminId, onClose }) => 
 
   const handleSelectPlayer = (player: JogadorBusca) => {
     setSelectedPlayer(player);
-    setSearchTerm(player.discord);
+    setSearchTerm(player.discord); 
     setSuggestions([]);
     setErrorMsg(null);
   };
@@ -78,14 +87,17 @@ const PopupAutorizar: React.FC<PopupAutorizarProps> = ({ adminId, onClose }) => 
     setErrorMsg(null);
 
     try {
-      const data = await API.post('/jogador/gerar-codigo', {
+      const response = await API.post('/jogador/gerar-codigo', {
         adminId: adminId,
         jogadorId: selectedPlayer.id
-      }) as any;
+      });
       
-      setGeneratedCode(data);
+      const codigo = (response && response.data) ? response.data : response;
+      
+      setGeneratedCode(typeof codigo === 'object' ? codigo.codigo : codigo);
 
     } catch (err: any) {
+      console.error(err);
       const msg = err.response?.data?.message || "Erro ao gerar código";
       setErrorMsg(msg);
     } finally {
@@ -128,15 +140,16 @@ const PopupAutorizar: React.FC<PopupAutorizarProps> = ({ adminId, onClose }) => 
           {!generatedCode ? (
             <div className="auth-search-container">
                 <div className="form-group relative-container">
-                    <label>Buscar Jogador (Discord)</label>
+                    <label>Buscar Jogador</label>
                     <div className="input-icon-wrap">
                         <input 
                             type="text" 
                             className="autorizar-input"
-                            placeholder="Digite o discord (ex: indiomala...)"
+                            placeholder="Nome ou Discord (ex: ronaldo...)"
                             value={searchTerm}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value);
+                                // Se o usuário alterar o texto enquanto algo está selecionado, limpa a seleção
                                 if (selectedPlayer && e.target.value !== selectedPlayer.discord) {
                                     setSelectedPlayer(null);
                                 }
@@ -162,8 +175,8 @@ const PopupAutorizar: React.FC<PopupAutorizarProps> = ({ adminId, onClose }) => 
                                         {player.imagem ? <img src={player.imagem} alt="" /> : player.nome.charAt(0)}
                                     </div>
                                     <div className="sug-info">
-                                        <span className="sug-discord">{player.discord}</span>
                                         <span className="sug-name">{player.nome}</span>
+                                        <span className="sug-discord">{player.discord}</span>
                                     </div>
                                 </div>
                             ))}
@@ -175,7 +188,7 @@ const PopupAutorizar: React.FC<PopupAutorizarProps> = ({ adminId, onClose }) => 
                     <div className="selected-player-card">
                         <div className="sp-content">
                             <span className="sp-label">Selecionado:</span>
-                            <span className="sp-value">{selectedPlayer.nome}</span>
+                            <span className="sp-value">{selectedPlayer.nome} <small>({selectedPlayer.discord})</small></span>
                         </div>
                         <button className="sp-remove" onClick={clearSelection}>Trocar</button>
                     </div>
