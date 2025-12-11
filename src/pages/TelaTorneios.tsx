@@ -16,13 +16,15 @@ import {
   Settings,
   CalendarSync,
   Plus,
-  ArrowLeft
+  ArrowLeft,
+  Link
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupNovoTorneio from '../components/PopupNovoTorneio';
+import PopupJogadorClube from '../components/PopupJogadorClube';
 
 interface Torneio {
   id: string;
@@ -124,6 +126,7 @@ export function TelaTorneios() {
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [showNovoTorneioPopup, setShowNovoTorneioPopup] = useState(false);
+  const [showJogadorClubePopup, setShowJogadorClubePopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -183,6 +186,8 @@ export function TelaTorneios() {
   };
 
   const isLoading = isLoadingTorneios || isLoadingCompeticoes;
+
+  const hasAdminPrivileges = currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -419,15 +424,36 @@ export function TelaTorneios() {
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Torneios da Temporada</h2>
                 <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Gerencie os torneios desta temporada</p>
             </div>
-            {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
-                <button 
-                  className="t-btn" 
-                  onClick={() => setShowNovoTorneioPopup(true)}
-                  style={{background: 'var(--primary)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '8px'}}
-                >
-                    <Plus size={18} /> Novo Torneio
-                </button>
-            )}
+            
+            <div style={{ display: 'flex', gap: '10px' }}>
+                {hasAdminPrivileges && (
+                    <button 
+                      className="t-btn" 
+                      onClick={() => setShowJogadorClubePopup(true)}
+                      style={{
+                          background: 'var(--bg-card)', 
+                          color: 'var(--text-primary)', 
+                          border: '1px solid var(--border-color)', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '8px',
+                          cursor: 'pointer'
+                      }}
+                    >
+                        <Link size={18} /> Vincular Jogadores
+                    </button>
+                )}
+
+                {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
+                    <button 
+                      className="t-btn" 
+                      onClick={() => setShowNovoTorneioPopup(true)}
+                      style={{background: 'var(--primary)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '8px'}}
+                    >
+                        <Plus size={18} /> Novo Torneio
+                    </button>
+                )}
+            </div>
             </div>
 
             <div className="table-container">
@@ -517,6 +543,12 @@ export function TelaTorneios() {
         <PopupNovoTorneio 
           onClose={() => setShowNovoTorneioPopup(false)} 
           onSubmit={handleNovoTorneioSubmit} 
+        />
+      )}
+
+      {showJogadorClubePopup && (
+        <PopupJogadorClube 
+          onClose={() => setShowJogadorClubePopup(false)}
         />
       )}
     </div>
