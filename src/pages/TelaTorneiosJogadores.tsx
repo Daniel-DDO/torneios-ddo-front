@@ -38,6 +38,12 @@ interface JogadorClubeDTO {
   jogos: number;
   pontosCoeficiente: number;
   statusTemporada: string;
+  vitorias: number;
+  empates: number;
+  derrotas: number;
+  cartoesAmarelos: number;
+  cartoesVermelhos: number;
+  balancoFinanceiro: number;
 }
 
 interface UserData {
@@ -231,6 +237,12 @@ export function TelaTorneiosJogadores() {
             object-fit: contain;
         }
 
+        .ved-cell {
+            font-size: 0.9rem;
+            color: var(--text-gray);
+            letter-spacing: 1px;
+        }
+
         @media (max-width: 768px) {
           .page-content { padding: 1rem; }
           .custom-table th, .custom-table td { padding: 12px; }
@@ -366,7 +378,8 @@ export function TelaTorneiosJogadores() {
                     <tr>
                       <th>Clube</th>
                       <th>Jogador</th>
-                      <th style={{textAlign: 'center'}}>Jogos</th>
+                      <th style={{textAlign: 'center'}}>Partidas</th>
+                      <th style={{textAlign: 'center'}}>V-E-D</th>
                       <th style={{textAlign: 'center'}}>Gols Pró</th>
                       <th style={{textAlign: 'center'}}>Gols Contra</th>
                       <th style={{textAlign: 'right'}}>Coeficiente</th>
@@ -383,6 +396,11 @@ export function TelaTorneiosJogadores() {
                           </td>
                           <td>{item.jogadorNome}</td>
                           <td style={{textAlign: 'center'}}>{item.jogos}</td>
+                          <td style={{textAlign: 'center'}}>
+                              <span className="ved-cell">
+                                {item.vitorias}-{item.empates}-{item.derrotas}
+                              </span>
+                          </td>
                           <td style={{textAlign: 'center', color: '#10b981'}}>{item.golsMarcados}</td>
                           <td style={{textAlign: 'center', color: '#ef4444'}}>{item.golsSofridos}</td>
                           <td style={{textAlign: 'right', fontWeight: 'bold'}}>{item.pontosCoeficiente.toFixed(3)}</td>
@@ -390,7 +408,7 @@ export function TelaTorneiosJogadores() {
                     ))}
                     {filteredInscritos.length === 0 && (
                       <tr>
-                          <td colSpan={6} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
+                          <td colSpan={7} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
                               Nenhum jogador inscrito encontrado
                           </td>
                       </tr>

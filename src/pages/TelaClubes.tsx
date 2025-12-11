@@ -22,6 +22,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import PopupClubes from '../components/PopupClubes';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import PopupNovoClube from '../components/PopupNovoClube';
 
 interface Clube {
   id: string;
@@ -106,7 +107,7 @@ const fetchAvatarsService = async () => {
 export function TelaClubes() {
   const navigate = useNavigate();
 
-  const { data: clubes = [], isLoading: loading } = useQuery({
+  const { data: clubes = [], isLoading: loading, refetch } = useQuery({
     queryKey: ['clubes'], 
     queryFn: fetchAllClubesService,
     staleTime: 1000 * 60 * 5, 
@@ -130,6 +131,7 @@ export function TelaClubes() {
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
+  const [showNovoClubePopup, setShowNovoClubePopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -174,6 +176,10 @@ export function TelaClubes() {
         setCurrentUser(null);
         setShowUserPopup(false);
     }
+  };
+
+  const handleNovoClubeSuccess = () => {
+    refetch();
   };
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
@@ -428,7 +434,11 @@ export function TelaClubes() {
                 <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize os clubes e seleções oficiais</p>
             </div>
             {currentUser && ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo) && (
-              <button className="t-btn" style={{background: 'var(--primary)', color: 'white', border: 'none'}}>
+              <button 
+                className="t-btn" 
+                style={{background: 'var(--primary)', color: 'white', border: 'none', cursor: 'pointer'}}
+                onClick={() => setShowNovoClubePopup(true)}
+              >
                   + Novo Clube
               </button>
             )}
@@ -491,6 +501,13 @@ export function TelaClubes() {
           }}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
+        />
+      )}
+
+      {showNovoClubePopup && (
+        <PopupNovoClube 
+          onClose={() => setShowNovoClubePopup(false)} 
+          onSuccess={handleNovoClubeSuccess}
         />
       )}
     </div>
