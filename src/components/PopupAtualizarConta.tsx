@@ -35,6 +35,7 @@ const PopupAtualizarConta: React.FC<PopupAtualizarContaProps> = ({ currentUser, 
   const [loadingAvatares, setLoadingAvatares] = useState(false);
   
   const [selectedAvatarUrl, setSelectedAvatarUrl] = useState<string | null>(null);
+  const [resolvedInitialAvatarUrl, setResolvedInitialAvatarUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewFileUrl, setPreviewFileUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,15 +43,44 @@ const PopupAtualizarConta: React.FC<PopupAtualizarContaProps> = ({ currentUser, 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (currentUser) {
-      setFormData({
-        nome: currentUser.nome || '',
-        descricao: currentUser.descricao || '',
-        imagem: currentUser.imagem || ''
-      });
-      setSelectedAvatarUrl(currentUser.imagem);
+  const isUrl = (string: string) => {
+    try {
+      new URL(string);
+      return true;
+    } catch (_) {
+      return false;
     }
+  };
+
+  useEffect(() => {
+    const resolveAvatar = async () => {
+      if (currentUser) {
+        setFormData({
+          nome: currentUser.nome || '',
+          descricao: currentUser.descricao || '',
+          imagem: currentUser.imagem || ''
+        });
+
+        if (currentUser.imagem) {
+            if (isUrl(currentUser.imagem)) {
+                setResolvedInitialAvatarUrl(currentUser.imagem);
+                setSelectedAvatarUrl(currentUser.imagem);
+            } else {
+                try {
+                    const response = await API.get(`/api/avatares/${currentUser.imagem}`);
+                    const avatarData = response.data;
+                    if (avatarData && avatarData.url) {
+                        setResolvedInitialAvatarUrl(avatarData.url);
+                        setSelectedAvatarUrl(avatarData.url);
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        }
+      }
+    };
+    resolveAvatar();
 
     return () => {
       if (previewFileUrl) URL.revokeObjectURL(previewFileUrl);
@@ -127,7 +157,7 @@ const PopupAtualizarConta: React.FC<PopupAtualizarContaProps> = ({ currentUser, 
       const payload = {
         nome: formData.nome,
         descricao: formData.descricao,
-        imagem: (!selectedFile && selectedAvatarUrl !== currentUser.imagem) ? selectedAvatarUrl : undefined
+        imagem: (!selectedFile && selectedAvatarUrl !== resolvedInitialAvatarUrl) ? selectedAvatarUrl : undefined
       };
 
       const response = await API.patch('/jogador/perfil', payload);
@@ -143,7 +173,7 @@ const PopupAtualizarConta: React.FC<PopupAtualizarContaProps> = ({ currentUser, 
     }
   };
 
-  const currentDisplayAvatar = previewFileUrl || selectedAvatarUrl || formData.imagem;
+  const currentDisplayAvatar = previewFileUrl || selectedAvatarUrl || resolvedInitialAvatarUrl;
 
   return (
     <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
@@ -303,7 +333,7 @@ const PopupAtualizarConta: React.FC<PopupAtualizarContaProps> = ({ currentUser, 
                                             <line x1="12" y1="3" x2="12" y2="15"></line>
                                         </svg>
                                         <p>Clique para selecionar</p>
-                                        <span>JPG, PNG (Max 5MB)</span>
+                                        <span>JPG, PNG (Max 2MB)</span>
                                     </div>
                                 )}
                             </div>
@@ -317,7 +347,7 @@ const PopupAtualizarConta: React.FC<PopupAtualizarContaProps> = ({ currentUser, 
 
           <div className="actions-footer">
             <div className="footer-left">
-                {activeTab === 'avatar' && selectedAvatarUrl !== currentUser?.imagem && (
+                {activeTab === 'avatar' && selectedAvatarUrl !== resolvedInitialAvatarUrl && (
                     <span className="unsaved-badge">Alteração pendente</span>
                 )}
             </div>

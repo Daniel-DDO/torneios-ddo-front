@@ -26,6 +26,7 @@ import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupAtualizarFoto from '../components/PopupAtualizarFoto';
 import PopupAlterarCredenciais from '../components/PopupAlterarCredenciais';
+import PopupAtualizarConta from '../components/PopupAtualizarConta';
 
 interface UserData {
   id: string;
@@ -164,6 +165,7 @@ export function TelaMinhaConta() {
   };
 
   const [showCredenciaisPopup, setShowCredenciaisPopup] = useState(false);
+  const [showAtualizarContaPopup, setShowAtualizarContaPopup] = useState(false);
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -566,7 +568,7 @@ export function TelaMinhaConta() {
                     <Camera size={20} />
                     Atualizar foto do perfil
                   </button>
-                  <button className="action-btn" onClick={() => console.log('Atualizar conta')}>
+                  <button className="action-btn" onClick={() => setShowAtualizarContaPopup(true)}>
                     <Edit size={20} />
                     Atualizar conta
                   </button>
@@ -615,6 +617,20 @@ export function TelaMinhaConta() {
           }}
         />
       )}
+
+      {showAtualizarContaPopup && currentUser && (
+        <PopupAtualizarConta
+          currentUser={currentUser} 
+          onClose={() => setShowAtualizarContaPopup(false)}
+          onUpdateSuccess={(updatedData: any) => {
+             const newUserData = { ...currentUser, ...updatedData };
+             setCurrentUser(newUserData);
+             localStorage.setItem('user_data', JSON.stringify(newUserData));
+             setShowAtualizarContaPopup(false);
+          }}
+        />
+      )}
+
     </div>
   );
 }
