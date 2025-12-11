@@ -26,17 +26,15 @@ const PopupAtualizarFoto: React.FC<PopupAtualizarFotoProps> = ({ onClose, onUpda
     const fetchAvatares = async () => {
       try {
         const response = await API.get('/api/avatares');
-        
-        let dadosParaSalvar: AvatarData[] = [];
-        if (Array.isArray(response)) {
-          dadosParaSalvar = response;
-        } else if (response.data && Array.isArray(response.data)) {
-          dadosParaSalvar = response.data;
-        }
+        const dados = (response && response.data) ? response.data : response;
 
-        setAvatares(dadosParaSalvar);
+        if (Array.isArray(dados)) {
+          setAvatares(dados);
+        } else {
+          setAvatares([]);
+        }
       } catch (err) {
-        console.error("Erro ao carregar avatares:", err);
+        console.error(err);
         setError('Não foi possível carregar a galeria.');
       } finally {
         setLoadingAvatares(false);
@@ -77,7 +75,7 @@ const PopupAtualizarFoto: React.FC<PopupAtualizarFotoProps> = ({ onClose, onUpda
       
       handleClose();
     } catch (err: any) {
-      console.error("Erro ao salvar:", err);
+      console.error(err);
       const msg = err.response?.data?.message || "Erro ao atualizar a foto.";
       setError(msg);
       setSaving(false);
@@ -95,7 +93,7 @@ const PopupAtualizarFoto: React.FC<PopupAtualizarFotoProps> = ({ onClose, onUpda
         onUpdateSuccess(''); 
         handleClose();
     } catch (err: any) {
-        console.error("Erro ao remover:", err);
+        console.error(err);
         setError("Erro ao remover a foto.");
         setDeleting(false);
     }
@@ -104,27 +102,27 @@ const PopupAtualizarFoto: React.FC<PopupAtualizarFotoProps> = ({ onClose, onUpda
   return (
     <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
       <div className="popup-content foto-popup-width">
+        <button className="popup-close-btn" onClick={handleClose}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
 
-          <button className="popup-close-btn" onClick={handleClose}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-
-          <div className={`popup-body-animate ${fadeout ? 'fade-out-content' : ''}`}>
-            
-            <div className="popup-header-clean">
-              <div className="icon-badge-wrapper">
-                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="30" height="30">
-                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                   <circle cx="12" cy="13" r="4"></circle>
-                 </svg>
-              </div>
-              <h2 className="popup-title">Alterar Foto</h2>
-              <p className="popup-subtitle">Escolha um avatar da nossa galeria</p>
+        <div className={`popup-body-animate ${fadeout ? 'fade-out-content' : ''}`}>
+          
+          <div className="popup-header-clean">
+            <div className="icon-badge-wrapper">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="30" height="30">
+                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                 <circle cx="12" cy="13" r="4"></circle>
+               </svg>
             </div>
+            <h2 className="popup-title">Alterar Foto</h2>
+            <p className="popup-subtitle">Escolha um avatar da nossa galeria</p>
+          </div>
 
+          <div className="popup-scrollable-area custom-scrollbar">
             {loadingAvatares ? (
               <div className="loading-container">
                   <div className="popup-spinner-large"></div>
@@ -132,8 +130,8 @@ const PopupAtualizarFoto: React.FC<PopupAtualizarFotoProps> = ({ onClose, onUpda
               </div>
             ) : (
               <>
-                  <div className="avatar-grid-container custom-scrollbar">
-                      {avatares && avatares.length > 0 ? (
+                  <div className="avatar-grid-container">
+                      {avatares.length > 0 ? (
                         avatares.map((avatar) => (
                           <div 
                               key={avatar.id} 
@@ -165,50 +163,49 @@ const PopupAtualizarFoto: React.FC<PopupAtualizarFotoProps> = ({ onClose, onUpda
             )}
 
             {error && <div className="reivindicar-error-msg">{error}</div>}
+          </div>
 
-            <div className="actions-footer">
-              
-              <div className="footer-left">
-                <button 
-                  type="button"
-                  className="btn-base btn-danger-ghost" 
-                  onClick={handleRemoveAvatar}
-                  disabled={saving || deleting || loadingAvatares}
-                  title="Remover foto atual"
-                >
-                   {deleting ? (
-                      <span className="btn-spinner" style={{borderColor: '#ff4d4f', borderTopColor: 'transparent'}}></span>
-                   ) : (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                      </svg>
-                   )}
-                </button>
-              </div>
-
-              <div className="footer-right">
-                <button 
-                    className="btn-base btn-secondary" 
-                    onClick={handleClose}
-                >
-                    Cancelar
-                </button>
-                
-                <button 
-                    className="btn-base btn-primary" 
-                    onClick={handleSubmit}
-                    disabled={saving || deleting || loadingAvatares || !selectedAvatarId}
-                >
-                    {saving ? <div className="btn-spinner"></div> : 'Salvar'}
-                </button>
-              </div>
-
+          <div className="actions-footer">
+            <div className="footer-left">
+              <button 
+                type="button"
+                className="btn-base btn-danger-ghost" 
+                onClick={handleRemoveAvatar}
+                disabled={saving || deleting || loadingAvatares}
+                title="Remover foto atual"
+              >
+                 {deleting ? (
+                    <span className="btn-spinner" style={{borderColor: '#ff4d4f', borderTopColor: 'transparent'}}></span>
+                 ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                 )}
+              </button>
             </div>
 
+            <div className="footer-right">
+              <button 
+                  className="btn-base btn-secondary" 
+                  onClick={handleClose}
+              >
+                  Cancelar
+              </button>
+              
+              <button 
+                  className="btn-base btn-primary" 
+                  onClick={handleSubmit}
+                  disabled={saving || deleting || loadingAvatares || !selectedAvatarId}
+              >
+                  {saving ? <div className="btn-spinner"></div> : 'Salvar'}
+              </button>
+            </div>
           </div>
+
         </div>
       </div>
+    </div>
   );
 };
 

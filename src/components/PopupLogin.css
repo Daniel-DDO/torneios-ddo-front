@@ -18,6 +18,9 @@
   --pl-badge-text: #555555;
   
   --pl-club-img-bg: #ffffff;
+
+  --pl-scrollbar-track: #f1f1f1;
+  --pl-scrollbar-thumb: #c1c1c1;
 }
 
 body.dark-mode {
@@ -38,6 +41,9 @@ body.dark-mode {
   --pl-badge-text: #ffffff;
   
   --pl-club-img-bg: #2d2d2d;
+
+  --pl-scrollbar-track: #2d2d2d;
+  --pl-scrollbar-thumb: #555555;
 }
 
 .popup-overlay {
@@ -64,7 +70,6 @@ body.dark-mode {
 .popup-content {
   background-color: var(--pl-bg-card);
   color: var(--pl-text-primary);
-  padding: 40px;
   border-radius: 20px;
   width: 90%;
   position: relative;
@@ -72,10 +77,15 @@ body.dark-mode {
   animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   border: 1px solid var(--pl-border);
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-  min-height: 300px;
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  padding: 0;
+  overflow: hidden;
+}
+
+.login-popup-width {
+  max-width: 420px;
 }
 
 .popup-overlay.fade-out .popup-content {
@@ -110,6 +120,9 @@ body.dark-mode {
 .popup-body-animate {
   animation: slideUp 0.4s ease forwards;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
 }
 
 .popup-body-animate.fade-out-content {
@@ -117,12 +130,13 @@ body.dark-mode {
   transition: opacity 0.2s;
 }
 
-.popup-header-clean {
+.popup-header-fixed {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 30px;
   text-align: center;
+  padding: 30px 30px 10px 30px;
+  flex-shrink: 0;
 }
 
 .popup-club-image-wrapper {
@@ -156,8 +170,10 @@ body.dark-mode {
   text-transform: uppercase;
 }
 
-.login-popup-width {
-  max-width: 400px;
+.popup-body-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 40px 40px 40px;
 }
 
 .login-form {
@@ -201,7 +217,7 @@ body.dark-mode {
 
 .login-input:focus {
   border-color: var(--pl-input-focus-border);
-  background-color: var(--pl-input-bg);
+  background-color: var(--pl-bg-card);
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
   color: var(--pl-input-text);
 }
@@ -285,6 +301,19 @@ body.dark-mode {
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--pl-scrollbar-thumb);
+    border-radius: 10px;
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

@@ -68,9 +68,7 @@ const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
           </svg>
         </button>
 
-        <div className={`popup-body-animate ${fadeout ? 'fade-out-content' : ''}`}>
-          
-          <div className="popup-header-clean">
+        <div className="popup-header-fixed">
             <div className="popup-user-image-wrapper">
                 {user.imagem ? (
                     <img src={user.imagem} alt={user.nome} className="popup-user-img" />
@@ -86,51 +84,54 @@ const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
             <span className="popup-role-badge">
                 {user.cargo}
             </span>
-          </div>
-
-          <div className="user-stats-grid">
-            <div className="stat-item">
-                <span className="stat-value">{user.partidasJogadas}</span>
-                <span className="stat-label">Partidas</span>
-            </div>
-            <div className="stat-item">
-                <span className="stat-value">{user.golsMarcados}</span>
-                <span className="stat-label">Gols</span>
-            </div>
-            <div className="stat-item">
-                <span className="stat-value">{user.titulos}</span>
-                <span className="stat-label">Títulos</span>
-            </div>
-          </div>
-
-          <div className="user-details-list">
-            <div className="detail-row">
-                <div className="detail-icon money-icon">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                </div>
-                <div className="detail-info">
-                    <label>Saldo Virtual</label>
-                    <span className="money-value">{formatCurrency(user.saldoVirtual)}</span>
-                </div>
-            </div>
-
-            <div className="detail-row">
-                <div className="detail-icon discord-icon">
-                   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3 4-3 9-3 9 1.34 9 3z"/><path d="M15.5 17c0 1 1.5 3 2 3 2.5 0 3.5-2.5 4-5"/><path d="M8.5 17c0 1-1.5 3-2 3-2.5 0-3.5-2.5-4-5"/></svg>
-                </div>
-                <div className="detail-info">
-                    <label>Discord</label>
-                    <span>{user.discord || 'Não vinculado'}</span>
-                </div>
-            </div>
-          </div>
-
-          <button onClick={handleLogoutClick} className="logout-btn">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-              Sair da Conta
-          </button>
-
         </div>
+
+        <div className="popup-body-scroll custom-scrollbar">
+            <div className="user-stats-grid">
+                <div className="stat-item">
+                    <span className="stat-value">{user.partidasJogadas}</span>
+                    <span className="stat-label">Partidas</span>
+                </div>
+                <div className="stat-item">
+                    <span className="stat-value">{user.golsMarcados}</span>
+                    <span className="stat-label">Gols</span>
+                </div>
+                <div className="stat-item">
+                    <span className="stat-value">{user.titulos}</span>
+                    <span className="stat-label">Títulos</span>
+                </div>
+            </div>
+
+            <div className="user-details-list">
+                <div className="detail-row">
+                    <div className="detail-icon money-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    </div>
+                    <div className="detail-info">
+                        <label>Saldo Virtual</label>
+                        <span className="money-value">{formatCurrency(user.saldoVirtual)}</span>
+                    </div>
+                </div>
+
+                <div className="detail-row">
+                    <div className="detail-icon discord-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3 4-3 9-3 9 1.34 9 3z"/><path d="M15.5 17c0 1 1.5 3 2 3 2.5 0 3.5-2.5 4-5"/><path d="M8.5 17c0 1-1.5 3-2 3-2.5 0-3.5-2.5-4-5"/></svg>
+                    </div>
+                    <div className="detail-info">
+                        <label>Discord</label>
+                        <span>{user.discord || 'Não vinculado'}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div className="popup-footer-fixed">
+            <button onClick={handleLogoutClick} className="logout-btn">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                Sair da Conta
+            </button>
+        </div>
+
       </div>
     </div>
   );

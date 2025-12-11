@@ -39,8 +39,7 @@ const PopupCadastrarJogador: React.FC<PopupCadastrarJogadorProps> = ({ onClose, 
     setError('');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setError('');
     setSuccessMsg('');
 
@@ -80,9 +79,7 @@ const PopupCadastrarJogador: React.FC<PopupCadastrarJogadorProps> = ({ onClose, 
           </svg>
         </button>
 
-        <div className={`popup-body-animate ${fadeout ? 'fade-out-content' : ''}`}>
-          
-          <div className="popup-header-clean">
+        <div className="popup-header-fixed">
             <div className="icon-badge-wrapper-cad">
                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="32" height="32">
                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -93,48 +90,54 @@ const PopupCadastrarJogador: React.FC<PopupCadastrarJogadorProps> = ({ onClose, 
             </div>
             <h2 className="popup-title">Cadastrar Jogador</h2>
             <p className="popup-subtitle">Adicione um novo membro ao sistema</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="cadastrar-form">
-            
-            <div className="form-group">
-                <label htmlFor="nome">Nome do Jogador <span className="required-star">*</span></label>
-                <input 
-                  className="cadastrar-input"
-                  type="text" 
-                  id="nome"
-                  name="nome"
-                  placeholder="Ex: Daniel Silva"
-                  value={formData.nome}
-                  onChange={handleChange}
-                  required
-                />
-            </div>
-
-            <div className="form-group">
-                <label htmlFor="discord">Discord <span className="required-star">*</span></label>
-                <input 
-                  className="cadastrar-input"
-                  type="text" 
-                  id="discord"
-                  name="discord"
-                  placeholder="Ex: danielddo"
-                  value={formData.discord}
-                  onChange={handleChange}
-                  required
-                />
-            </div>
-
-            {error && <div className="cadastrar-error-msg">{error}</div>}
-            {successMsg && <div className="cadastrar-success-msg">{successMsg}</div>}
-
-            <button type="submit" className="submit-cad-btn" disabled={loading || !!successMsg}>
-              {loading ? <div className="popup-spinner-small"></div> : 'Confirmar Cadastro'}
-            </button>
-
-          </form>
-
         </div>
+
+        <div className="popup-body-scroll custom-scrollbar">
+            <div className="cadastrar-form">
+                <div className="form-group">
+                    <label htmlFor="nome">Nome do Jogador <span className="required-star">*</span></label>
+                    <input 
+                        className="cadastrar-input"
+                        type="text" 
+                        id="nome"
+                        name="nome"
+                        placeholder="Ex: Daniel Silva"
+                        value={formData.nome}
+                        onChange={handleChange}
+                        disabled={loading}
+                    />
+                </div>
+
+                <div className="form-group">
+                    <label htmlFor="discord">Discord <span className="required-star">*</span></label>
+                    <input 
+                        className="cadastrar-input"
+                        type="text" 
+                        id="discord"
+                        name="discord"
+                        placeholder="Ex: danielddo"
+                        value={formData.discord}
+                        onChange={handleChange}
+                        disabled={loading}
+                    />
+                </div>
+
+                {error && <div className="cadastrar-error-msg">{error}</div>}
+                {successMsg && <div className="cadastrar-success-msg">{successMsg}</div>}
+            </div>
+        </div>
+
+        <div className="popup-footer-fixed">
+            <button 
+                type="button" 
+                className="submit-cad-btn" 
+                onClick={handleSubmit} 
+                disabled={loading || !!successMsg}
+            >
+                {loading ? <div className="popup-spinner-small"></div> : 'Confirmar Cadastro'}
+            </button>
+        </div>
+
       </div>
     </div>
   );

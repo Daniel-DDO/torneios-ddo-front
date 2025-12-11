@@ -78,9 +78,7 @@ const PopupNovaTemporada: React.FC<PopupNovaTemporadaProps> = ({ onClose, onSubm
           </svg>
         </button>
 
-        <div className={`popup-body-animate ${fadeout ? 'fade-out-content' : ''}`}>
-          
-          <div className="popup-header-clean">
+        <div className="popup-header-fixed">
             <div className="icon-badge-wrapper season-badge">
                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="32" height="32">
                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -91,75 +89,77 @@ const PopupNovaTemporada: React.FC<PopupNovaTemporadaProps> = ({ onClose, onSubm
             </div>
             <h2 className="popup-title">Nova Temporada</h2>
             <p className="popup-subtitle">Defina o período e nome da nova etapa</p>
-          </div>
-
-          <div className="info-box">
-            <div className="info-icon">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-              </svg>
-            </div>
-            <p>
-              Ao criar uma nova temporada, ela será definida como ativa.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="nova-temporada-form">
-            
-            <div className="form-group">
-                <label htmlFor="nome">Nome da Temporada <span className="required-star">*</span></label>
-                <input 
-                  className="nova-temporada-input"
-                  type="text" 
-                  id="nome"
-                  name="nome"
-                  placeholder="Ex: Temporada 01/2026"
-                  value={formData.nome}
-                  onChange={handleChange}
-                  autoComplete="off"
-                  required
-                />
-            </div>
-
-            <div className="form-row-split">
-                <div className="form-group">
-                  <label htmlFor="dataInicio">Data Início <span className="required-star">*</span></label>
-                  <input 
-                    className="nova-temporada-input"
-                    type="date" 
-                    id="dataInicio"
-                    name="dataInicio"
-                    value={formData.dataInicio}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="dataFim">Data Fim <span className="required-star">*</span></label>
-                  <input 
-                    className="nova-temporada-input"
-                    type="date" 
-                    id="dataFim"
-                    name="dataFim"
-                    value={formData.dataFim}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-            </div>
-
-            {error && <div className="temporada-error-msg">{error}</div>}
-
-            <button type="submit" className="submit-season-btn" disabled={loading}>
-              {loading ? <div className="popup-spinner-small"></div> : 'Criar Temporada'}
-            </button>
-
-          </form>
-
         </div>
+
+        <div className="popup-body-scroll custom-scrollbar">
+            
+            <div className="info-box">
+                <div className="info-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                </div>
+                <p>
+                    Ao criar uma nova temporada, ela será definida como ativa.
+                </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="nova-temporada-form" id="form-temporada">
+                <div className="form-group">
+                    <label htmlFor="nome">Nome da Temporada <span className="required-star">*</span></label>
+                    <input 
+                        className="nova-temporada-input"
+                        type="text" 
+                        id="nome"
+                        name="nome"
+                        placeholder="Ex: Temporada 01/2026"
+                        value={formData.nome}
+                        onChange={handleChange}
+                        autoComplete="off"
+                        required
+                    />
+                </div>
+
+                <div className="form-row-split">
+                    <div className="form-group">
+                        <label htmlFor="dataInicio">Data Início <span className="required-star">*</span></label>
+                        <input 
+                            className="nova-temporada-input"
+                            type="date" 
+                            id="dataInicio"
+                            name="dataInicio"
+                            value={formData.dataInicio}
+                            onChange={handleChange}
+                            required
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="dataFim">Data Fim <span className="required-star">*</span></label>
+                        <input 
+                            className="nova-temporada-input"
+                            type="date" 
+                            id="dataFim"
+                            name="dataFim"
+                            value={formData.dataFim}
+                            onChange={handleChange}
+                            required
+                        />
+                    </div>
+                </div>
+
+                {error && <div className="temporada-error-msg">{error}</div>}
+            </form>
+        </div>
+
+        <div className="popup-footer-fixed">
+            <button type="submit" form="form-temporada" className="submit-season-btn" disabled={loading}>
+                {loading ? <div className="popup-spinner-small"></div> : 'Criar Temporada'}
+            </button>
+        </div>
+
       </div>
     </div>
   );

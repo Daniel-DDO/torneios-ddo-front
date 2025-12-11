@@ -41,7 +41,7 @@ export default function PopupNovoTorneio({ onClose, onSubmit }: PopupNovoTorneio
                     setCompeticoes(response.data);
                 }
             } catch (err) {
-                console.error("Erro ao carregar competições", err);
+                console.error(err);
                 setError("Não foi possível carregar a lista de competições.");
             } finally {
                 setLoadingCompeticoes(false);
@@ -88,8 +88,8 @@ export default function PopupNovoTorneio({ onClose, onSubmit }: PopupNovoTorneio
             };
 
             await API.post('/torneio/criar', payload);
-            onSubmit(); // Atualiza a lista pai
-            handleClose(); // Fecha o popup
+            onSubmit();
+            handleClose();
         } catch (err: any) {
             console.error(err);
             if (err.response && err.response.data && err.response.data.message) {
@@ -109,15 +109,15 @@ export default function PopupNovoTorneio({ onClose, onSubmit }: PopupNovoTorneio
                     <X size={20} />
                 </button>
 
-                <div className="popup-body-animate">
-                    <div className="popup-header-clean">
-                        <div className="icon-badge-wrapper">
-                            <Trophy size={28} />
-                        </div>
-                        <h2 className="popup-title">Novo Torneio</h2>
-                        <p className="popup-subtitle">Crie um novo torneio para esta temporada</p>
+                <div className="popup-header-fixed">
+                    <div className="icon-badge-wrapper">
+                        <Trophy size={28} />
                     </div>
+                    <h2 className="popup-title">Novo Torneio</h2>
+                    <p className="popup-subtitle">Crie um novo torneio para esta temporada</p>
+                </div>
 
+                <div className="popup-body-scroll custom-scrollbar">
                     {error && (
                         <div className="reivindicar-error-msg">
                             <AlertCircle size={16} style={{ display: 'inline', marginRight: 5, verticalAlign: 'text-bottom' }} />
@@ -125,82 +125,79 @@ export default function PopupNovoTorneio({ onClose, onSubmit }: PopupNovoTorneio
                         </div>
                     )}
 
-                    <form className="reivindicar-form" onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label>Nome do Torneio <span className="required-star">*</span></label>
+                        <input 
+                            type="text" 
+                            className="reivindicar-input" 
+                            placeholder="Ex: Liga Real DDO - 1"
+                            value={nome}
+                            onChange={(e) => setNome(e.target.value)}
+                            disabled={loading}
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Competição Base <span className="required-star">*</span></label>
                         
-                        <div className="form-group">
-                            <label>Nome do Torneio <span className="required-star">*</span></label>
-                            <input 
-                                type="text" 
-                                className="reivindicar-input" 
-                                placeholder="Ex: Liga Real DDO - 1"
-                                value={nome}
-                                onChange={(e) => setNome(e.target.value)}
-                                disabled={loading}
-                            />
-                        </div>
-
-                        {/* Seletor de Competição */}
-                        <div className="form-group">
-                            <label>Competição Base <span className="required-star">*</span></label>
-                            
-                            <div className="competicao-selector-container">
-                                {loadingCompeticoes ? (
-                                    <div style={{ textAlign: 'center', padding: '20px', color: 'var(--pp-text-secondary)' }}>
-                                        <div className="popup-spinner-small" style={{ borderColor: 'var(--pp-text-secondary)', borderTopColor: 'transparent', margin: '0 auto 10px' }}></div>
-                                        Carregando competições...
-                                    </div>
-                                ) : competicoes.length === 0 ? (
-                                    <div style={{ padding: '10px', color: 'var(--pp-text-secondary)' }}>Nenhuma competição encontrada.</div>
-                                ) : (
-                                    competicoes.map((comp) => (
-                                        <div 
-                                            key={comp.id} 
-                                            className={`competicao-item ${selectedCompeticaoId === comp.id ? 'selected' : ''}`}
-                                            onClick={() => !loading && setSelectedCompeticaoId(comp.id)}
-                                        >
-                                            {selectedCompeticaoId === comp.id && (
-                                                <CheckCircle2 size={16} color="#2563eb" style={{ position: 'absolute', right: 20 }} />
-                                            )}
-                                            
-                                            {/* Imagem da Competição (se houver url, senão um placeholder) */}
+                        <div className="competicao-list-wrapper">
+                            {loadingCompeticoes ? (
+                                <div className="loading-state">
+                                    <div className="popup-spinner-small"></div>
+                                    <span>Carregando competições...</span>
+                                </div>
+                            ) : competicoes.length === 0 ? (
+                                <div className="empty-state">Nenhuma competição encontrada.</div>
+                            ) : (
+                                competicoes.map((comp) => (
+                                    <div 
+                                        key={comp.id} 
+                                        className={`competicao-item ${selectedCompeticaoId === comp.id ? 'selected' : ''}`}
+                                        onClick={() => !loading && setSelectedCompeticaoId(comp.id)}
+                                    >
+                                        {selectedCompeticaoId === comp.id && (
+                                            <CheckCircle2 size={18} color="#2563eb" className="check-icon" />
+                                        )}
+                                        
+                                        <div className="comp-img-container">
                                             {comp.imagem ? (
-                                                <img src={comp.imagem} alt={comp.nome} className="competicao-img-mini" />
+                                                <img src={comp.imagem} alt={comp.nome} />
                                             ) : (
-                                                <div className="competicao-img-mini" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#eee' }}>
-                                                    <Trophy size={16} color="#999" />
-                                                </div>
+                                                <Trophy size={16} color="#999" />
                                             )}
-                                            
-                                            <div className="competicao-info">
-                                                <span className="competicao-name">{comp.nome}</span>
-                                                <span className="competicao-division">
-                                                    {comp.divisao ? comp.divisao : `Peso: ${comp.valor}`}
-                                                </span>
-                                            </div>
                                         </div>
-                                    ))
-                                )}
-                            </div>
+                                        
+                                        <div className="competicao-info">
+                                            <span className="competicao-name">{comp.nome}</span>
+                                            <span className="competicao-division">
+                                                {comp.divisao ? comp.divisao : `Peso: ${comp.valor}`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
+                    </div>
 
-                        {/* Info Box */}
-                        <div className="info-box" style={{ marginTop: '10px', marginBottom: '10px' }}>
-                            <div className="info-icon">
-                                <AlertCircle size={18} />
-                            </div>
-                            <p>
-                                O torneio será criado vinculado à temporada atual. Certifique-se de escolher a competição correta para definir o peso e as regras.
-                            </p>
+                    <div className="info-box">
+                        <div className="info-icon">
+                            <AlertCircle size={18} />
                         </div>
+                        <p>
+                            O torneio será criado vinculado à temporada atual. Certifique-se de escolher a competição correta para definir o peso e as regras.
+                        </p>
+                    </div>
+                </div>
 
-                        <button 
-                            type="submit" 
-                            className="submit-claim-btn" 
-                            disabled={loading || loadingCompeticoes}
-                        >
-                            {loading ? <div className="popup-spinner-small"></div> : 'Criar Torneio'}
-                        </button>
-                    </form>
+                <div className="popup-footer-fixed">
+                    <button 
+                        type="button" 
+                        className="submit-claim-btn" 
+                        onClick={handleSubmit}
+                        disabled={loading || loadingCompeticoes}
+                    >
+                        {loading ? <div className="popup-spinner-small-white"></div> : 'Criar Torneio'}
+                    </button>
                 </div>
             </div>
         </div>
