@@ -1,0 +1,394 @@
+:root {
+  --pp-bg-overlay: rgba(0, 0, 0, 0.75);
+  --pp-bg-card: #ffffff;
+  --pp-text-primary: #333333;
+  --pp-text-secondary: #666666;
+  --pp-border: #e0e0e0;
+  
+  --pp-btn-close-bg: #f0f0f0;
+  --pp-btn-close-text: #666666;
+  
+  --pp-scrollbar-track: #f1f1f1;
+  --pp-scrollbar-thumb: #c1c1c1;
+
+  --pp-input-bg: #ffffff;
+  --pp-input-border: #cccccc;
+  --pp-input-focus: #2563eb;
+}
+
+body.dark-mode {
+  --pp-bg-card: #1a1a1a;
+  --pp-text-primary: #ffffff;
+  --pp-text-secondary: #aaaaaa;
+  --pp-border: #333333;
+  
+  --pp-btn-close-bg: #333333;
+  --pp-btn-close-text: #ffffff;
+  
+  --pp-scrollbar-track: #2d2d2d;
+  --pp-scrollbar-thumb: #555555;
+
+  --pp-input-bg: #2d2d2d;
+  --pp-input-border: #444444;
+  --pp-input-focus: #60a5fa;
+}
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--pp-bg-overlay);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 0;
+  animation: fadeIn 0.3s forwards;
+}
+
+.popup-overlay.fade-out {
+  animation: fadeOut 0.3s forwards;
+  pointer-events: none;
+}
+
+.popup-content {
+  background-color: var(--pp-bg-card);
+  color: var(--pp-text-primary);
+  border-radius: 20px;
+  width: 90%;
+  position: relative;
+  transform: scale(0.95);
+  animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  border: 1px solid var(--pp-border);
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  max-height: 90vh;
+  padding: 0;
+  overflow: hidden;
+}
+
+.credenciais-popup-width {
+    max-width: 500px;
+}
+
+.popup-overlay.fade-out .popup-content {
+  animation: scaleOut 0.3s forwards;
+}
+
+.popup-body-animate {
+  animation: slideUp 0.4s ease forwards;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.popup-body-animate.fade-out-content {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.popup-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--pp-btn-close-bg);
+  border: 1px solid transparent; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--pp-btn-close-text);
+  transition: all 0.2s;
+  z-index: 10;
+  padding: 0;
+}
+
+.popup-close-btn:hover {
+  background-color: #ff4d4d;
+  color: white;
+  transform: scale(1.1);
+}
+
+.popup-header-clean {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 30px 30px 10px 30px;
+    flex-shrink: 0;
+}
+
+.icon-badge-wrapper {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    color: white;
+}
+
+.credenciais-badge {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25);
+}
+
+.popup-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0;
+    color: var(--pp-text-primary); 
+}
+
+.popup-subtitle {
+    font-size: 0.9rem;
+    color: var(--pp-text-secondary);
+    margin: 5px 0 0 0;
+}
+
+.popup-scrollable-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 40px;
+}
+
+.form-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--pp-text-secondary);
+}
+
+.form-input {
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--pp-input-border);
+    background-color: var(--pp-input-bg);
+    color: var(--pp-text-primary);
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+.form-input:focus {
+    border-color: var(--pp-input-focus);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: var(--pp-btn-close-bg);
+}
+
+.input-highlight {
+    border-color: #2563eb;
+}
+
+.input-highlight:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.field-hint {
+    font-size: 0.8rem;
+    color: var(--pp-text-secondary);
+    opacity: 0.8;
+}
+
+.form-divider {
+    height: 1px;
+    background-color: var(--pp-border);
+    margin: 5px 0;
+}
+
+.alert-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background-color: rgba(37, 99, 235, 0.1);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(37, 99, 235, 0.3);
+    color: #1e40af;
+    font-size: 0.85rem;
+    margin-top: 5px;
+}
+
+body.dark-mode .alert-box {
+    color: #60a5fa;
+}
+
+.required-section .form-label {
+    color: #1d4ed8;
+}
+
+body.dark-mode .required-section .form-label {
+    color: #60a5fa;
+}
+
+.req {
+    color: #ef4444;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: var(--pp-scrollbar-track); 
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--pp-scrollbar-thumb); 
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #888; 
+}
+
+.actions-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px 30px 30px;
+    border-top: 1px solid var(--pp-border);
+    gap: 15px;
+    background-color: var(--pp-bg-card);
+    flex-shrink: 0;
+}
+
+.footer-left {
+    display: flex;
+    align-items: center;
+}
+
+.footer-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-base {
+    height: 44px;
+    padding: 0 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-secondary {
+    background-color: transparent;
+    border: 1px solid var(--pp-border);
+    color: var(--pp-text-secondary);
+}
+
+.btn-secondary:hover {
+    background-color: var(--pp-btn-close-bg);
+    color: var(--pp-text-primary);
+    border-color: var(--pp-text-secondary);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+    min-width: 140px;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3);
+    filter: brightness(1.05);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@media (max-width: 500px) {
+    .actions-footer {
+        flex-direction: column-reverse; 
+        gap: 15px;
+    }
+
+    .footer-left, .footer-right {
+        width: 100%;
+    }
+    
+    .footer-right {
+        flex-direction: column;
+    }
+
+    .btn-base {
+        width: 100%; 
+    }
+
+    .popup-scrollable-area {
+        padding: 20px 20px;
+    }
+}
+
+.reivindicar-error-msg {
+    color: #d63031;
+    background-color: rgba(214, 48, 49, 0.1);
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: center;
+    border: 1px solid rgba(214, 48, 49, 0.2);
+    margin: 5px 0 0 0;
+    animation: slideUp 0.2s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes scaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.9); opacity: 0; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }

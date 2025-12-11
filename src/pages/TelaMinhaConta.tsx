@@ -25,6 +25,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupAtualizarFoto from '../components/PopupAtualizarFoto';
+import PopupAlterarCredenciais from '../components/PopupAlterarCredenciais';
 
 interface UserData {
   id: string;
@@ -161,6 +162,8 @@ export function TelaMinhaConta() {
     if (!currentUser?.imagem) return null;
     return avatarMap[currentUser.imagem] || currentUser.imagem;
   };
+
+  const [showCredenciaisPopup, setShowCredenciaisPopup] = useState(false);
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -567,7 +570,7 @@ export function TelaMinhaConta() {
                     <Edit size={20} />
                     Atualizar conta
                   </button>
-                  <button className="action-btn" onClick={() => console.log('Atualizar email')}>
+                  <button className="action-btn" onClick={() => setShowCredenciaisPopup(true)}>
                     <Mail size={20} />
                     Atualizar email e senha
                   </button>
@@ -600,6 +603,16 @@ export function TelaMinhaConta() {
         <PopupAtualizarFoto
           onClose={() => setShowAvatarPopup(false)}
           onUpdateSuccess={handleAvatarUpdate}
+        />
+      )}
+
+      {showCredenciaisPopup && (
+        <PopupAlterarCredenciais
+          onClose={() => setShowCredenciaisPopup(false)}
+          onSuccess={() => {
+            setShowCredenciaisPopup(false);
+            alert('Credenciais atualizadas com sucesso!');
+          }}
         />
       )}
     </div>
