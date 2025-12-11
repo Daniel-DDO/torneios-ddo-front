@@ -16,36 +16,24 @@ import {
   Settings,
   CalendarSync,
   Plus,
-  ArrowLeft,
-  Link,
-  UserCheck 
+  ArrowLeft
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
-import PopupNovoTorneio from '../components/PopupNovoTorneio';
-import PopupJogadorClube from '../components/PopupJogadorClube';
+import PopupNovaFase from '../components/PopupNovaFase';
 
-interface Torneio {
+interface FaseTorneioDTO {
   id: string;
   nome: string;
-  temporadaId: string;
-  temporadaNome: string;
-  competicaoId: string;
-  competicaoNome: string;
-  status?: string; 
-  vagas?: number;
-  dataInicio?: string;
-}
-
-interface Competicao {
-  id: string;
-  nome: string;
-  imagem: string;
-  divisao: string;
-  valor: number;
-  descricao: string;
+  ordem: number;
+  torneioId: string;
+  torneioNome: string;
+  tipoTorneio: string;
+  numeroRodadas: number | null;
+  faseInicialMataMata: string | null;
+  temJogoVolta: boolean | null;
 }
 
 interface UserData {
@@ -74,19 +62,14 @@ const fetchAvatarsService = async () => {
   return [];
 };
 
-const fetchTorneiosPorTemporadaService = async (temporadaId: string) => {
-  const response = await API.get(`/torneio/temporada/${temporadaId}`);
+const fetchFasesPorTorneioService = async (torneioId: string) => {
+  const response = await API.get(`/fase-torneio/torneio/${torneioId}`);
   return response.data;
 };
 
-const fetchCompeticoesSimplesService = async () => {
-    const response = await API.get('/competicao/lista-simples');
-    return response.data;
-};
-
-export function TelaTorneios() {
+export function TelaTorneiosFases() {
   const navigate = useNavigate();
-  const { temporadaId } = useParams();
+  const { torneioId, temporadaId } = useParams();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -96,15 +79,10 @@ export function TelaTorneios() {
     staleTime: 1000 * 60 * 60,
   });
 
-  const { data: torneios = [], isLoading: isLoadingTorneios } = useQuery<Torneio[]>({
-    queryKey: ['torneios', temporadaId],
-    queryFn: () => fetchTorneiosPorTemporadaService(temporadaId || ''),
-    enabled: !!temporadaId,
-  });
-
-  const { data: competicoes = [], isLoading: isLoadingCompeticoes } = useQuery<Competicao[]>({
-    queryKey: ['competicoes-simples'],
-    queryFn: fetchCompeticoesSimplesService,
+  const { data: fases = [], isLoading } = useQuery<FaseTorneioDTO[]>({
+    queryKey: ['fases', torneioId],
+    queryFn: () => fetchFasesPorTorneioService(torneioId || ''),
+    enabled: !!torneioId,
   });
 
   const avatarMap = useMemo(() => {
@@ -115,19 +93,10 @@ export function TelaTorneios() {
     return map;
   }, [avatars]);
 
-  const competicaoMap = useMemo(() => {
-    const map: Record<string, Competicao> = {};
-    competicoes.forEach((comp) => {
-        map[comp.id] = comp;
-    });
-    return map;
-  }, [competicoes]);
-
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
-  const [showNovoTorneioPopup, setShowNovoTorneioPopup] = useState(false);
-  const [showJogadorClubePopup, setShowJogadorClubePopup] = useState(false);
+  const [showNovaFasePopup, setShowNovaFasePopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -165,20 +134,15 @@ export function TelaTorneios() {
     }
   };
 
-  const handleNovoTorneioSubmit = () => {
-    queryClient.invalidateQueries({ queryKey: ['torneios', temporadaId] });
+  const handleNovaFaseSubmit = () => {
+    queryClient.invalidateQueries({ queryKey: ['fases', torneioId] });
   };
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const filteredTorneios = torneios.filter((torneio) => {
+  const filteredFases = fases.filter((fase) => {
     const term = searchTerm.toLowerCase();
-    const nomeTorneio = torneio.nome.toLowerCase();
-    
-    const comp = competicaoMap[torneio.competicaoId];
-    const nomeCompeticao = comp ? comp.nome.toLowerCase() : '';
-
-    return nomeTorneio.includes(term) || nomeCompeticao.includes(term);
+    return fase.nome.toLowerCase().includes(term);
   });
 
   const getCurrentUserAvatar = () => {
@@ -186,21 +150,25 @@ export function TelaTorneios() {
     return avatarMap[currentUser.imagem] || currentUser.imagem;
   };
 
-  const handleVerJogadores = () => {
-    if (temporadaId) {
-        navigate(`/${temporadaId}/torneios/jogadores`);
+  const formatTipoTorneio = (tipo: string) => {
+    switch (tipo) {
+        case 'GRUPOS': return 'Fase de Grupos';
+        case 'PONTOS_CORRIDOS': return 'Pontos Corridos';
+        case 'MATA_MATA': return 'Mata-Mata';
+        case 'JOGO_UNICO': return 'Jogo Único';
+        default: return tipo;
     }
   };
 
-  const handleTorneioClick = (torneioId: string) => {
-    if (temporadaId && torneioId) {
-      navigate(`/${temporadaId}/${torneioId}/fases`);
+  const getDetalhesFase = (fase: FaseTorneioDTO) => {
+    if (fase.tipoTorneio === 'PONTOS_CORRIDOS' || fase.tipoTorneio === 'GRUPOS') {
+        return `${fase.numeroRodadas} Rodadas`;
     }
+    if (fase.tipoTorneio === 'MATA_MATA') {
+        return `${fase.faseInicialMataMata} ${fase.temJogoVolta ? '(Ida e Volta)' : '(Jogo Único)'}`;
+    }
+    return '-';
   };
-
-  const isLoading = isLoadingTorneios || isLoadingCompeticoes;
-
-  const hasAdminPrivileges = currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -257,30 +225,6 @@ export function TelaTorneios() {
           border-bottom: none;
         }
 
-        .status-badge {
-          display: inline-block;
-          padding: 4px 12px;
-          border-radius: 12px;
-          font-size: 0.8rem;
-          font-weight: 700;
-          text-transform: uppercase;
-        }
-
-        .status-aberto {
-          background-color: rgba(16, 185, 129, 0.15);
-          color: #10b981;
-        }
-
-        .status-encerrado {
-          background-color: var(--border-color);
-          color: var(--text-gray);
-        }
-
-        .status-andamento {
-          background-color: rgba(59, 130, 246, 0.15);
-          color: #3b82f6;
-        }
-
         .back-button {
             display: flex;
             align-items: center;
@@ -298,45 +242,20 @@ export function TelaTorneios() {
             color: var(--primary);
         }
 
-        .comp-cell {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .comp-logo-mini {
-            width: 36px;
-            height: 36px;
-            object-fit: contain;
-            border-radius: 4px;
-        }
-
-        .ver-jogadores-btn {
-            background-color: transparent;
+        .badge-type {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background-color: var(--hover-bg);
             color: var(--text-primary);
             border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            margin-right: 10px;
-        }
-
-        .ver-jogadores-btn:hover {
-            background-color: var(--hover-bg);
-            border-color: var(--primary);
-            color: var(--primary);
         }
 
         @media (max-width: 768px) {
           .page-content { padding: 1rem; }
           .custom-table th, .custom-table td { padding: 12px; }
-          .ver-jogadores-btn span { display: none; } /* Esconde texto no mobile se quiser */
         }
       `}</style>
 
@@ -397,7 +316,7 @@ export function TelaTorneios() {
               <Search size={20} />
               <input 
                 type="text" 
-                placeholder="Buscar torneio ou competição..." 
+                placeholder="Buscar fase..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -405,12 +324,6 @@ export function TelaTorneios() {
           </div>
           
           <div className="header-actions">
-            
-            <button className="ver-jogadores-btn" onClick={handleVerJogadores}>
-                <UserCheck size={18} />
-                <span>Jogadores dessa temporada</span>
-            </button>
-
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
@@ -457,101 +370,57 @@ export function TelaTorneios() {
         </header>
 
         <div className="page-content">
-            <button onClick={() => navigate('/temporadas')} className="back-button">
-                <ArrowLeft size={16} /> Voltar para Temporadas
+            <button onClick={() => navigate(`/${temporadaId}/torneios`)} className="back-button">
+                <ArrowLeft size={16} /> Voltar para Torneios
             </button>
 
             <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Torneios da Temporada</h2>
-                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Gerencie os torneios desta temporada</p>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-                {hasAdminPrivileges && (
-                    <button 
-                      className="t-btn" 
-                      onClick={() => setShowJogadorClubePopup(true)}
-                      style={{
-                          background: 'var(--bg-card)', 
-                          color: 'var(--text-primary)', 
-                          border: '1px solid var(--border-color)', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '8px',
-                          cursor: 'pointer'
-                      }}
-                    >
-                        <Link size={18} /> Vincular Jogadores
-                    </button>
-                )}
+                <div>
+                    <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Fases do Torneio</h2>
+                    <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Gerencie as etapas deste torneio</p>
+                </div>
 
-                {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
+                {currentUser && ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo) && (
                     <button 
                       className="t-btn" 
-                      onClick={() => setShowNovoTorneioPopup(true)}
+                      onClick={() => setShowNovaFasePopup(true)}
                       style={{background: 'var(--primary)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '8px'}}
                     >
-                        <Plus size={18} /> Novo Torneio
+                        <Plus size={18} /> Nova Fase
                     </button>
                 )}
-            </div>
             </div>
 
             <div className="table-container">
               {isLoading ? (
-                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>Carregando dados...</div>
+                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>Carregando fases...</div>
               ) : (
                 <table className="custom-table">
                   <thead>
                     <tr>
-                      <th>Competição</th>
-                      <th>Torneio</th>
-                      <th>Temporada</th>
-                      <th>Status</th>
+                      <th style={{width: '80px', textAlign: 'center'}}>Ordem</th>
+                      <th>Nome da Fase</th>
+                      <th>Tipo</th>
+                      <th>Detalhes</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTorneios.map((torneio) => {
-                      const competicao = competicaoMap[torneio.competicaoId];
-                      return (
-                        <tr 
-                            key={torneio.id}
-                            onClick={() => handleTorneioClick(torneio.id)}
-                        >
+                    {filteredFases.map((fase) => (
+                        <tr key={fase.id} onClick={() => console.log('Detalhes da fase', fase.id)}>
+                          <td style={{textAlign: 'center', fontWeight: 'bold'}}>{fase.ordem}</td>
+                          <td>{fase.nome}</td>
                           <td>
-                            <div className="comp-cell">
-                                {competicao ? (
-                                    <>
-                                        <img src={competicao.imagem} alt={competicao.nome} className="comp-logo-mini" />
-                                        <span>{competicao.nome}</span>
-                                    </>
-                                ) : (
-                                    <span>{torneio.competicaoNome || 'Competição Desconhecida'}</span>
-                                )}
-                            </div>
+                              <span className="badge-type">{formatTipoTorneio(fase.tipoTorneio)}</span>
                           </td>
-                          <td>{torneio.nome}</td>
-                          <td>{torneio.temporadaNome}</td>
-                          <td>
-                             {torneio.status ? (
-                                <span className={`status-badge ${
-                                    torneio.status === 'ABERTO' ? 'status-aberto' : 
-                                    torneio.status === 'EM_ANDAMENTO' ? 'status-andamento' : 'status-encerrado'
-                                }`}>
-                                    {torneio.status === 'EM_ANDAMENTO' ? 'Em Andamento' : torneio.status}
-                                </span>
-                             ) : (
-                                <span className="status-badge status-aberto">Aberto</span>
-                             )}
+                          <td style={{color: 'var(--text-gray)'}}>
+                              {getDetalhesFase(fase)}
                           </td>
                         </tr>
-                      );
-                    })}
-                    {filteredTorneios.length === 0 && (
+                    ))}
+                    {filteredFases.length === 0 && (
                       <tr>
                           <td colSpan={4} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
-                              Nenhum torneio encontrado
+                              Nenhuma fase encontrada
                           </td>
                       </tr>
                     )}
@@ -581,16 +450,10 @@ export function TelaTorneios() {
         />
       )}
 
-      {showNovoTorneioPopup && (
-        <PopupNovoTorneio 
-          onClose={() => setShowNovoTorneioPopup(false)} 
-          onSubmit={handleNovoTorneioSubmit} 
-        />
-      )}
-
-      {showJogadorClubePopup && (
-        <PopupJogadorClube 
-          onClose={() => setShowJogadorClubePopup(false)}
+      {showNovaFasePopup && (
+        <PopupNovaFase 
+          onClose={() => setShowNovaFasePopup(false)} 
+          onSubmit={handleNovaFaseSubmit} 
         />
       )}
     </div>

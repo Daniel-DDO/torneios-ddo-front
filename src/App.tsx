@@ -10,6 +10,7 @@ import { TelaPerfilJogador } from './pages/TelaPerfilJogador';
 import { TelaTemporadas } from './pages/TelaTemporadas';
 import { TelaTorneios } from './pages/TelaTorneios';
 import { TelaTorneiosJogadores } from './pages/TelaTorneiosJogadores';
+import { TelaTorneiosFases } from './pages/TelaTorneiosFases';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -36,6 +37,7 @@ function App() {
           <Route path="/temporadas" element={<TelaTemporadas />} />
           <Route path="/:temporadaId/torneios" element={<TelaTorneios />} />
           <Route path="/:temporadaId/torneios/jogadores" element={<TelaTorneiosJogadores />} />
+          <Route path="/:temporadaId/:torneioId/fases" element={<TelaTorneiosFases />} />
         </Routes>
       </Router>
     </QueryClientProvider>
