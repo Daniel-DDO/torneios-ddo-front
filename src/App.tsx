@@ -8,6 +8,7 @@ import { TelaMinhaConta } from './pages/TelaMinhaConta';
 import { TelaAdmin } from './pages/TelaAdmin';
 import { TelaPerfilJogador } from './pages/TelaPerfilJogador';
 import { TelaTemporadas } from './pages/TelaTemporadas';
+import { TelaTorneios } from './pages/TelaTorneios';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -32,6 +33,7 @@ function App() {
           <Route path="/admin" element={<TelaAdmin />} />
           <Route path="/jogador/:id" element={<TelaPerfilJogador />} />
           <Route path="/temporadas" element={<TelaTemporadas />} />
+          <Route path="/:temporadaId/torneios" element={<TelaTorneios />} />
         </Routes>
       </Router>
     </QueryClientProvider>

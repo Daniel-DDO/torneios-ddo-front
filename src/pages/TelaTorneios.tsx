@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Menu, 
@@ -15,20 +15,23 @@ import {
   Lightbulb,
   Settings,
   CalendarSync,
-  Plus
+  Plus,
+  ArrowLeft
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
-import PopupNovaTemporada from '../components/PopupNovaTemporada';
+import PopupNovoTorneio from '../components/PopupNovoTorneio';
 
-interface Season {
+interface Torneio {
   id: string;
   nome: string;
+  tipo: string;
   dataInicio: string;
   dataFim: string;
-  ativa: boolean;
+  status: string;
+  vagas: number;
 }
 
 interface UserData {
@@ -57,13 +60,14 @@ const fetchAvatarsService = async () => {
   return [];
 };
 
-const fetchSeasonsService = async () => {
-  const response = await API.get('/temporada/all');
+const fetchTorneiosPorTemporadaService = async (temporadaId: string) => {
+  const response = await API.get(`/torneio/temporada/${temporadaId}`);
   return response.data;
 };
 
-export function TelaTemporadas() {
+export function TelaTorneios() {
   const navigate = useNavigate();
+  const { temporadaId } = useParams();
   const queryClient = useQueryClient();
 
   const { data: avatars = [] } = useQuery<Avatar[]>({
@@ -72,9 +76,10 @@ export function TelaTemporadas() {
     staleTime: 1000 * 60 * 60,
   });
 
-  const { data: seasons = [] } = useQuery<Season[]>({
-    queryKey: ['temporadas'],
-    queryFn: fetchSeasonsService,
+  const { data: torneios = [], isLoading } = useQuery<Torneio[]>({
+    queryKey: ['torneios', temporadaId],
+    queryFn: () => fetchTorneiosPorTemporadaService(temporadaId || ''),
+    enabled: !!temporadaId,
   });
 
   const avatarMap = useMemo(() => {
@@ -88,7 +93,7 @@ export function TelaTemporadas() {
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
-  const [showNovaTemporadaPopup, setShowNovaTemporadaPopup] = useState(false);
+  const [showNovoTorneioPopup, setShowNovoTorneioPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -127,31 +132,14 @@ export function TelaTemporadas() {
     }
   };
 
-  const handleNovaTemporadaSubmit = () => {
-    queryClient.invalidateQueries({ queryKey: ['temporadas'] });
+  const handleNovoTorneioSubmit = () => {
+    queryClient.invalidateQueries({ queryKey: ['torneios', temporadaId] });
   };
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const getSeasonStatus = (startStr: string, endStr: string) => {
-    const now = new Date();
-    const start = new Date(startStr);
-    const end = new Date(endStr);
-    
-    start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
-
-    if (now >= start && now <= end) {
-        return { label: 'ATUAL', className: 'status-atual' };
-    } else if (now > end) {
-        return { label: 'PASSADO', className: 'status-passado' };
-    } else {
-        return { label: 'EM BREVE', className: 'status-breve' };
-    }
-  };
-
-  const filteredSeasons = seasons.filter((season) =>
-    season.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTorneios = torneios.filter((torneio) =>
+    torneio.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getCurrentUserAvatar = () => {
@@ -222,19 +210,36 @@ export function TelaTemporadas() {
           text-transform: uppercase;
         }
 
-        .status-atual {
+        .status-aberto {
           background-color: rgba(16, 185, 129, 0.15);
           color: #10b981;
         }
 
-        .status-passado {
+        .status-encerrado {
           background-color: var(--border-color);
           color: var(--text-gray);
         }
 
-        .status-breve {
+        .status-andamento {
           background-color: rgba(59, 130, 246, 0.15);
           color: #3b82f6;
+        }
+
+        .back-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-gray);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            padding: 0;
+        }
+
+        .back-button:hover {
+            color: var(--primary);
         }
 
         @media (max-width: 768px) {
@@ -300,7 +305,7 @@ export function TelaTemporadas() {
               <Search size={20} />
               <input 
                 type="text" 
-                placeholder="Buscar temporada..." 
+                placeholder="Buscar torneio..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -354,60 +359,71 @@ export function TelaTemporadas() {
         </header>
 
         <div className="page-content">
+            <button onClick={() => navigate('/temporadas')} className="back-button">
+                <ArrowLeft size={16} /> Voltar para Temporadas
+            </button>
+
             <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Temporadas</h2>
-                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Gerencie as temporadas do torneio</p>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Torneios da Temporada</h2>
+                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Gerencie os torneios desta temporada</p>
             </div>
             {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
                 <button 
                   className="t-btn" 
-                  onClick={() => setShowNovaTemporadaPopup(true)}
+                  onClick={() => setShowNovoTorneioPopup(true)}
                   style={{background: 'var(--primary)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '8px'}}
                 >
-                    <Plus size={18} /> Nova Temporada
+                    <Plus size={18} /> Novo Torneio
                 </button>
             )}
             </div>
 
             <div className="table-container">
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th>Nome</th>
-                    <th>Início</th>
-                    <th>Fim</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSeasons.map((season) => {
-                    const statusInfo = getSeasonStatus(season.dataInicio, season.dataFim);
-                    return (
-                        <tr 
-                            key={season.id} 
-                            onClick={() => navigate(`/${season.id}/torneios`)}
-                        >
-                          <td>{season.nome}</td>
-                          <td>{new Date(season.dataInicio).toLocaleDateString('pt-BR')}</td>
-                          <td>{new Date(season.dataFim).toLocaleDateString('pt-BR')}</td>
-                          <td>
-                            <span className={`status-badge ${statusInfo.className}`}>
-                              {statusInfo.label}
-                            </span>
-                          </td>
-                        </tr>
-                    );
-                  })}
-                  {filteredSeasons.length === 0 && (
+              {isLoading ? (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>Carregando torneios...</div>
+              ) : (
+                <table className="custom-table">
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Tipo</th>
+                      <th>Data Início</th>
+                      <th>Vagas</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTorneios.map((torneio) => (
+                      <tr 
+                          key={torneio.id}
+                          // Aqui você define para onde vai ao clicar no torneio (Ex: detalhes)
+                          onClick={() => console.log('Navegar para detalhes do torneio', torneio.id)}
+                      >
+                        <td>{torneio.nome}</td>
+                        <td>{torneio.tipo}</td>
+                        <td>{torneio.dataInicio ? new Date(torneio.dataInicio).toLocaleDateString('pt-BR') : '-'}</td>
+                        <td>{torneio.vagas}</td>
+                        <td>
+                          <span className={`status-badge ${
+                              torneio.status === 'ABERTO' ? 'status-aberto' : 
+                              torneio.status === 'EM_ANDAMENTO' ? 'status-andamento' : 'status-encerrado'
+                          }`}>
+                            {torneio.status === 'EM_ANDAMENTO' ? 'Em Andamento' : torneio.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredTorneios.length === 0 && (
                       <tr>
-                          <td colSpan={4} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
-                              Nenhuma temporada encontrada
+                          <td colSpan={5} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
+                              Nenhum torneio encontrado para esta temporada
                           </td>
                       </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              )}
             </div>
         </div>
 
@@ -431,10 +447,10 @@ export function TelaTemporadas() {
         />
       )}
 
-      {showNovaTemporadaPopup && (
-        <PopupNovaTemporada 
-          onClose={() => setShowNovaTemporadaPopup(false)} 
-          onSubmit={handleNovaTemporadaSubmit}
+      {showNovoTorneioPopup && (
+        <PopupNovoTorneio 
+          onClose={() => setShowNovoTorneioPopup(false)} 
+          onSubmit={handleNovoTorneioSubmit} 
         />
       )}
     </div>
