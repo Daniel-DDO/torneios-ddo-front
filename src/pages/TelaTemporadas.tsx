@@ -15,7 +15,8 @@ import {
   Lightbulb,
   Settings,
   CalendarSync,
-  Plus
+  Plus,
+  Loader2
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -72,7 +73,7 @@ export function TelaTemporadas() {
     staleTime: 1000 * 60 * 60,
   });
 
-  const { data: seasons = [] } = useQuery<Season[]>({
+  const { data: seasons = [], isLoading } = useQuery<Season[]>({
     queryKey: ['temporadas'],
     queryFn: fetchSeasonsService,
   });
@@ -174,6 +175,9 @@ export function TelaTemporadas() {
           overflow: hidden;
           margin-top: 24px;
           box-shadow: var(--shadow-sm);
+          min-height: 300px;
+          display: flex;
+          flex-direction: column;
         }
 
         .custom-table {
@@ -235,6 +239,27 @@ export function TelaTemporadas() {
         .status-breve {
           background-color: rgba(59, 130, 246, 0.15);
           color: #3b82f6;
+        }
+
+        .state-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .spinner-icon {
+            animation: spin 1s linear infinite;
+            margin-bottom: 12px;
+            color: var(--primary);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         @media (max-width: 768px) {
@@ -371,43 +396,48 @@ export function TelaTemporadas() {
             </div>
 
             <div className="table-container">
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th>Nome</th>
-                    <th>Início</th>
-                    <th>Fim</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSeasons.map((season) => {
-                    const statusInfo = getSeasonStatus(season.dataInicio, season.dataFim);
-                    return (
-                        <tr 
-                            key={season.id} 
-                            onClick={() => navigate(`/${season.id}/torneios`)}
-                        >
-                          <td>{season.nome}</td>
-                          <td>{new Date(season.dataInicio).toLocaleDateString('pt-BR')}</td>
-                          <td>{new Date(season.dataFim).toLocaleDateString('pt-BR')}</td>
-                          <td>
-                            <span className={`status-badge ${statusInfo.className}`}>
-                              {statusInfo.label}
-                            </span>
-                          </td>
-                        </tr>
-                    );
-                  })}
-                  {filteredSeasons.length === 0 && (
-                      <tr>
-                          <td colSpan={4} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
-                              Nenhuma temporada encontrada
-                          </td>
-                      </tr>
-                  )}
-                </tbody>
-              </table>
+              {isLoading ? (
+                <div className="state-container">
+                    <Loader2 size={32} className="spinner-icon" />
+                    <p>Buscando temporadas...</p>
+                </div>
+              ) : filteredSeasons.length > 0 ? (
+                <table className="custom-table">
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Início</th>
+                      <th>Fim</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSeasons.map((season) => {
+                      const statusInfo = getSeasonStatus(season.dataInicio, season.dataFim);
+                      return (
+                          <tr 
+                              key={season.id} 
+                              onClick={() => navigate(`/${season.id}/torneios`)}
+                          >
+                            <td>{season.nome}</td>
+                            <td>{new Date(season.dataInicio).toLocaleDateString('pt-BR')}</td>
+                            <td>{new Date(season.dataFim).toLocaleDateString('pt-BR')}</td>
+                            <td>
+                              <span className={`status-badge ${statusInfo.className}`}>
+                                {statusInfo.label}
+                              </span>
+                            </td>
+                          </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="state-container">
+                    <p style={{ fontSize: '1.1rem', fontWeight: 500 }}>Nenhuma temporada encontrada</p>
+                    <p style={{ fontSize: '0.9rem', opacity: 0.7 }}>Tente ajustar sua busca ou adicione uma nova.</p>
+                </div>
+              )}
             </div>
         </div>
 
