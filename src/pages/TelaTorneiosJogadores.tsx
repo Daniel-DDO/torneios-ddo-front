@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Menu, 
   LayoutDashboard, 
@@ -15,37 +15,29 @@ import {
   Lightbulb,
   Settings,
   CalendarSync,
-  Plus,
-  ArrowLeft,
-  Link,
-  UserCheck 
+  ArrowLeft
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
-import PopupNovoTorneio from '../components/PopupNovoTorneio';
-import PopupJogadorClube from '../components/PopupJogadorClube';
 
-interface Torneio {
+interface JogadorClubeDTO {
   id: string;
-  nome: string;
+  jogadorId: string;
+  jogadorNome: string;
+  jogadorImagem: string;
+  clubeId: string;
+  clubeNome: string;
+  clubeImagem: string;
+  clubeSigla: string;
   temporadaId: string;
   temporadaNome: string;
-  competicaoId: string;
-  competicaoNome: string;
-  status?: string; 
-  vagas?: number;
-  dataInicio?: string;
-}
-
-interface Competicao {
-  id: string;
-  nome: string;
-  imagem: string;
-  divisao: string;
-  valor: number;
-  descricao: string;
+  golsMarcados: number;
+  golsSofridos: number;
+  jogos: number;
+  pontosCoeficiente: number;
+  statusTemporada: string;
 }
 
 interface UserData {
@@ -74,20 +66,14 @@ const fetchAvatarsService = async () => {
   return [];
 };
 
-const fetchTorneiosPorTemporadaService = async (temporadaId: string) => {
-  const response = await API.get(`/torneio/temporada/${temporadaId}`);
+const fetchInscritosService = async (temporadaId: string) => {
+  const response = await API.get(`/inscricao/temporada/${temporadaId}`);
   return response.data;
 };
 
-const fetchCompeticoesSimplesService = async () => {
-    const response = await API.get('/competicao/lista-simples');
-    return response.data;
-};
-
-export function TelaTorneios() {
+export function TelaTorneiosJogadores() {
   const navigate = useNavigate();
   const { temporadaId } = useParams();
-  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: avatars = [] } = useQuery<Avatar[]>({
@@ -96,15 +82,10 @@ export function TelaTorneios() {
     staleTime: 1000 * 60 * 60,
   });
 
-  const { data: torneios = [], isLoading: isLoadingTorneios } = useQuery<Torneio[]>({
-    queryKey: ['torneios', temporadaId],
-    queryFn: () => fetchTorneiosPorTemporadaService(temporadaId || ''),
+  const { data: inscritos = [], isLoading } = useQuery<JogadorClubeDTO[]>({
+    queryKey: ['inscritos', temporadaId],
+    queryFn: () => fetchInscritosService(temporadaId || ''),
     enabled: !!temporadaId,
-  });
-
-  const { data: competicoes = [], isLoading: isLoadingCompeticoes } = useQuery<Competicao[]>({
-    queryKey: ['competicoes-simples'],
-    queryFn: fetchCompeticoesSimplesService,
   });
 
   const avatarMap = useMemo(() => {
@@ -115,19 +96,9 @@ export function TelaTorneios() {
     return map;
   }, [avatars]);
 
-  const competicaoMap = useMemo(() => {
-    const map: Record<string, Competicao> = {};
-    competicoes.forEach((comp) => {
-        map[comp.id] = comp;
-    });
-    return map;
-  }, [competicoes]);
-
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
-  const [showNovoTorneioPopup, setShowNovoTorneioPopup] = useState(false);
-  const [showJogadorClubePopup, setShowJogadorClubePopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -165,36 +136,17 @@ export function TelaTorneios() {
     }
   };
 
-  const handleNovoTorneioSubmit = () => {
-    queryClient.invalidateQueries({ queryKey: ['torneios', temporadaId] });
-  };
-
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const filteredTorneios = torneios.filter((torneio) => {
+  const filteredInscritos = inscritos.filter((item) => {
     const term = searchTerm.toLowerCase();
-    const nomeTorneio = torneio.nome.toLowerCase();
-    
-    const comp = competicaoMap[torneio.competicaoId];
-    const nomeCompeticao = comp ? comp.nome.toLowerCase() : '';
-
-    return nomeTorneio.includes(term) || nomeCompeticao.includes(term);
+    return item.jogadorNome.toLowerCase().includes(term) || item.clubeNome.toLowerCase().includes(term);
   });
 
   const getCurrentUserAvatar = () => {
     if (!currentUser?.imagem) return null;
     return avatarMap[currentUser.imagem] || currentUser.imagem;
   };
-
-  const handleVerJogadores = () => {
-    if (temporadaId) {
-        navigate(`/${temporadaId}/torneios/jogadores`);
-    }
-  };
-
-  const isLoading = isLoadingTorneios || isLoadingCompeticoes;
-
-  const hasAdminPrivileges = currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -240,7 +192,6 @@ export function TelaTorneios() {
 
         .custom-table tbody tr {
           transition: background-color 0.2s;
-          cursor: pointer;
         }
 
         .custom-table tbody tr:hover {
@@ -249,30 +200,6 @@ export function TelaTorneios() {
 
         .custom-table tr:last-child td {
           border-bottom: none;
-        }
-
-        .status-badge {
-          display: inline-block;
-          padding: 4px 12px;
-          border-radius: 12px;
-          font-size: 0.8rem;
-          font-weight: 700;
-          text-transform: uppercase;
-        }
-
-        .status-aberto {
-          background-color: rgba(16, 185, 129, 0.15);
-          color: #10b981;
-        }
-
-        .status-encerrado {
-          background-color: var(--border-color);
-          color: var(--text-gray);
-        }
-
-        .status-andamento {
-          background-color: rgba(59, 130, 246, 0.15);
-          color: #3b82f6;
         }
 
         .back-button {
@@ -292,45 +219,21 @@ export function TelaTorneios() {
             color: var(--primary);
         }
 
-        .comp-cell {
+        .clube-cell {
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .comp-logo-mini {
-            width: 36px;
-            height: 36px;
+        .clube-logo-mini {
+            width: 32px;
+            height: 32px;
             object-fit: contain;
-            border-radius: 4px;
-        }
-
-        .ver-jogadores-btn {
-            background-color: transparent;
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            margin-right: 10px;
-        }
-
-        .ver-jogadores-btn:hover {
-            background-color: var(--hover-bg);
-            border-color: var(--primary);
-            color: var(--primary);
         }
 
         @media (max-width: 768px) {
           .page-content { padding: 1rem; }
           .custom-table th, .custom-table td { padding: 12px; }
-          .ver-jogadores-btn span { display: none; } /* Esconde texto no mobile se quiser */
         }
       `}</style>
 
@@ -391,7 +294,7 @@ export function TelaTorneios() {
               <Search size={20} />
               <input 
                 type="text" 
-                placeholder="Buscar torneio ou competição..." 
+                placeholder="Buscar jogador ou clube..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -399,13 +302,6 @@ export function TelaTorneios() {
           </div>
           
           <div className="header-actions">
-            
-            {/* Botão Novo: Jogadores dessa Temporada */}
-            <button className="ver-jogadores-btn" onClick={handleVerJogadores}>
-                <UserCheck size={18} />
-                <span>Jogadores dessa temporada</span>
-            </button>
-
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
@@ -452,45 +348,13 @@ export function TelaTorneios() {
         </header>
 
         <div className="page-content">
-            <button onClick={() => navigate('/temporadas')} className="back-button">
-                <ArrowLeft size={16} /> Voltar para Temporadas
+            <button onClick={() => navigate(`/${temporadaId}/torneios`)} className="back-button">
+                <ArrowLeft size={16} /> Voltar para Torneios
             </button>
 
-            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Torneios da Temporada</h2>
-                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Gerencie os torneios desta temporada</p>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-                {hasAdminPrivileges && (
-                    <button 
-                      className="t-btn" 
-                      onClick={() => setShowJogadorClubePopup(true)}
-                      style={{
-                          background: 'var(--bg-card)', 
-                          color: 'var(--text-primary)', 
-                          border: '1px solid var(--border-color)', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '8px',
-                          cursor: 'pointer'
-                      }}
-                    >
-                        <Link size={18} /> Vincular Jogadores
-                    </button>
-                )}
-
-                {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
-                    <button 
-                      className="t-btn" 
-                      onClick={() => setShowNovoTorneioPopup(true)}
-                      style={{background: 'var(--primary)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '8px'}}
-                    >
-                        <Plus size={18} /> Novo Torneio
-                    </button>
-                )}
-            </div>
+            <div style={{ marginBottom: '1rem' }}>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Jogadores da Temporada</h2>
+                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Lista de inscritos e seus desempenhos gerais</p>
             </div>
 
             <div className="table-container">
@@ -500,53 +364,34 @@ export function TelaTorneios() {
                 <table className="custom-table">
                   <thead>
                     <tr>
-                      <th>Competição</th>
-                      <th>Torneio</th>
-                      <th>Temporada</th>
-                      <th>Status</th>
+                      <th>Clube</th>
+                      <th>Jogador</th>
+                      <th style={{textAlign: 'center'}}>Jogos</th>
+                      <th style={{textAlign: 'center'}}>Gols Pró</th>
+                      <th style={{textAlign: 'center'}}>Gols Contra</th>
+                      <th style={{textAlign: 'right'}}>Coeficiente</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTorneios.map((torneio) => {
-                      const competicao = competicaoMap[torneio.competicaoId];
-                      return (
-                        <tr 
-                            key={torneio.id}
-                            onClick={() => console.log('Navegar para detalhes do torneio', torneio.id)}
-                        >
+                    {filteredInscritos.map((item) => (
+                        <tr key={item.id}>
                           <td>
-                            <div className="comp-cell">
-                                {competicao ? (
-                                    <>
-                                        <img src={competicao.imagem} alt={competicao.nome} className="comp-logo-mini" />
-                                        <span>{competicao.nome}</span>
-                                    </>
-                                ) : (
-                                    <span>{torneio.competicaoNome || 'Competição Desconhecida'}</span>
-                                )}
+                            <div className="clube-cell">
+                                <img src={item.clubeImagem} alt={item.clubeNome} className="clube-logo-mini" />
+                                <span>{item.clubeNome}</span>
                             </div>
                           </td>
-                          <td>{torneio.nome}</td>
-                          <td>{torneio.temporadaNome}</td>
-                          <td>
-                             {torneio.status ? (
-                                <span className={`status-badge ${
-                                    torneio.status === 'ABERTO' ? 'status-aberto' : 
-                                    torneio.status === 'EM_ANDAMENTO' ? 'status-andamento' : 'status-encerrado'
-                                }`}>
-                                    {torneio.status === 'EM_ANDAMENTO' ? 'Em Andamento' : torneio.status}
-                                </span>
-                             ) : (
-                                <span className="status-badge status-aberto">Aberto</span>
-                             )}
-                          </td>
+                          <td>{item.jogadorNome}</td>
+                          <td style={{textAlign: 'center'}}>{item.jogos}</td>
+                          <td style={{textAlign: 'center', color: '#10b981'}}>{item.golsMarcados}</td>
+                          <td style={{textAlign: 'center', color: '#ef4444'}}>{item.golsSofridos}</td>
+                          <td style={{textAlign: 'right', fontWeight: 'bold'}}>{item.pontosCoeficiente.toFixed(3)}</td>
                         </tr>
-                      );
-                    })}
-                    {filteredTorneios.length === 0 && (
+                    ))}
+                    {filteredInscritos.length === 0 && (
                       <tr>
-                          <td colSpan={4} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
-                              Nenhum torneio encontrado
+                          <td colSpan={6} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
+                              Nenhum jogador inscrito encontrado
                           </td>
                       </tr>
                     )}
@@ -573,19 +418,6 @@ export function TelaTorneios() {
           }}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
-        />
-      )}
-
-      {showNovoTorneioPopup && (
-        <PopupNovoTorneio 
-          onClose={() => setShowNovoTorneioPopup(false)} 
-          onSubmit={handleNovoTorneioSubmit} 
-        />
-      )}
-
-      {showJogadorClubePopup && (
-        <PopupJogadorClube 
-          onClose={() => setShowJogadorClubePopup(false)}
         />
       )}
     </div>
