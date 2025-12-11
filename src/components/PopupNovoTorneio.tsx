@@ -22,24 +22,19 @@ export default function PopupNovoTorneio({ onClose, onSubmit }: PopupNovoTorneio
     const { temporadaId } = useParams();
     const [isClosing, setIsClosing] = useState(false);
     
-    // Form State
     const [nome, setNome] = useState('');
     const [selectedCompeticaoId, setSelectedCompeticaoId] = useState('');
     
-    // Data State
     const [competicoes, setCompeticoes] = useState<Competicao[]>([]);
     const [loadingCompeticoes, setLoadingCompeticoes] = useState(true);
     
-    // Status State
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Carregar competições ao abrir
     useEffect(() => {
         async function fetchCompeticoes() {
             try {
-                // Buscando 50 para garantir que apareçam opções suficientes no seletor
-                const response = await API.get('/competicao/all?size=50&sort=nome,asc');
+                const response = await API.get('/competicao/lista-simples');
                 if (response.data && response.data.content) {
                     setCompeticoes(response.data.content);
                 } else if (Array.isArray(response.data)) {
@@ -132,13 +127,12 @@ export default function PopupNovoTorneio({ onClose, onSubmit }: PopupNovoTorneio
 
                     <form className="reivindicar-form" onSubmit={handleSubmit}>
                         
-                        {/* Nome do Torneio */}
                         <div className="form-group">
                             <label>Nome do Torneio <span className="required-star">*</span></label>
                             <input 
                                 type="text" 
                                 className="reivindicar-input" 
-                                placeholder="Ex: Premier League 2025 - Série A"
+                                placeholder="Ex: Liga Real DDO - 1"
                                 value={nome}
                                 onChange={(e) => setNome(e.target.value)}
                                 disabled={loading}

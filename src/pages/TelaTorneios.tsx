@@ -27,11 +27,22 @@ import PopupNovoTorneio from '../components/PopupNovoTorneio';
 interface Torneio {
   id: string;
   nome: string;
-  tipo: string;
-  dataInicio: string;
-  dataFim: string;
-  status: string;
-  vagas: number;
+  temporadaId: string;
+  temporadaNome: string;
+  competicaoId: string;
+  competicaoNome: string;
+  status?: string; 
+  vagas?: number;
+  dataInicio?: string;
+}
+
+interface Competicao {
+  id: string;
+  nome: string;
+  imagem: string;
+  divisao: string;
+  valor: number;
+  descricao: string;
 }
 
 interface UserData {
@@ -65,10 +76,16 @@ const fetchTorneiosPorTemporadaService = async (temporadaId: string) => {
   return response.data;
 };
 
+const fetchCompeticoesSimplesService = async () => {
+    const response = await API.get('/competicao/lista-simples');
+    return response.data;
+};
+
 export function TelaTorneios() {
   const navigate = useNavigate();
   const { temporadaId } = useParams();
   const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: avatars = [] } = useQuery<Avatar[]>({
     queryKey: ['avatares'],
@@ -76,10 +93,15 @@ export function TelaTorneios() {
     staleTime: 1000 * 60 * 60,
   });
 
-  const { data: torneios = [], isLoading } = useQuery<Torneio[]>({
+  const { data: torneios = [], isLoading: isLoadingTorneios } = useQuery<Torneio[]>({
     queryKey: ['torneios', temporadaId],
     queryFn: () => fetchTorneiosPorTemporadaService(temporadaId || ''),
     enabled: !!temporadaId,
+  });
+
+  const { data: competicoes = [], isLoading: isLoadingCompeticoes } = useQuery<Competicao[]>({
+    queryKey: ['competicoes-simples'],
+    queryFn: fetchCompeticoesSimplesService,
   });
 
   const avatarMap = useMemo(() => {
@@ -90,12 +112,19 @@ export function TelaTorneios() {
     return map;
   }, [avatars]);
 
+  const competicaoMap = useMemo(() => {
+    const map: Record<string, Competicao> = {};
+    competicoes.forEach((comp) => {
+        map[comp.id] = comp;
+    });
+    return map;
+  }, [competicoes]);
+
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [showNovoTorneioPopup, setShowNovoTorneioPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -138,14 +167,22 @@ export function TelaTorneios() {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const filteredTorneios = torneios.filter((torneio) =>
-    torneio.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTorneios = torneios.filter((torneio) => {
+    const term = searchTerm.toLowerCase();
+    const nomeTorneio = torneio.nome.toLowerCase();
+    
+    const comp = competicaoMap[torneio.competicaoId];
+    const nomeCompeticao = comp ? comp.nome.toLowerCase() : '';
+
+    return nomeTorneio.includes(term) || nomeCompeticao.includes(term);
+  });
 
   const getCurrentUserAvatar = () => {
     if (!currentUser?.imagem) return null;
     return avatarMap[currentUser.imagem] || currentUser.imagem;
   };
+
+  const isLoading = isLoadingTorneios || isLoadingCompeticoes;
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -173,6 +210,7 @@ export function TelaTorneios() {
           padding: 16px 24px;
           text-align: left;
           border-bottom: 1px solid var(--border-color);
+          vertical-align: middle;
         }
 
         .custom-table th {
@@ -242,6 +280,19 @@ export function TelaTorneios() {
             color: var(--primary);
         }
 
+        .comp-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .comp-logo-mini {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
         @media (max-width: 768px) {
           .page-content { padding: 1rem; }
           .custom-table th, .custom-table td { padding: 12px; }
@@ -305,7 +356,7 @@ export function TelaTorneios() {
               <Search size={20} />
               <input 
                 type="text" 
-                placeholder="Buscar torneio..." 
+                placeholder="Buscar torneio ou competição..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -381,43 +432,58 @@ export function TelaTorneios() {
 
             <div className="table-container">
               {isLoading ? (
-                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>Carregando torneios...</div>
+                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>Carregando dados...</div>
               ) : (
                 <table className="custom-table">
                   <thead>
                     <tr>
-                      <th>Nome</th>
-                      <th>Tipo</th>
-                      <th>Data Início</th>
-                      <th>Vagas</th>
+                      <th>Competição</th>
+                      <th>Torneio</th>
+                      <th>Temporada</th>
                       <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTorneios.map((torneio) => (
-                      <tr 
-                          key={torneio.id}
-                          // Aqui você define para onde vai ao clicar no torneio (Ex: detalhes)
-                          onClick={() => console.log('Navegar para detalhes do torneio', torneio.id)}
-                      >
-                        <td>{torneio.nome}</td>
-                        <td>{torneio.tipo}</td>
-                        <td>{torneio.dataInicio ? new Date(torneio.dataInicio).toLocaleDateString('pt-BR') : '-'}</td>
-                        <td>{torneio.vagas}</td>
-                        <td>
-                          <span className={`status-badge ${
-                              torneio.status === 'ABERTO' ? 'status-aberto' : 
-                              torneio.status === 'EM_ANDAMENTO' ? 'status-andamento' : 'status-encerrado'
-                          }`}>
-                            {torneio.status === 'EM_ANDAMENTO' ? 'Em Andamento' : torneio.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredTorneios.map((torneio) => {
+                      const competicao = competicaoMap[torneio.competicaoId];
+                      return (
+                        <tr 
+                            key={torneio.id}
+                            onClick={() => console.log('Navegar para detalhes do torneio', torneio.id)}
+                        >
+                          <td>
+                            <div className="comp-cell">
+                                {competicao ? (
+                                    <>
+                                        <img src={competicao.imagem} alt={competicao.nome} className="comp-logo-mini" />
+                                        <span>{competicao.nome}</span>
+                                    </>
+                                ) : (
+                                    <span>{torneio.competicaoNome || 'Competição Desconhecida'}</span>
+                                )}
+                            </div>
+                          </td>
+                          <td>{torneio.nome}</td>
+                          <td>{torneio.temporadaNome}</td>
+                          <td>
+                             {torneio.status ? (
+                                <span className={`status-badge ${
+                                    torneio.status === 'ABERTO' ? 'status-aberto' : 
+                                    torneio.status === 'EM_ANDAMENTO' ? 'status-andamento' : 'status-encerrado'
+                                }`}>
+                                    {torneio.status === 'EM_ANDAMENTO' ? 'Em Andamento' : torneio.status}
+                                </span>
+                             ) : (
+                                <span className="status-badge status-aberto">Aberto</span>
+                             )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {filteredTorneios.length === 0 && (
                       <tr>
-                          <td colSpan={5} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
-                              Nenhum torneio encontrado para esta temporada
+                          <td colSpan={4} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
+                              Nenhum torneio encontrado
                           </td>
                       </tr>
                     )}
