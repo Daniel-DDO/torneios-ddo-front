@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { 
   Menu, 
   LayoutDashboard, 
@@ -56,30 +56,9 @@ interface Avatar {
   nome?: string;
 }
 
-const fetchAllPlayersService = async () => {
-  let allData: Player[] = [];
-  let page = 0;
-  let hasMore = true;
-
-  while (hasMore) {
-    const response = await API.get(`/jogador/all?page=${page}`);
-    const data = (response && (response as any).data) ? (response as any).data : response;
-    
-    if (data && data.conteudo) {
-      allData = [...allData, ...data.conteudo];
-      if (data.ultimaPagina === true) {
-        hasMore = false;
-      } else {
-        page++;
-      }
-    } else if (Array.isArray(data)) {
-      allData = data;
-      hasMore = false;
-    } else {
-      hasMore = false;
-    }
-  }
-  return allData;
+const fetchPlayersService = async ({ pageParam = 0 }) => {
+  const response = await API.get(`/jogador/todos?page=${pageParam}&size=12`);
+  return (response && (response as any).data) ? (response as any).data : response;
 };
 
 const fetchAvatarsService = async () => {
@@ -91,11 +70,21 @@ const fetchAvatarsService = async () => {
 
 export function TelaJogadores() {
   const navigate = useNavigate();
+  const observerTarget = useRef(null);
 
-  const { data: players = [], isLoading: loadingPlayers } = useQuery({
-    queryKey: ['jogadores'], 
-    queryFn: fetchAllPlayersService,
-    staleTime: 1000 * 60 * 5, 
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: loadingPlayers,
+    refetch
+  } = useInfiniteQuery({
+    queryKey: ['jogadores-infinite'],
+    queryFn: fetchPlayersService,
+    getNextPageParam: (lastPage) => lastPage.ultimaPagina ? undefined : lastPage.paginaAtual + 1,
+    initialPageParam: 0,
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: avatars = [] } = useQuery({
@@ -103,6 +92,27 @@ export function TelaJogadores() {
     queryFn: fetchAvatarsService,
     staleTime: 1000 * 60 * 60,
   });
+
+  const allPlayers = useMemo((): Player[] => {
+    return data?.pages.flatMap(page => page.conteudo) || [];
+  }, [data]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasNextPage, fetchNextPage, isFetchingNextPage]);
 
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -156,7 +166,7 @@ export function TelaJogadores() {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const filteredPlayers = players.filter(player =>
+  const filteredPlayers = allPlayers.filter(player =>
     player.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -168,7 +178,7 @@ export function TelaJogadores() {
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       
-      <LoadingSpinner isLoading={loadingPlayers} />
+      <LoadingSpinner isLoading={loadingPlayers && !isFetchingNextPage} />
 
       <style>{`
         .page-content {
@@ -277,6 +287,14 @@ export function TelaJogadores() {
         .btn-profile:hover {
           background: var(--primary);
           color: white;
+        }
+
+        .infinite-scroll-loader {
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          padding: 2rem;
+          color: var(--text-gray);
         }
 
         @media (max-width: 768px) {
@@ -404,55 +422,63 @@ export function TelaJogadores() {
                 <button 
                   className="t-btn" 
                   onClick={() => setShowCadastrarJogadorPopup(true)}
-                  style={{background: 'var(--primary)', color: 'white', border: 'none'}}
+                  style={{background: 'var(--primary)', color: 'white', border: 'none', cursor: 'pointer', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold'}}
                 >
                     + Novo Jogador
                 </button>
             )}
             </div>
 
-            {!loadingPlayers && (
-                <div className="players-grid-container">
-                {filteredPlayers.map((player, index) => {
-                    const avatarUrl = player.imagem ? (avatarMap[player.imagem] || player.imagem) : null;
+            <div className="players-grid-container">
+            {filteredPlayers.map((player, index) => {
+                const avatarUrl = player.imagem ? (avatarMap[player.imagem] || player.imagem) : null;
+                
+                return (
+                    <div key={player.id} className="player-card-item">
+                    <div className="card-rank-badge">#{index + 1}</div>
                     
-                    return (
-                        <div key={player.id} className="player-card-item">
-                        <div className="card-rank-badge">#{index + 1}</div>
-                        
-                        {avatarUrl ? (
-                            <div className="card-avatar-large" style={{backgroundImage: `url(${avatarUrl})`}}></div>
-                        ) : (
-                            <div className="card-avatar-large">
-                                {player.nome.charAt(0)}
-                            </div>
-                        )}
-                        
-                        <div className="card-name">{player.nome}</div>
-                        <div className="card-location">{player.discord || 'Jogador DDO'}</div>
-                        
-                        <div className="card-stats-row">
-                            <div className="stat-box">
-                            <span className="stat-val">{player.partidasJogadas}</span>
-                            <span className="stat-lbl">Partidas</span>
-                            </div>
-                            <div style={{width: '1px', background: 'var(--border-color)'}}></div>
-                            <div className="stat-box">
-                            <span className="stat-val">{player.titulos}</span>
-                            <span className="stat-lbl">Títulos</span>
-                            </div>
+                    {avatarUrl ? (
+                        <div className="card-avatar-large" style={{backgroundImage: `url(${avatarUrl})`}}></div>
+                    ) : (
+                        <div className="card-avatar-large">
+                            {player.nome.charAt(0)}
                         </div>
+                    )}
+                    
+                    <div className="card-name">{player.nome}</div>
+                    <div className="card-location">{player.discord || 'Jogador DDO'}</div>
+                    
+                    <div className="card-stats-row">
+                        <div className="stat-box">
+                        <span className="stat-val">{player.partidasJogadas}</span>
+                        <span className="stat-lbl">Partidas</span>
+                        </div>
+                        <div style={{width: '1px', background: 'var(--border-color)'}}></div>
+                        <div className="stat-box">
+                        <span className="stat-val">{player.titulos}</span>
+                        <span className="stat-lbl">Títulos</span>
+                        </div>
+                    </div>
 
-                        <button 
-                            className="btn-profile" 
-                            onClick={() => navigate(`/jogador/${player.id}`)}
-                        >
-                            Ver Perfil
-                        </button>
-                        </div>
-                    );
-                })}
-                </div>
+                    <button 
+                        className="btn-profile" 
+                        onClick={() => navigate(`/jogador/${player.id}`)}
+                    >
+                        Ver Perfil
+                    </button>
+                    </div>
+                );
+            })}
+            </div>
+
+            <div ref={observerTarget} className="infinite-scroll-loader">
+              {isFetchingNextPage ? 'Carregando mais...' : ''}
+            </div>
+
+            {!loadingPlayers && filteredPlayers.length === 0 && (
+              <div style={{textAlign: 'center', marginTop: '50px', color: 'var(--text-gray)'}}>
+                Nenhum resultado encontrado.
+              </div>
             )}
         </div>
 
@@ -479,6 +505,7 @@ export function TelaJogadores() {
       {showCadastrarJogadorPopup && (
         <PopupCadastrarJogador
           onClose={() => setShowCadastrarJogadorPopup(false)}
+          onSuccess={() => refetch()}
         />
       )}
     </div>
