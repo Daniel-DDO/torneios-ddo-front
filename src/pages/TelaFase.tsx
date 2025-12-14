@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Menu, 
   LayoutDashboard, 
@@ -25,6 +25,7 @@ import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import PopupAdicionarJFase from '../components/PopupAdicionarJFase';
 
 interface FaseTorneioDTO {
   id: string;
@@ -70,12 +71,15 @@ interface Avatar {
 
 export function TelaFase() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { faseId, torneioId, temporadaId } = useParams();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
+  const [showAddPlayerPopup, setShowAddPlayerPopup] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
   const { data: avatars = [] } = useQuery<Avatar[]>({
@@ -141,6 +145,10 @@ export function TelaFase() {
       setCurrentUser(null);
       setShowUserPopup(false);
     }
+  };
+
+  const handleAddPlayerSubmit = () => {
+    queryClient.invalidateQueries({ queryKey: ['participantes-fase', faseId] });
   };
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
@@ -332,7 +340,7 @@ export function TelaFase() {
 
                 {isAdmin && (
                   <div className="action-area">
-                      <button className="btn-action btn-add">
+                      <button className="btn-action btn-add" onClick={() => setShowAddPlayerPopup(true)}>
                         <Plus size={18} /> Adicionar Jogador
                       </button>
 
@@ -366,7 +374,7 @@ export function TelaFase() {
                     <h4 style={{textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-gray)'}}>BRACKET</h4>
                     {participantes.length === 0 && (
                       <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>
-                        Não há jogadores nesta fase.
+                        Não há jogadores na API.
                       </div>
                     )}
                   </div>
@@ -402,7 +410,7 @@ export function TelaFase() {
                             {filteredParticipantes.length === 0 && (
                               <tr>
                                 <td colSpan={8} style={{textAlign: 'center', padding: '40px', color: 'var(--text-gray)'}}>
-                                  Não tem jogadores na API.
+                                  Não há jogadores na API.
                                 </td>
                               </tr>
                             )}
@@ -429,6 +437,15 @@ export function TelaFase() {
           }}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
+        />
+      )}
+
+      {showAddPlayerPopup && (
+        <PopupAdicionarJFase 
+          faseId={faseId || ''} 
+          temporadaId={temporadaId || ''} 
+          onClose={() => setShowAddPlayerPopup(false)} 
+          onSubmit={handleAddPlayerSubmit} 
         />
       )}
     </div>
