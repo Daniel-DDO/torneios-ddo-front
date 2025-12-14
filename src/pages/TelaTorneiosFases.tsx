@@ -406,7 +406,7 @@ export function TelaTorneiosFases() {
                   </thead>
                   <tbody>
                     {filteredFases.map((fase) => (
-                        <tr key={fase.id} onClick={() => console.log('Detalhes da fase', fase.id)}>
+                        <tr key={fase.id} onClick={() => navigate(`/${temporadaId}/torneio/${torneioId}/fase/${fase.id}`)}>
                           <td style={{textAlign: 'center', fontWeight: 'bold'}}>{fase.ordem}</td>
                           <td>{fase.nome}</td>
                           <td>

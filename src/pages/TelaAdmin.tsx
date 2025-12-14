@@ -239,16 +239,11 @@ export function TelaAdmin() {
           <a href="#" className="nav-item">
             <Gamepad2 size={20} /> Partidas
           </a>
-          <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
+          <a onClick={() => navigate('/minha-conta')} className="nav-item active" style={{ cursor: 'pointer' }}>
             <Wallet size={20} /> Minha conta
           </a>
           <a href="#" className="nav-item">
             <Settings size={20} /> Suporte
-          </a>
-          
-          <div className="nav-separator"></div>
-          <a className="nav-item active" style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 'bold' }}>
-            <Lock size={18} /> Menu Adm
           </a>
         </nav>
       </aside>
