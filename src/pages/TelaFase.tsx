@@ -28,6 +28,7 @@ import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupAdicionarJFase from '../components/PopupAdicionarJFase';
 import PopupColorirPos from '../components/PopupColorirPos';
+import PopupSorteio from '../components/PopupSorteio';
 
 interface FaseTorneioDTO {
   id: string;
@@ -89,6 +90,7 @@ export function TelaFase() {
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [showAddPlayerPopup, setShowAddPlayerPopup] = useState(false);
   const [showColorirPopup, setShowColorirPopup] = useState(false);
+  const [showSorteioPopup, setShowSorteioPopup] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
   const { data: avatars = [] } = useQuery<Avatar[]>({
@@ -382,8 +384,8 @@ export function TelaFase() {
                 </button>
               )}
 
-              {isAdmin && (fase?.tipoTorneio === 'PONTOS_CORRIDOS' || fase?.tipoTorneio === 'GRUPOS') && (
-                <button className="btn-action btn-utility">
+              {isProprietario && (
+                <button className="btn-action btn-utility" onClick={() => setShowSorteioPopup(true)}>
                   <Dices size={18} /> Sortear
                 </button>
               )}
@@ -522,6 +524,17 @@ export function TelaFase() {
           onClose={() => setShowColorirPopup(false)}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['participantes-fase', faseId] });
+          }}
+        />
+      )}
+
+      {showSorteioPopup && (
+        <PopupSorteio
+          faseId={faseId || ''}
+          onClose={() => setShowSorteioPopup(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['participantes-fase', faseId] });
+            queryClient.invalidateQueries({ queryKey: ['fase-detalhe', faseId] });
           }}
         />
       )}
