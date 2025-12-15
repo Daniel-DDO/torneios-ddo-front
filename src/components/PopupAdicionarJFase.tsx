@@ -3,11 +3,11 @@ import { API } from '../services/api';
 import { UserPlus, Search, Info, X, Check } from 'lucide-react';
 import './PopupAdicionarJFase.css';
 
-interface InscritoDTO {
+interface JogadorClubeDTO {
   id: string;
-  nomeJogador: string;
-  nomeClube: string;
-  urlLogoClube: string;
+  jogadorNome: string;
+  clubeNome: string;
+  clubeImagem: string;
 }
 
 interface PopupAdicionarJFaseProps {
@@ -22,9 +22,9 @@ const PopupAdicionarJFase: React.FC<PopupAdicionarJFaseProps> = ({ faseId, tempo
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
-  const [inscritos, setInscritos] = useState<InscritoDTO[]>([]);
+  const [inscritos, setInscritos] = useState<JogadorClubeDTO[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedId, setSelectedId] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchInscritos = async () => {
@@ -48,32 +48,50 @@ const PopupAdicionarJFase: React.FC<PopupAdicionarJFaseProps> = ({ faseId, tempo
     }, 300);
   };
 
+  const filteredInscritos = (inscritos || []).filter(i => {
+    const nome = i?.jogadorNome?.toLowerCase() || "";
+    const clube = i?.clubeNome?.toLowerCase() || "";
+    const term = searchTerm.toLowerCase();
+    return nome.includes(term) || clube.includes(term);
+  });
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === filteredInscritos.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredInscritos.map(i => i.id));
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!selectedId) return;
+    if (selectedIds.length === 0) return;
     setLoading(true);
     setError('');
 
     try {
-      await API.post('/participacao-fase/add', {
-        faseId,
-        jogadorClubeId: selectedId
-      });
+      await Promise.all(
+        selectedIds.map(id => 
+          API.post('/participacao-fase/add', {
+            faseId,
+            jogadorClubeId: id
+          })
+        )
+      );
       onSubmit();
       handleClose();
     } catch (err: any) {
-      const msg = err.response?.data?.message || "Erro ao adicionar participante.";
+      const msg = err.response?.data?.message || "Erro ao adicionar participantes.";
       setError(msg);
     } finally {
       setLoading(false);
     }
   };
-
-  const filteredInscritos = (inscritos || []).filter(i => {
-    const nome = i?.nomeJogador?.toLowerCase() || "";
-    const clube = i?.nomeClube?.toLowerCase() || "";
-    const term = searchTerm.toLowerCase();
-    return nome.includes(term) || clube.includes(term);
-  });
 
   return (
     <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
@@ -87,8 +105,8 @@ const PopupAdicionarJFase: React.FC<PopupAdicionarJFaseProps> = ({ faseId, tempo
             <div className="icon-badge-wrapper credenciais-badge">
               <UserPlus size={28} />
             </div>
-            <h2 className="popup-title">Adicionar Jogador</h2>
-            <p className="popup-subtitle">Selecione um inscrito da temporada para esta fase</p>
+            <h2 className="popup-title">Adicionar Jogadores</h2>
+            <p className="popup-subtitle">Selecione os inscritos da temporada para esta fase</p>
           </header>
 
           <main className="popup-scrollable-area custom-scrollbar">
@@ -96,11 +114,23 @@ const PopupAdicionarJFase: React.FC<PopupAdicionarJFaseProps> = ({ faseId, tempo
               
               <div className="alert-box">
                 <Info size={18} style={{ flexShrink: 0 }} />
-                <p>Apenas jogadores inscritos na <strong>Temporada</strong> podem ser adicionados.</p>
+                <p>Selecione um ou mais jogadores inscritos na <strong>Temporada</strong>.</p>
               </div>
 
               <div className="form-section">
-                <label className="form-label">Buscar Participante</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label className="form-label" style={{ marginBottom: 0 }}>Buscar Participantes</label>
+                  {filteredInscritos.length > 0 && (
+                    <button 
+                      type="button" 
+                      className="field-hint" 
+                      onClick={handleSelectAll}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                    >
+                      {selectedIds.length === filteredInscritos.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                    </button>
+                  )}
+                </div>
                 <div style={{ position: 'relative' }}>
                   <Search size={16} className="input-icon-left" />
                   <input 
@@ -120,17 +150,17 @@ const PopupAdicionarJFase: React.FC<PopupAdicionarJFaseProps> = ({ faseId, tempo
                   filteredInscritos.map((item) => (
                     <div 
                       key={item.id} 
-                      className={`inscrito-card ${selectedId === item.id ? 'selected' : ''}`}
-                      onClick={() => setSelectedId(item.id)}
+                      className={`inscrito-card ${selectedIds.includes(item.id) ? 'selected' : ''}`}
+                      onClick={() => toggleSelection(item.id)}
                     >
                       <div className="inscrito-logo">
-                        {item.urlLogoClube ? <img src={item.urlLogoClube} alt="Clube" /> : <UserPlus size={20} />}
+                        {item.clubeImagem ? <img src={item.clubeImagem} alt="Clube" /> : <UserPlus size={20} />}
                       </div>
                       <div className="inscrito-details">
-                        <span className="p-name">{item.nomeJogador || "Sem Nome"}</span>
-                        <span className="p-club">{item.nomeClube || "Sem Clube"}</span>
+                        <span className="p-name">{item.jogadorNome || "Sem Nome"}</span>
+                        <span className="p-club">{item.clubeNome || "Sem Clube"}</span>
                       </div>
-                      {selectedId === item.id && <Check size={18} className="check-icon" />}
+                      {selectedIds.includes(item.id) && <Check size={18} className="check-icon" />}
                     </div>
                   ))
                 ) : (
@@ -144,16 +174,16 @@ const PopupAdicionarJFase: React.FC<PopupAdicionarJFaseProps> = ({ faseId, tempo
 
           <footer className="actions-footer">
             <div className="footer-left">
-               <span className="field-hint">{inscritos.length} jogadores disponíveis</span>
+               <span className="field-hint">{selectedIds.length} selecionados</span>
             </div>
             <div className="footer-right">
               <button className="btn-base btn-secondary" onClick={handleClose}>Cancelar</button>
               <button 
                 className="btn-base btn-primary" 
                 onClick={handleSubmit} 
-                disabled={loading || !selectedId}
+                disabled={loading || selectedIds.length === 0}
               >
-                {loading ? <div className="btn-spinner"></div> : 'Adicionar'}
+                {loading ? <div className="btn-spinner"></div> : `Adicionar (${selectedIds.length})`}
               </button>
             </div>
           </footer>
