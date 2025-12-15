@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { pdf } from '@react-pdf/renderer';
+import { saveAs } from 'file-saver';
 import {
   Menu,
   LayoutDashboard,
@@ -20,7 +22,8 @@ import {
   Dices,
   GitBranch,
   Download,
-  Palette
+  Palette,
+  FileText
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -29,6 +32,7 @@ import PopupUser from '../components/PopupUser';
 import PopupAdicionarJFase from '../components/PopupAdicionarJFase';
 import PopupColorirPos from '../components/PopupColorirPos';
 import PopupSorteio from '../components/PopupSorteio';
+import { PdfRelatorioFase } from '../components/RelatorioFase';
 
 interface FaseTorneioDTO {
   id: string;
@@ -92,6 +96,7 @@ export function TelaFase() {
   const [showColorirPopup, setShowColorirPopup] = useState(false);
   const [showSorteioPopup, setShowSorteioPopup] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [gerandoPdf, setGerandoPdf] = useState(false);
 
   const { data: avatars = [] } = useQuery<Avatar[]>({
     queryKey: ['avatares'],
@@ -120,7 +125,7 @@ export function TelaFase() {
       return Array.isArray(response.data) ? response.data : [];
     },
     enabled: !!faseId,
-    refetchInterval: 5000 
+    refetchInterval: 5000
   });
 
   const avatarMap = useMemo(() => {
@@ -192,6 +197,37 @@ export function TelaFase() {
     return Array.from(zones.entries());
   }, [participantes]);
 
+  const handleExportarPdf = async () => {
+    if (gerandoPdf) return;
+    setGerandoPdf(true);
+    try {
+      const response = await API.get(`/fase-torneio/${faseId}/dados-exportacao`);
+      const exportData = response.data;
+
+      if (!exportData || !exportData.classificacao) {
+        throw new Error("Dados incompletos");
+      }
+
+      const doc = <PdfRelatorioFase data={exportData} />;
+      const blob = await pdf(doc).toBlob();
+      
+      if (!blob) {
+        throw new Error("Erro blob");
+      }
+
+      const safeFileName = exportData.faseNome 
+        ? exportData.faseNome.replace(/\s+/g, '_') 
+        : 'Relatorio';
+
+      saveAs(blob, `Torneio_DDO_${safeFileName}.pdf`);
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao baixar o PDF.");
+    } finally {
+      setGerandoPdf(false);
+    }
+  };
+
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
 
@@ -236,6 +272,7 @@ export function TelaFase() {
         }
         .btn-add { background: var(--primary); color: white; }
         .btn-utility { background: var(--hover-bg); color: var(--text-dark); border: 1px solid var(--border-color); }
+        .btn-pdf { background: #0ea5e9; color: white; }
         .clube-img-td { width: 28px; height: 28px; object-fit: contain; margin-right: 12px; }
         .legend-container {
           display: flex;
@@ -372,6 +409,15 @@ export function TelaFase() {
             </div>
 
             <div className="action-area">
+              <button 
+                className="btn-action btn-pdf" 
+                onClick={handleExportarPdf}
+                disabled={gerandoPdf}
+              >
+                {gerandoPdf ? <div className="spinner-mini"></div> : <FileText size={18} />}
+                Gerar PDF
+              </button>
+
               {isAdmin && (
                 <button className="btn-action btn-add" onClick={() => setShowAddPlayerPopup(true)}>
                   <Plus size={18} /> Adicionar Jogador
@@ -438,8 +484,8 @@ export function TelaFase() {
                     </thead>
                     <tbody>
                       {filteredParticipantes.map((p) => (
-                        <tr 
-                          key={p.jogadorClubeId} 
+                        <tr
+                          key={p.jogadorClubeId}
                           style={{ borderLeft: (p.zonaCor && p.zonaCor !== '#FFFFFF') ? `5px solid ${p.zonaCor}` : '5px solid transparent' }}
                         >
                           <td style={{ fontWeight: 'bold' }}>{p.posicao}º</td>
