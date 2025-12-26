@@ -1,6 +1,6 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = 'https://torneios-ddo-back.onrender.com';
+const API_BASE_URL = 'https://torneios-ddo-backend.onrender.com';
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
