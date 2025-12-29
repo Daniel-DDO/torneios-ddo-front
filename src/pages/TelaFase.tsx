@@ -23,7 +23,8 @@ import {
   GitBranch,
   Download,
   Palette,
-  FileText
+  FileText,
+  CalendarDays
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -531,6 +532,15 @@ export function TelaFase() {
                     ))}
                   </div>
                 )}
+
+                <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button 
+                    className="btn-action btn-utility"
+                    onClick={() => navigate(`/${temporadaId}/torneio/${torneioId}/fase/${faseId}/rodadas`)}
+                  >
+                    <CalendarDays size={18} /> Ver Rodadas
+                  </button>
+                </div>
               </>
             )
           )}
