@@ -31,6 +31,7 @@ import { API } from '../services/api';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupRegistrarPartida from '../components/PopupRegistrarPartida';
+import PopupReportarPartida from '../components/PopupReportarPartida';
 import '../styles/TorneiosPage.css';
 
 interface JogadorClubeDTO {
@@ -99,6 +100,7 @@ export function TelaPartidaSelecionada() {
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [showRegistrarPopup, setShowRegistrarPopup] = useState(false);
+  const [showReportarPopup, setShowReportarPopup] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
   const { data: partida, isLoading, refetch } = useQuery<PartidaDTO>({
@@ -603,7 +605,7 @@ export function TelaPartidaSelecionada() {
                             )}
 
                             {hasReportPermission() && (
-                                <button className="btn-full btn-report">
+                                <button className="btn-full btn-report" onClick={() => setShowReportarPopup(true)}>
                                     <AlertTriangle size={18} /> Reportar Problema
                                 </button>
                             )}
@@ -658,6 +660,13 @@ export function TelaPartidaSelecionada() {
           }} 
           onClose={() => setShowRegistrarPopup(false)} 
           onSuccess={() => { refetch(); }} 
+        />
+      )}
+      {showReportarPopup && partida && (
+        <PopupReportarPartida
+          isOpen={showReportarPopup}
+          onClose={() => setShowReportarPopup(false)}
+          partidaId={partida.id}
         />
       )}
     </div>
