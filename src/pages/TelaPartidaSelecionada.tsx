@@ -30,6 +30,7 @@ import {
 import { API } from '../services/api';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import PopupRegistrarPartida from '../components/PopupRegistrarPartida';
 import '../styles/TorneiosPage.css';
 
 interface JogadorClubeDTO {
@@ -97,9 +98,10 @@ export function TelaPartidaSelecionada() {
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
+  const [showRegistrarPopup, setShowRegistrarPopup] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
-  const { data: partida, isLoading } = useQuery<PartidaDTO>({
+  const { data: partida, isLoading, refetch } = useQuery<PartidaDTO>({
     queryKey: ['partida-detalhe', partidaId],
     queryFn: async () => {
       const response = await API.get(`/partida/${partidaId}`);
@@ -595,7 +597,7 @@ export function TelaPartidaSelecionada() {
                             )}
 
                             {hasEditPermission() && (
-                                <button className="btn-full btn-admin">
+                                <button className="btn-full btn-admin" onClick={() => setShowRegistrarPopup(true)}>
                                     <Edit3 size={18} /> Registrar Resultado
                                 </button>
                             )}
@@ -620,6 +622,44 @@ export function TelaPartidaSelecionada() {
 
       {showLoginPopup && <PopupLogin onClose={() => setShowLoginPopup(false)} onLoginSuccess={setCurrentUser} />}
       {showUserPopup && currentUser && <PopupUser user={{...currentUser, imagem: avatarMap[currentUser.imagem || ''] || currentUser.imagem}} onClose={() => setShowUserPopup(false)} onLogout={() => { localStorage.removeItem('token'); localStorage.removeItem('user_data'); setCurrentUser(null); setShowUserPopup(false); }} />}
+      {showRegistrarPopup && partida && (
+        <PopupRegistrarPartida 
+          partida={{
+            ...partida,
+            dataHora: partida.dataHora || "",
+            rodadaId: partida.rodadaId || undefined,
+            numeroRodada: partida.numeroRodada || undefined,
+            etapaMataMata: partida.etapaMataMata || undefined,
+            chaveIndex: partida.chaveIndex || undefined,
+            estadio: partida.estadio || undefined,
+            linkPartida: partida.linkPartida || undefined,
+            logEventos: partida.logEventos || undefined,
+            tipoPartida: partida.tipoPartida || undefined,
+            coeficienteMandante: partida.coeficienteMandante || undefined,
+            coeficienteVisitante: partida.coeficienteVisitante || undefined,
+            penaltisMandante: partida.penaltisMandante || undefined,
+            penaltisVisitante: partida.penaltisVisitante || undefined,
+            golsMandante: partida.golsMandante || 0,
+            golsVisitante: partida.golsVisitante || 0,
+            cartoesAmarelosMandante: partida.cartoesAmarelosMandante || 0,
+            cartoesVermelhosMandante: partida.cartoesVermelhosMandante || 0,
+            cartoesAmarelosVisitante: partida.cartoesAmarelosVisitante || 0,
+            cartoesVermelhosVisitante: partida.cartoesVermelhosVisitante || 0,
+            mandante: { 
+              nome: partida.mandante.clubeNome, 
+              psnId: partida.mandante.jogadorNome, 
+              imgUrl: partida.mandante.clubeImagem 
+            },
+            visitante: { 
+              nome: partida.visitante.clubeNome, 
+              psnId: partida.visitante.jogadorNome, 
+              imgUrl: partida.visitante.clubeImagem 
+            }
+          }} 
+          onClose={() => setShowRegistrarPopup(false)} 
+          onSuccess={() => { refetch(); }} 
+        />
+      )}
     </div>
   );
 }
