@@ -116,7 +116,8 @@ export function TelaFase() {
       return response.data;
     },
     enabled: !!faseId,
-    retry: false
+    retry: false,
+    staleTime: 1000 * 30,
   });
 
   const { data: participantes = [], isLoading: isLoadingParticipantes } = useQuery<ParticipanteFase[]>({
@@ -126,7 +127,8 @@ export function TelaFase() {
       return Array.isArray(response.data) ? response.data : [];
     },
     enabled: !!faseId,
-    refetchInterval: 5000
+    refetchInterval: 5000,
+    staleTime: 2000
   });
 
   const avatarMap = useMemo(() => {
@@ -229,6 +231,26 @@ export function TelaFase() {
     }
   };
 
+  const renderTableSkeletons = () => {
+    return Array(8).fill(0).map((_, i) => (
+      <tr key={i}>
+        <td><div className="skeleton" style={{ width: '20px', height: '20px' }}></div></td>
+        <td>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="skeleton" style={{ width: '28px', height: '28px', borderRadius: '50%' }}></div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div className="skeleton" style={{ width: '120px', height: '14px' }}></div>
+              <div className="skeleton" style={{ width: '80px', height: '10px' }}></div>
+            </div>
+          </div>
+        </td>
+        {Array(8).fill(0).map((__, j) => (
+          <td key={j}><div className="skeleton" style={{ width: '20px', height: '14px' }}></div></td>
+        ))}
+      </tr>
+    ));
+  };
+
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
 
@@ -287,6 +309,18 @@ export function TelaFase() {
         }
         .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; }
         .legend-color { width: 12px; height: 12px; border-radius: 3px; }
+        
+        .skeleton {
+          background: linear-gradient(90deg, var(--hover-bg) 25%, var(--border-color) 50%, var(--hover-bg) 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.5s infinite;
+          border-radius: 4px;
+        }
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+
         @media (max-width: 768px) {
           .page-content { padding: 1rem; }
           .custom-table th, .custom-table td { padding: 8px; font-size: 0.8rem; }
@@ -399,14 +433,23 @@ export function TelaFase() {
         </header>
 
         <div className="page-content">
-          <button onClick={() => navigate(`/${temporadaId}/torneio/${torneioId}/fases`)} className="back-button">
+          <button onClick={() => navigate(`/${temporadaId}/${torneioId}/fases`)} className="back-button">
             <ArrowLeft size={16} /> Voltar para Fases
           </button>
 
           <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>{fase?.nome || 'Detalhes da Fase'}</h2>
-              <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>{fase?.torneioNome}</p>
+            <div style={{ flex: 1 }}>
+              {isLoadingFase ? (
+                <>
+                  <div className="skeleton" style={{ width: '300px', height: '36px', marginBottom: '8px' }}></div>
+                  <div className="skeleton" style={{ width: '150px', height: '18px' }}></div>
+                </>
+              ) : (
+                <>
+                  <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>{fase?.nome || 'Detalhes da Fase'}</h2>
+                  <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>{fase?.torneioNome}</p>
+                </>
+              )}
             </div>
 
             <div className="action-area">
@@ -451,98 +494,105 @@ export function TelaFase() {
             </div>
           </div>
 
-          {(isLoadingFase || isLoadingParticipantes) ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-gray)' }}>Carregando...</div>
-          ) : (
-            fase?.tipoTorneio === 'MATA_MATA' ? (
-              <div className="bracket-container">
-                <div className="bracket-column">
-                  <h4 style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-gray)' }}>MATA-MATA</h4>
-                  {participantes.length === 0 && (
-                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>
-                      Não há jogadores nesta fase.
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="table-container">
-                  <table className="custom-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: '50px' }}>Pos</th>
-                        <th>Participante</th>
-                        <th>P</th>
-                        <th>J</th>
-                        <th>V</th>
-                        <th>E</th>
-                        <th>D</th>
-                        <th>GP</th>
-                        <th>GC</th>
-                        <th>SG</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredParticipantes.map((p) => (
-                        <tr
-                          key={p.jogadorClubeId}
-                          style={{ borderLeft: (p.zonaCor && p.zonaCor !== '#FFFFFF') ? `5px solid ${p.zonaCor}` : '5px solid transparent' }}
-                        >
-                          <td style={{ fontWeight: 'bold' }}>{p.posicao}º</td>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center' }}>
-                              <img src={p.imagemClube} alt={p.nomeClube} className="clube-img-td" />
-                              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontWeight: 600 }}>{p.nomeJogador}</span>
-                                <span style={{ fontSize: '0.7rem', color: 'var(--text-gray)' }}>{p.nomeClube}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{p.pontos}</td>
-                          <td>{p.jogos}</td>
-                          <td>{p.vitorias}</td>
-                          <td>{p.empates}</td>
-                          <td>{p.derrotas}</td>
-                          <td>{p.golsPro}</td>
-                          <td>{p.golsContra}</td>
-                          <td style={{ fontWeight: '600', color: p.saldoGols > 0 ? '#10b981' : p.saldoGols < 0 ? '#ef4444' : 'inherit' }}>
-                            {p.saldoGols}
-                          </td>
-                        </tr>
-                      ))}
-                      {filteredParticipantes.length === 0 && (
-                        <tr>
-                          <td colSpan={10} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-gray)' }}>
-                            Nenhum participante encontrado nesta fase.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {legendas.length > 0 && (
-                  <div className="legend-container">
-                    {legendas.map(([nome, cor]) => (
-                      <div key={nome} className="legend-item">
-                        <div className="legend-color" style={{ backgroundColor: cor }}></div>
-                        <span>{nome}</span>
-                      </div>
-                    ))}
+          {!isLoadingFase && fase?.tipoTorneio === 'MATA_MATA' ? (
+            <div className="bracket-container">
+              <div className="bracket-column">
+                <h4 style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-gray)' }}>MATA-MATA</h4>
+                {!isLoadingParticipantes && participantes.length === 0 && (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>
+                    Não há jogadores nesta fase.
                   </div>
                 )}
+                {isLoadingParticipantes && (
+                   <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>
+                      <div className="skeleton" style={{ width: '100%', height: '200px' }}></div>
+                   </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="table-container">
+                <table className="custom-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '50px' }}>Pos</th>
+                      <th>Participante</th>
+                      <th>P</th>
+                      <th>J</th>
+                      <th>V</th>
+                      <th>E</th>
+                      <th>D</th>
+                      <th>GP</th>
+                      <th>GC</th>
+                      <th>SG</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoadingParticipantes ? (
+                      renderTableSkeletons()
+                    ) : (
+                      <>
+                        {filteredParticipantes.map((p) => (
+                          <tr
+                            key={p.jogadorClubeId}
+                            style={{ borderLeft: (p.zonaCor && p.zonaCor !== '#FFFFFF') ? `5px solid ${p.zonaCor}` : '5px solid transparent' }}
+                          >
+                            <td style={{ fontWeight: 'bold' }}>{p.posicao}º</td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <img src={p.imagemClube} alt={p.nomeClube} className="clube-img-td" />
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span style={{ fontWeight: 600 }}>{p.nomeJogador}</span>
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-gray)' }}>{p.nomeClube}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ fontWeight: 'bold', color: 'var(--primary)' }}>{p.pontos}</td>
+                            <td>{p.jogos}</td>
+                            <td>{p.vitorias}</td>
+                            <td>{p.empates}</td>
+                            <td>{p.derrotas}</td>
+                            <td>{p.golsPro}</td>
+                            <td>{p.golsContra}</td>
+                            <td style={{ fontWeight: '600', color: p.saldoGols > 0 ? '#10b981' : p.saldoGols < 0 ? '#ef4444' : 'inherit' }}>
+                              {p.saldoGols}
+                            </td>
+                          </tr>
+                        ))}
+                        {filteredParticipantes.length === 0 && !isLoadingParticipantes && (
+                          <tr>
+                            <td colSpan={10} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-gray)' }}>
+                              Nenhum participante encontrado nesta fase.
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
-                <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-                  <button 
-                    className="btn-action btn-utility"
-                    onClick={() => navigate(`/${temporadaId}/torneio/${torneioId}/fase/${faseId}/rodadas`)}
-                  >
-                    <CalendarDays size={18} /> Ver Rodadas
-                  </button>
+              {!isLoadingParticipantes && legendas.length > 0 && (
+                <div className="legend-container">
+                  {legendas.map(([nome, cor]) => (
+                    <div key={nome} className="legend-item">
+                      <div className="legend-color" style={{ backgroundColor: cor }}></div>
+                      <span>{nome}</span>
+                    </div>
+                  ))}
                 </div>
-              </>
-            )
+              )}
+
+              <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button 
+                  className="btn-action btn-utility"
+                  onClick={() => navigate(`/${temporadaId}/torneio/${torneioId}/fase/${faseId}/rodadas`)}
+                >
+                  <CalendarDays size={18} /> Ver Rodadas
+                </button>
+              </div>
+            </>
           )}
         </div>
       </main>

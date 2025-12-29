@@ -117,10 +117,12 @@ export function TelaRodadas() {
   const { data: rodadasData, isLoading } = useQuery<RodadaResponse>({
     queryKey: ['rodadas-fase', faseId],
     queryFn: async () => {
-      const response = await API.get(`/rodada/fase/${faseId}?size=100&sort=numero,asc`);
+      const response = await API.get(`/rodada/fase/${faseId}?size=50&sort=numero,asc`);
       return response.data;
     },
     enabled: !!faseId,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false
   });
 
   const rodadas = rodadasData?.content || [];
@@ -259,10 +261,12 @@ export function TelaRodadas() {
             flex-direction: column;
             gap: 15px;
             transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
         }
         .match-card:hover {
             transform: translateY(-2px);
             box-shadow: var(--shadow-md);
+            border-color: var(--primary);
         }
 
         .match-header {
@@ -340,6 +344,21 @@ export function TelaRodadas() {
           border: none; background: none; padding: 0;
         }
         .back-button:hover { color: var(--primary); }
+
+        .skeleton {
+            background: var(--hover-bg);
+            border-radius: 8px;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        .skeleton-text { height: 16px; width: 60%; margin: 4px auto; }
+        .skeleton-circle { width: 50px; height: 50px; border-radius: 50%; margin: 0 auto; }
+        .skeleton-header { height: 20px; width: 100%; margin-bottom: 15px; }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
 
         @media (max-width: 768px) {
             .matches-grid { grid-template-columns: 1fr; }
@@ -465,7 +484,24 @@ export function TelaRodadas() {
           </div>
 
           {isLoading ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-gray)' }}>Carregando rodadas...</div>
+            <div className="matches-grid">
+               {[...Array(8)].map((_, i) => (
+                 <div key={i} className="match-card">
+                    <div className="skeleton skeleton-header"></div>
+                    <div className="teams-container">
+                        <div className="team-info">
+                            <div className="skeleton skeleton-circle"></div>
+                            <div className="skeleton skeleton-text"></div>
+                        </div>
+                        <div className="skeleton" style={{width: 60, height: 30}}></div>
+                        <div className="team-info">
+                            <div className="skeleton skeleton-circle"></div>
+                            <div className="skeleton skeleton-text"></div>
+                        </div>
+                    </div>
+                 </div>
+               ))}
+            </div>
           ) : rodadas.length === 0 ? (
             <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-gray)' }}>
                 Nenhuma rodada encontrada para esta fase.
@@ -496,7 +532,11 @@ export function TelaRodadas() {
 
                 <div className="matches-grid">
                     {filteredPartidas.map((partida) => (
-                        <div key={partida.id} className="match-card">
+                        <div 
+                            key={partida.id} 
+                            className="match-card"
+                            onClick={() => navigate(`/${temporadaId}/torneio/${torneioId}/fase/${faseId}/rodadas/${partida.id}`)}
+                        >
                             <div className="match-header">
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <MapPin size={12} /> {partida.estadio || 'Local não definido'}

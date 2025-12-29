@@ -12,9 +12,11 @@ import { TelaTorneios } from './pages/TelaTorneios';
 import { TelaTorneiosJogadores } from './pages/TelaTorneiosJogadores';
 import { TelaTorneiosFases } from './pages/TelaTorneiosFases';
 import { TelaFase } from './pages/TelaFase';
-import './App.css';
 import { TelaPartidas } from './pages/TelaPartidas';
 import { TelaRodadas } from './pages/TelaRodadas';
+import { TelaPartidaSelecionada } from './pages/TelaPartidaSelecionada';
+import './App.css';
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,6 +46,8 @@ function App() {
           <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId" element={<TelaFase />} />
           <Route path="/partidas" element={<TelaPartidas />} />
           <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/rodadas" element={<TelaRodadas />} />
+          <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/rodadas/:partidaId" element={<TelaPartidaSelecionada />} />
+          
         </Routes>
       </Router>
     </QueryClientProvider>
