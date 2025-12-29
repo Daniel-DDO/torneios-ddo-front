@@ -236,7 +236,7 @@ export function TelaAdmin() {
             <CalendarSync size={20} /> Temporadas
           </a>
           <div className="nav-separator"></div>
-          <a href="#" className="nav-item">
+          <a onClick={() => navigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
             <Gamepad2 size={20} /> Partidas
           </a>
           <a onClick={() => navigate('/minha-conta')} className="nav-item active" style={{ cursor: 'pointer' }}>
