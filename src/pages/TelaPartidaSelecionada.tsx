@@ -667,6 +667,10 @@ export function TelaPartidaSelecionada() {
           isOpen={showReportarPopup}
           onClose={() => setShowReportarPopup(false)}
           partidaId={partida.id}
+          mandante={partida.mandante.jogadorNome}
+          timeMandante={partida.mandante.clubeNome}
+          visitante={partida.visitante.jogadorNome}
+          timeVisitante={partida.visitante.clubeNome}
         />
       )}
     </div>
