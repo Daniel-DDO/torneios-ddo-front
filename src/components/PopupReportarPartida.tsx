@@ -9,7 +9,9 @@ import {
   AlertTriangle, 
   Send, 
   CheckCircle2, 
-  Loader2 
+  Loader2,
+  Gavel,
+  FileText
 } from 'lucide-react';
 import { API } from '../services/api';
 import './PopupReportarPartida.css';
@@ -142,24 +144,34 @@ export default function PopupReportarPartida({
               <div className="success-icon-circle">
                 <CheckCircle2 size={50} strokeWidth={3} />
               </div>
-              <h3 className="success-title">Relato Enviado!</h3>
+              <h3 className="success-title">Julgamento Realizado</h3>
               <p className="success-desc">
-                O Juiz Virtual analisou o caso.
+                O Juiz Virtual analisou o caso com {sucessoData.nivelConfiabilidade}% de confiabilidade.
               </p>
               
-              <div className="ia-analysis-box" style={{ marginTop: '15px', padding: '15px', background: '#f8f9fa', borderRadius: '8px', borderLeft: '4px solid #6366f1', textAlign: 'left' }}>
-                <h4 style={{ margin: '0 0 10px 0', color: '#1e293b', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Swords size={16} /> Veredito da IA ({sucessoData.nivelConfiabilidade}% confiabilidade)
-                </h4>
-                <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#4f46e5' }}>
-                  {sucessoData.vereditoSugerido}
-                </p>
-                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: '1.5' }}>
-                  {sucessoData.analiseIA}
-                </p>
+              <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                
+                <div style={{ padding: '15px', background: '#f1f5f9', borderRadius: '8px', textAlign: 'left' }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#475569', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'bold' }}>
+                    <FileText size={14} /> Análise Técnica
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#334155', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                    {sucessoData.analiseIA}
+                  </p>
+                </div>
+
+                <div style={{ padding: '15px', background: '#eef2ff', borderRadius: '8px', borderLeft: '4px solid #4f46e5', textAlign: 'left' }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#4f46e5', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 'bold' }}>
+                    <Gavel size={14} /> Veredito Final
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e1b4b', lineHeight: '1.4' }}>
+                    {sucessoData.vereditoSugerido}
+                  </p>
+                </div>
+
               </div>
 
-              <div className="protocol-ticket" style={{ marginTop: '15px' }}>
+              <div className="protocol-ticket" style={{ marginTop: '20px' }}>
                 <div className="protocol-label">ID do Protocolo</div>
                 <div className="protocol-value">#{sucessoData.id.substring(0, 8).toUpperCase()}</div>
               </div>
