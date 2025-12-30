@@ -11,22 +11,40 @@ import {
   CheckCircle2, 
   Loader2 
 } from 'lucide-react';
+import { API } from '../services/api';
 import './PopupReportarPartida.css';
 
 interface PopupReportarPartidaProps {
   isOpen: boolean;
   onClose: () => void;
   partidaId: string;
+  mandante: string;
+  timeMandante: string;
+  visitante: string;
+  timeVisitante: string;
 }
 
 type CategoriaProblema = 'ANTI_JOGO' | 'CONEXAO' | 'OFENSA' | 'OUTRO';
 
 interface ReportResponse {
   id: string;
-  status: string;
+  partida: any;
+  relatoAdmin: string;
+  analiseIA: string;
+  vereditoSugerido: string;
+  nivelConfiabilidade: number;
+  dataReport: string;
 }
 
-export default function PopupReportarPartida({ isOpen, onClose, partidaId }: PopupReportarPartidaProps) {
+export default function PopupReportarPartida({ 
+  isOpen, 
+  onClose, 
+  partidaId,
+  mandante,
+  timeMandante,
+  visitante,
+  timeVisitante
+}: PopupReportarPartidaProps) {
   const [categoria, setCategoria] = useState<CategoriaProblema | null>(null);
   const [descricao, setDescricao] = useState('');
   const [loading, setLoading] = useState(false);
@@ -71,19 +89,19 @@ export default function PopupReportarPartida({ isOpen, onClose, partidaId }: Pop
     setErro(null);
 
     const categoriaLabel = categorias.find(c => c.id === categoria)?.label || 'Desconhecido';
-    const textoFormatado = `(Problema: ${categoriaLabel}) - ${descricao}`;
-
+    
     try {
-      const response = await fetch(`/partida/${partidaId}/analisar-problema`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texto: textoFormatado }),
-      });
+      const payload = {
+        nomeMandante: mandante,
+        timeMandante: timeMandante,
+        nomeVisitante: visitante,
+        timeVisitante: timeVisitante,
+        relato: `(Problema: ${categoriaLabel}) - ${descricao}`
+      };
 
-      if (!response.ok) throw new Error('Falha ao enviar reporte.');
+      const response = await API.post(`/partida/${partidaId}/analisar-problema`, payload);
 
-      const data = await response.json();
-      setSucessoData(data);
+      setSucessoData(response.data);
     } catch (error) {
       setErro('Ocorreu um erro ao processar sua solicitação. Tente novamente.');
     } finally {
@@ -126,10 +144,22 @@ export default function PopupReportarPartida({ isOpen, onClose, partidaId }: Pop
               </div>
               <h3 className="success-title">Relato Enviado!</h3>
               <p className="success-desc">
-                Sua denúncia foi registrada e será analisada pela nossa equipe de moderação.
+                O Juiz Virtual analisou o caso.
               </p>
               
-              <div className="protocol-ticket">
+              <div className="ia-analysis-box" style={{ marginTop: '15px', padding: '15px', background: '#f8f9fa', borderRadius: '8px', borderLeft: '4px solid #6366f1', textAlign: 'left' }}>
+                <h4 style={{ margin: '0 0 10px 0', color: '#1e293b', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Swords size={16} /> Veredito da IA ({sucessoData.nivelConfiabilidade}% confiabilidade)
+                </h4>
+                <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#4f46e5' }}>
+                  {sucessoData.vereditoSugerido}
+                </p>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: '1.5' }}>
+                  {sucessoData.analiseIA}
+                </p>
+              </div>
+
+              <div className="protocol-ticket" style={{ marginTop: '15px' }}>
                 <div className="protocol-label">ID do Protocolo</div>
                 <div className="protocol-value">#{sucessoData.id.substring(0, 8).toUpperCase()}</div>
               </div>
@@ -205,7 +235,7 @@ export default function PopupReportarPartida({ isOpen, onClose, partidaId }: Pop
               >
                 {loading ? (
                   <>
-                    <Loader2 size={20} className="animate-spin" /> Processando...
+                    <Loader2 size={20} className="animate-spin" /> Analisando...
                   </>
                 ) : (
                   <>
