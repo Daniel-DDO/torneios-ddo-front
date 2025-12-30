@@ -176,11 +176,11 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
               <div className="score-grid-container">
                 <div className="team-side">
                   <div className="team-logo-display">
-                     {partida.mandante.imgUrl ? (
-                       <img src={partida.mandante.imgUrl} alt="Mandante" />
-                     ) : (
-                       <div className="team-abbr">{partida.mandante.nome.substring(0,2)}</div>
-                     )}
+                      {partida.mandante.imgUrl ? (
+                        <img src={partida.mandante.imgUrl} alt="Mandante" />
+                      ) : (
+                        <div className="team-abbr">{partida.mandante.nome.substring(0,2)}</div>
+                      )}
                   </div>
                   <span className="team-name">{partida.mandante.nome}</span>
                 </div>
@@ -203,11 +203,11 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
 
                 <div className="team-side">
                   <div className="team-logo-display">
-                     {partida.visitante.imgUrl ? (
-                       <img src={partida.visitante.imgUrl} alt="Visitante" />
-                     ) : (
-                       <div className="team-abbr">{partida.visitante.nome.substring(0,2)}</div>
-                     )}
+                      {partida.visitante.imgUrl ? (
+                        <img src={partida.visitante.imgUrl} alt="Visitante" />
+                      ) : (
+                        <div className="team-abbr">{partida.visitante.nome.substring(0,2)}</div>
+                      )}
                   </div>
                   <span className="team-name">{partida.visitante.nome}</span>
                 </div>
@@ -250,8 +250,8 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
               )}
 
               <div className="options-card">
-                 <label className="section-title">CARTÕES</label>
-                 <div className="cards-main-grid">
+                  <label className="section-title">CARTÕES</label>
+                  <div className="cards-main-grid">
                     
                     <div className="card-team-block">
                         <span className="card-team-label">MANDANTE</span>
@@ -281,7 +281,7 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
                         </div>
                     </div>
 
-                 </div>
+                  </div>
               </div>
 
               <div className="input-group">
@@ -302,8 +302,13 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
 
         <div className="popup-footer-fixed">
            {!isCountdown && (
-             <button type="button" className="submit-btn" onClick={startCountdown}>
-               CONFIRMAR RESULTADO
+             <button 
+                type="button" 
+                className="submit-btn" 
+                onClick={partida.realizada ? undefined : startCountdown}
+                disabled={partida.realizada}
+             >
+               {partida.realizada ? "RESULTADO JÁ INSERIDO" : "CONFIRMAR RESULTADO"}
              </button>
            )}
         </div>

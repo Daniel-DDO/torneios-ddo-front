@@ -48,6 +48,7 @@ function App() {
           <Route path="/partidas" element={<TelaPartidas />} />
           <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/rodadas" element={<TelaRodadas />} />
           <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/rodadas/:partidaId" element={<TelaPartidaSelecionada />} />
+          <Route path="/partida/:partidaId" element={<TelaPartidaSelecionada />} />
           <Route path="/suporte" element={<TelaSuporte />} />
           <Route path="/titulos" element={<TelaTitulos />} />
         </Routes>

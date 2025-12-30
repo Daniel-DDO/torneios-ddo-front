@@ -102,7 +102,8 @@ export function TelaPartidas() {
   const { data: avatars = [] } = useQuery({
     queryKey: ['avatares'],
     queryFn: fetchAvatarsService,
-    staleTime: 1000 * 60 * 60,
+    staleTime: 1000 * 60 * 60 * 24,
+    refetchOnWindowFocus: false,
   });
 
   const avatarMap = useMemo(() => {
@@ -149,7 +150,10 @@ export function TelaPartidas() {
       const response = await API.get(`partida/jogador/${currentUser?.id}/pendentes`);
       return response.data || [];
     },
-    enabled: !!currentUser?.id
+    enabled: !!currentUser?.id,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false
   });
 
   const { data: partidasFeitas = [], isLoading: isLoadingFeitas } = useQuery({
@@ -158,7 +162,10 @@ export function TelaPartidas() {
       const response = await API.get(`partida/jogador/${currentUser?.id}/feitas`);
       return response.data || [];
     },
-    enabled: !!currentUser?.id
+    enabled: !!currentUser?.id,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false
   });
 
   const handleLoginSuccess = (userData: UserData) => {
@@ -258,6 +265,7 @@ export function TelaPartidas() {
         gap: 1rem;
         box-shadow: var(--shadow-sm);
         transition: transform 0.2s;
+        cursor: pointer;
     }
 
     .match-card:hover {
@@ -300,6 +308,8 @@ export function TelaPartidas() {
         align-items: center;
         gap: 0.5rem;
         text-align: center;
+        min-width: 0;
+        overflow: hidden;
     }
 
     .team-logo {
@@ -327,6 +337,11 @@ export function TelaPartidas() {
         font-weight: 700;
         color: var(--text-dark);
         font-size: 1.1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        padding: 0 5px;
     }
 
     .player-info {
@@ -338,6 +353,7 @@ export function TelaPartidas() {
         border-radius: 12px;
         border: 1px solid var(--border-color);
         margin-top: 4px;
+        max-width: 100%;
     }
 
     .player-avatar-small {
@@ -347,12 +363,16 @@ export function TelaPartidas() {
         background-color: var(--primary);
         background-size: cover;
         background-position: center;
+        flex-shrink: 0;
     }
 
     .player-name {
         font-size: 0.8rem;
         color: var(--text-gray);
         font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .score-board {
@@ -360,6 +380,7 @@ export function TelaPartidas() {
         flex-direction: column;
         align-items: center;
         gap: 0.5rem;
+        min-width: 80px;
     }
 
     .score-main {
@@ -555,7 +576,11 @@ export function TelaPartidas() {
                   partidasPendentes.map((partida: PartidaDTO) => {
                     const { dia, hora } = formatDataHora(partida.dataHora);
                     return (
-                      <div key={partida.id} className="match-card">
+                      <div
+                        key={partida.id}
+                        className="match-card"
+                        onClick={() => navigate(`/partida/${partida.id}`)}
+                      >
                         <div className="match-header">
                           <div className="match-info-group">
                             <div className="match-info-tag">
@@ -578,7 +603,7 @@ export function TelaPartidas() {
                             ) : (
                               <div className="team-logo-placeholder">{partida.mandante.clubeSigla}</div>
                             )}
-                            <span className="team-name">{partida.mandante.clubeNome}</span>
+                            <span className="team-name" title={partida.mandante.clubeNome}>{partida.mandante.clubeNome}</span>
                             <div className="player-info">
                               <div
                                 className="player-avatar-small"
@@ -596,7 +621,7 @@ export function TelaPartidas() {
                             ) : (
                               <div className="team-logo-placeholder">{partida.visitante.clubeSigla}</div>
                             )}
-                            <span className="team-name">{partida.visitante.clubeNome}</span>
+                            <span className="team-name" title={partida.visitante.clubeNome}>{partida.visitante.clubeNome}</span>
                             <div className="player-info">
                               <div
                                 className="player-avatar-small"
@@ -620,7 +645,11 @@ export function TelaPartidas() {
                   partidasFeitas.map((partida: PartidaDTO) => {
                     const { dia } = formatDataHora(partida.dataHora);
                     return (
-                      <div key={partida.id} className="match-card">
+                      <div
+                        key={partida.id}
+                        className="match-card"
+                        onClick={() => navigate(`/partida/${partida.id}`)}
+                      >
                         <div className="match-header">
                           <div className="match-info-group">
                             <div className="match-info-tag">
@@ -644,7 +673,7 @@ export function TelaPartidas() {
                             ) : (
                               <div className="team-logo-placeholder">{partida.mandante.clubeSigla}</div>
                             )}
-                            <span className="team-name">{partida.mandante.clubeNome}</span>
+                            <span className="team-name" title={partida.mandante.clubeNome}>{partida.mandante.clubeNome}</span>
                             <div className="player-info">
                               <div
                                 className="player-avatar-small"
@@ -673,7 +702,7 @@ export function TelaPartidas() {
                             ) : (
                               <div className="team-logo-placeholder">{partida.visitante.clubeSigla}</div>
                             )}
-                            <span className="team-name">{partida.visitante.clubeNome}</span>
+                            <span className="team-name" title={partida.visitante.clubeNome}>{partida.visitante.clubeNome}</span>
                             <div className="player-info">
                               <div
                                 className="player-avatar-small"

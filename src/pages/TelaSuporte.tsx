@@ -88,7 +88,7 @@ export function TelaSuporte() {
 
     setMessages([{
       id: 1,
-      text: "Sou o assistente virtual dos torneios DDO, pode me chamar para resolver qualquer problema.",
+      text: "Sou o assistente virtual dos torneios DDO, pode me chamar para resolver qualquer problema. Seja direto ao ponto. Se possível, envie toda a história completa (em uma mensagem), para que eu possa te ajudar melhor.",
       sender: 'bot',
       time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     }]);
