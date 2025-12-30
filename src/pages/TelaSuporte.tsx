@@ -148,6 +148,16 @@ export function TelaSuporte() {
     return (lines > 1 || inputText.length > 55) ? 2 : 1;
   }, [inputText]);
 
+  const formatMessage = (text: string) => {
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={index}>{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       <style>{`
@@ -238,6 +248,8 @@ export function TelaSuporte() {
           box-shadow: 0 1px 2px rgba(0,0,0,0.05);
           font-size: 0.95rem;
           line-height: 1.5;
+          /* ADICIONADO: Faz respeitar as quebras de linha (\n) do backend */
+          white-space: pre-wrap;
         }
 
         .bubble-bot {
@@ -411,7 +423,8 @@ export function TelaSuporte() {
                     </div>
                   )}
                   <div className={`msg-bubble ${msg.sender === 'user' ? 'bubble-user' : 'bubble-bot'}`}>
-                    {msg.text}
+                    {/* USO DA FUNÇÃO DE FORMATAÇÃO AQUI */}
+                    {formatMessage(msg.text)}
                     <span className="msg-time">{msg.time}</span>
                   </div>
                 </div>
@@ -419,7 +432,7 @@ export function TelaSuporte() {
               
               {isTyping && (
                 <div className="message-row row-bot">
-                   <div style={{width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-body)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0}}>
+                    <div style={{width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-body)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0}}>
                       <Bot size={16} color="var(--primary)"/>
                     </div>
                     <div className="typing-indicator">
