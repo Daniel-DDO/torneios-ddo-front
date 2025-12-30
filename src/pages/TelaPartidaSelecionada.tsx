@@ -422,7 +422,11 @@ export function TelaPartidaSelecionada() {
 
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="logo-area">
-          <div className="logo-icon"><Trophy size={20} /></div>
+          <div className="logo-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+              <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z" />
+            </svg>
+          </div>
           <span className="logo-text">Torneios <span>DDO</span></span>
         </div>
         <nav className="nav-menu">
@@ -430,12 +434,12 @@ export function TelaPartidaSelecionada() {
           <a onClick={() => navigate('/jogadores')} className="nav-item"><Users size={20} /> Jogadores</a>
           <a onClick={() => navigate('/clubes')} className="nav-item"><Shield size={20} /> Clubes</a>
           <a onClick={() => navigate('/competicoes')} className="nav-item"><Trophy size={20} /> Competições</a>
-          <a className="nav-item"><Star size={20} /> Títulos</a>
+          <a onClick={() => navigate('/titulos')} className="nav-item"><Star size={20} /> Títulos</a>
           <a onClick={() => navigate('/temporadas')} className="nav-item active"><CalendarSync size={20} /> Temporadas</a>
           <div className="nav-separator"></div>
           <a onClick={() => navigate('/partidas')} className="nav-item"><Gamepad2 size={20} /> Partidas</a>
           <a onClick={() => navigate('/minha-conta')} className="nav-item"><Wallet size={20} /> Minha conta</a>
-          <a className="nav-item"><Settings size={20} /> Suporte</a>
+          <a onClick={() => navigate('/suporte')} className="nav-item"><Settings size={20} /> Suporte</a>
         </nav>
       </aside>
 

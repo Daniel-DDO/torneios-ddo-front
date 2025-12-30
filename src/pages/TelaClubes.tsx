@@ -391,7 +391,7 @@ export function TelaClubes() {
           <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
             <Trophy size={20} /> Competições
           </a>
-          <a href="#" className="nav-item">
+          <a onClick={() => navigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
             <Star size={20} /> Títulos
           </a>
           <a onClick={() => navigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
@@ -404,7 +404,7 @@ export function TelaClubes() {
            <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
             <Wallet size={20} /> Minha conta
           </a>
-          <a href="#" className="nav-item">
+          <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
             <Settings size={20} /> Suporte
           </a>
         </nav>
