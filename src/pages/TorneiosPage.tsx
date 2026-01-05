@@ -35,9 +35,10 @@ interface Torneio {
   id: number;
   nome: string;
   descricao: string;
-  status: 'em_andamento' | 'inscricoes_abertas' | 'finalizado';
+  status: 'em_andamento' | 'inscricoes_abertas' | 'finalizado' | 'disponivel';
   imagem?: string;
   botao_texto?: string;
+  link_destino?: string;
 }
 
 interface Player {
@@ -196,6 +197,15 @@ export function TorneiosPage() {
       imagem: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
       botao_texto: 'Ver Resultados',
     },
+    {
+      id: 4,
+      nome: 'Galeria de Insígnias',
+      descricao: 'Conheça todas as conquistas e medalhas disponíveis.',
+      status: 'disponivel',
+      imagem: 'https://images.unsplash.com/photo-1611606063065-ee7946f0787a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      botao_texto: 'Ver Insígnias',
+      link_destino: '/insignias'
+    },
   ];
 
   const getStatusLabel = (status: string) => {
@@ -203,6 +213,7 @@ export function TorneiosPage() {
       case 'em_andamento': return 'AO VIVO';
       case 'inscricoes_abertas': return 'ABERTO';
       case 'finalizado': return 'FINALIZADO';
+      case 'disponivel': return 'NOVIDADE';
       default: return status;
     }
   };
@@ -386,6 +397,7 @@ export function TorneiosPage() {
         
         .t-status-badge.em_andamento { color: #00d09c; }
         .t-status-badge.finalizado { color: var(--text-gray); }
+        .t-status-badge.disponivel { color: #8e44ad; }
 
         .t-body {
           padding: 20px;
@@ -507,7 +519,7 @@ export function TorneiosPage() {
 
         .rank-player-info {
           flex: 1;
-          min-width: 0; /* CRUCIAL FOR TEXT OVERFLOW */
+          min-width: 0;
           display: flex;
           flex-direction: column;
           justify-content: center;
@@ -574,7 +586,6 @@ export function TorneiosPage() {
           color: var(--primary);
         }
 
-        /* Responsividade Ajustada */
         @media (max-width: 1100px) {
           .grid-layout {
             grid-template-columns: 1fr;
@@ -775,7 +786,12 @@ export function TorneiosPage() {
                     <div className="t-body">
                       <h4 className="t-name">{torneio.nome}</h4>
                       <p className="t-description">{torneio.descricao}</p>
-                      <button className="t-btn-outline">{torneio.botao_texto}</button>
+                      <button 
+                        className="t-btn-outline"
+                        onClick={() => torneio.link_destino && navigate(torneio.link_destino)}
+                      >
+                        {torneio.botao_texto}
+                      </button>
                     </div>
                   </div>
                 ))}

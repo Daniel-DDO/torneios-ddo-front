@@ -17,6 +17,7 @@ import { TelaRodadas } from './pages/TelaRodadas';
 import { TelaPartidaSelecionada } from './pages/TelaPartidaSelecionada';
 import { TelaSuporte } from './pages/TelaSuporte';
 import { TelaTitulos } from './pages/TelaTitulos';
+import { TelaInsignia } from './pages/TelaInsignia';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -51,6 +52,7 @@ function App() {
           <Route path="/partida/:partidaId" element={<TelaPartidaSelecionada />} />
           <Route path="/suporte" element={<TelaSuporte />} />
           <Route path="/titulos" element={<TelaTitulos />} />
+          <Route path="/insignias" element={<TelaInsignia />} />
         </Routes>
       </Router>
     </QueryClientProvider>
