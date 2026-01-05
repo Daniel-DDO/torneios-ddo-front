@@ -29,13 +29,14 @@ import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupAutorizar from '../components/PopupAutorizar';
 import PopupCadastrarJogador from '../components/PopupCadastrarJogador';
+import PopupRecSenhaAdm from '../components/PopupRecSenhaAdm';
 
 interface UserData {
   id: string;
   nome: string;
   discord: string;
   imagem: string | null;
-  cargo: string;
+  cargo: 'PROPRIETARIO' | 'DIRETOR' | 'ADMINISTRADOR' | 'JOGADOR';
   saldoVirtual: number;
   titulos: number;
   finais: number;
@@ -64,6 +65,7 @@ export function TelaAdmin() {
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [showAuthPopup, setShowAuthPopup] = useState(false);
   const [showCadastrarJogadorPopup, setShowCadastrarJogadorPopup] = useState(false);
+  const [showRecSenhaAdmPopup, setShowRecSenhaAdmPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -102,7 +104,6 @@ export function TelaAdmin() {
       const parsedUser = JSON.parse(storedUser);
       setCurrentUser(parsedUser);
 
-      // Verifica se o cargo é de administrador/diretor/proprietário
       if (['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(parsedUser.cargo)) {
         setIsAuthorized(true);
       } else {
@@ -305,16 +306,13 @@ export function TelaAdmin() {
 
           <div className="admin-grid-actions">
             
-            <div 
-                className="action-card" 
-                onClick={() => setShowAuthPopup(true)} 
-            >
+            <div className="action-card" onClick={() => setShowAuthPopup(true)}>
                 <div className="action-icon"><Key size={40} /></div>
                 <h4 className="action-title">Autorizar jogador</h4>
                 <p className="action-desc">Gerar código para conta reivindicada</p>
             </div>
 
-            <div className="action-card" onClick={() => console.log('Recupere a senha')}>
+            <div className="action-card" onClick={() => setShowRecSenhaAdmPopup(true)}>
                 <div className="action-icon"><Lock size={40} /></div>
                 <h4 className="action-title">Recuperar senha</h4>
                 <p className="action-desc">Gere e envie o pin para o jogador que esqueceu da sua senha</p>
@@ -388,6 +386,13 @@ export function TelaAdmin() {
       {showCadastrarJogadorPopup && (
         <PopupCadastrarJogador
           onClose={() => setShowCadastrarJogadorPopup(false)}
+        />
+      )}
+
+      {showRecSenhaAdmPopup && currentUser && (
+        <PopupRecSenhaAdm 
+          currentUser={currentUser}
+          onClose={() => setShowRecSenhaAdmPopup(false)}
         />
       )}
     </div>

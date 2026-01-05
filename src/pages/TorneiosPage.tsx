@@ -21,13 +21,15 @@ import {
   Crown,
   TrendingUp,
   Target,
-  Swords
+  Swords,
+  Lock
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupReivindicar from '../components/PopupReivindicar';
+import PopupRecuperarSenha from '../components/PopupRecuperarSenha';
 
 interface Torneio {
   id: number;
@@ -73,7 +75,7 @@ const fetchAvatarsService = async () => {
 };
 
 const fetchTopPlayersService = async () => {
-  const response = await API.get('/jogador/by-coeficiente-10');
+  const response = await API.get('/jogador/by-coeficiente10');
   return response.data || [];
 };
 
@@ -82,6 +84,7 @@ export function TorneiosPage() {
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
+  const [showRecuperarSenhaPopup, setShowRecuperarSenhaPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [playersLimit, setPlayersLimit] = useState(5);
@@ -729,9 +732,18 @@ export function TorneiosPage() {
               <p className="hero-desc">Participe dos torneios mais competitivos, suba no ranking e conquiste a glória na comunidade DDO.</p>
               
               {!currentUser ? (
-                <button className="btn-glow" onClick={() => setShowReivindicarPopup(true)}>
-                  Entrar na Arena <Swords size={20} />
-                </button>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  <button className="btn-glow" onClick={() => setShowReivindicarPopup(true)}>
+                    Entrar na Arena <Swords size={20} />
+                  </button>
+                  <button 
+                    className="btn-glow" 
+                    onClick={() => setShowRecuperarSenhaPopup(true)}
+                    style={{ background: 'rgba(255,255,255,0.1)', boxShadow: 'none', border: '1px solid rgba(255,255,255,0.2)' }}
+                  >
+                    Recuperar Senha <Lock size={20} />
+                  </button>
+                </div>
               ) : (
                 <button className="btn-glow" onClick={() => navigate('/competicoes')}>
                   Ver Meus Torneios <Target size={20} />
@@ -872,6 +884,16 @@ export function TorneiosPage() {
           setShowReivindicarPopup(false);
         }}
       />
+    )}
+
+    {showRecuperarSenhaPopup && (
+        <PopupRecuperarSenha 
+          onClose={() => setShowRecuperarSenhaPopup(false)}
+          onSuccess={() => {
+            setShowRecuperarSenhaPopup(false);
+            alert("Senha redefinida com sucesso!");
+          }}
+        />
     )}
     </div>
   );
