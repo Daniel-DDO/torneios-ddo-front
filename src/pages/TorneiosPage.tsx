@@ -75,7 +75,7 @@ const fetchAvatarsService = async () => {
 };
 
 const fetchTopPlayersService = async () => {
-  const response = await API.get('/jogador/by-coeficiente10');
+  const response = await API.get('/jogador/by-coeficiente-10');
   return response.data || [];
 };
 
