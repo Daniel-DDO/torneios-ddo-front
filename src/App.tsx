@@ -16,8 +16,9 @@ import { TelaPartidas } from './pages/TelaPartidas';
 import { TelaRodadas } from './pages/TelaRodadas';
 import { TelaPartidaSelecionada } from './pages/TelaPartidaSelecionada';
 import { TelaSuporte } from './pages/TelaSuporte';
-import { TelaTitulos } from './pages/TelaTitulos';
 import { TelaInsignia } from './pages/TelaInsignia';
+import { TelaTitulos } from './pages/TelaTitulos';
+
 import './App.css';
 
 const queryClient = new QueryClient({
