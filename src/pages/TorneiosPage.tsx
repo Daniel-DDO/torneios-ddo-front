@@ -13,9 +13,15 @@ import {
   Bell, 
   Gamepad2, 
   Star,
-  LogIn,
   Lightbulb,
-  CalendarSync
+  CalendarSync,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  Crown,
+  TrendingUp,
+  Target,
+  Swords
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -33,10 +39,11 @@ interface Torneio {
 }
 
 interface Player {
-  id: number;
+  id: string;
   nome: string;
-  pontos: number;
-  posicao: number;
+  discord: string;
+  pontosCoeficiente: number;
+  imagem?: string;
 }
 
 interface UserData {
@@ -65,17 +72,30 @@ const fetchAvatarsService = async () => {
   return [];
 };
 
+const fetchTopPlayersService = async () => {
+  const response = await API.get('/jogador/by-coeficiente-10');
+  return response.data || [];
+};
+
 export function TorneiosPage() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [playersLimit, setPlayersLimit] = useState(5);
 
   const { data: avatars = [] } = useQuery({
     queryKey: ['avatares'],
     queryFn: fetchAvatarsService,
     staleTime: 1000 * 60 * 60,
+  });
+
+  const { data: topPlayers = [], isLoading: isLoadingPlayers } = useQuery<Player[]>({
+    queryKey: ['topPlayers'],
+    queryFn: fetchTopPlayersService,
+    staleTime: 1000 * 60 * 5, 
   });
 
   const avatarMap = useMemo(() => {
@@ -85,6 +105,26 @@ export function TorneiosPage() {
     });
     return map;
   }, [avatars]);
+
+  const filteredPlayers = useMemo(() => {
+    if (!searchTerm) return topPlayers;
+    return topPlayers.filter(player => 
+      player.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      player.discord.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [topPlayers, searchTerm]);
+
+  const displayedPlayers = useMemo(() => {
+    return filteredPlayers.slice(0, playersLimit);
+  }, [filteredPlayers, playersLimit]);
+
+  const togglePlayersLimit = () => {
+    if (playersLimit === 5) {
+      setPlayersLimit(filteredPlayers.length);
+    } else {
+      setPlayersLimit(5);
+    }
+  };
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -132,43 +172,34 @@ export function TorneiosPage() {
     {
       id: 1,
       nome: 'Liga Real DDO',
-      descricao: 'A liga de pontos corridos mais disputada da comunidade.',
+      descricao: 'A elite do futebol virtual em disputa.',
       status: 'em_andamento',
       imagem: 'https://images.unsplash.com/photo-1518091043644-c1d4457512c6?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      botao_texto: 'Ver Tabela',
+      botao_texto: 'Ver Classificação',
     },
     {
       id: 2,
       nome: 'Copa das Nações',
-      descricao: 'Escolha sua seleção e represente suas cores no mata-mata.',
+      descricao: 'Represente sua seleção no mata-mata.',
       status: 'inscricoes_abertas',
       imagem: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
       botao_texto: 'Inscrever-se',
     },
     {
       id: 3,
-      nome: 'Copa do Brasil',
-      descricao: 'O caminho para o título nacional. Jogos de ida e volta.',
-      status: 'em_andamento',
+      nome: 'Supercopa',
+      descricao: 'O confronto final dos campeões.',
+      status: 'finalizado',
       imagem: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      botao_texto: 'Assistir Jogos',
+      botao_texto: 'Ver Resultados',
     },
-  ];
-
-  const players: Player[] = [
-    { id: 1, nome: 'Lúcio DDO', pontos: 2850, posicao: 1 },
-    { id: 2, nome: 'Daniel DDO', pontos: 2720, posicao: 2 },
-    { id: 3, nome: 'OLS DDO', pontos: 2680, posicao: 3 },
-    { id: 4, nome: 'Segredo_0', pontos: 2590, posicao: 4 },
-    { id: 5, nome: 'Índio Mala', pontos: 2400, posicao: 5 },
-    { id: 6, nome: 'Deatch DDO', pontos: 2300, posicao: 6 },
   ];
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'em_andamento': return 'Ao Vivo';
-      case 'inscricoes_abertas': return 'Aberto';
-      case 'finalizado': return 'Fim';
+      case 'em_andamento': return 'AO VIVO';
+      case 'inscricoes_abertas': return 'ABERTO';
+      case 'finalizado': return 'FINALIZADO';
       default: return status;
     }
   };
@@ -177,7 +208,405 @@ export function TorneiosPage() {
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
-      
+       <style>{`
+        .glass-panel {
+          background: var(--bg-card);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid var(--border-color);
+          border-radius: 24px;
+          overflow: hidden;
+          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .hero-section {
+          position: relative;
+          border-radius: 24px;
+          background: linear-gradient(120deg, #1a1a2e 0%, #16213e 100%);
+          overflow: hidden;
+          padding: 40px;
+          color: white;
+          margin-bottom: 30px;
+          box-shadow: 0 20px 40px -10px rgba(0,0,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          min-height: 280px;
+        }
+        
+        .hero-bg-anim {
+          position: absolute;
+          top: -50%;
+          left: -20%;
+          width: 200%;
+          height: 200%;
+          background: radial-gradient(circle, rgba(78,62,255,0.4) 0%, rgba(0,0,0,0) 60%);
+          animation: pulse-glow 10s infinite alternate;
+          pointer-events: none;
+        }
+
+        @keyframes pulse-glow {
+          0% { transform: scale(1); opacity: 0.5; }
+          100% { transform: scale(1.2); opacity: 0.8; }
+        }
+
+        .hero-content {
+          position: relative;
+          z-index: 2;
+          max-width: 600px;
+        }
+
+        .hero-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          background: rgba(255, 71, 87, 0.2);
+          color: #ff4757;
+          padding: 6px 12px;
+          border-radius: 30px;
+          font-weight: 700;
+          font-size: 0.8rem;
+          margin-bottom: 16px;
+          border: 1px solid rgba(255, 71, 87, 0.3);
+        }
+
+        .hero-title {
+          font-size: 3rem;
+          font-weight: 800;
+          line-height: 1.1;
+          margin-bottom: 16px;
+          background: linear-gradient(to right, #ffffff, #a0aec0);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
+        .hero-desc {
+          font-size: 1.1rem;
+          color: rgba(255,255,255,0.7);
+          margin-bottom: 24px;
+        }
+
+        .btn-glow {
+          background: #4e3eff;
+          color: white;
+          padding: 12px 28px;
+          border-radius: 12px;
+          font-weight: 600;
+          border: none;
+          cursor: pointer;
+          box-shadow: 0 0 20px rgba(78, 62, 255, 0.4);
+          transition: all 0.3s;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .btn-glow:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 0 30px rgba(78, 62, 255, 0.6);
+        }
+
+        .grid-layout {
+          display: grid;
+          grid-template-columns: 2fr 1.2fr;
+          gap: 24px;
+        }
+
+        .section-header-styled {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 20px;
+        }
+
+        .section-title {
+          font-size: 1.4rem;
+          font-weight: 700;
+          color: var(--text-dark);
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .tournament-cards {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 20px;
+        }
+
+        .t-card-glass {
+          background: var(--bg-card);
+          border-radius: 20px;
+          overflow: hidden;
+          border: 1px solid var(--border-color);
+          transition: 0.3s;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .t-card-glass:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+          border-color: var(--primary);
+        }
+
+        .t-img-area {
+          height: 160px;
+          background-size: cover;
+          background-position: center;
+          position: relative;
+        }
+
+        .t-img-overlay {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
+          padding: 16px;
+        }
+
+        .t-status-badge {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          padding: 6px 12px;
+          border-radius: 8px;
+          font-size: 0.7rem;
+          font-weight: 800;
+          background: rgba(255,255,255,0.95);
+          color: #000;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        .t-status-badge.em_andamento { color: #00d09c; }
+        .t-status-badge.finalizado { color: var(--text-gray); }
+
+        .t-body {
+          padding: 20px;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .t-name {
+          font-weight: 700;
+          font-size: 1.1rem;
+          margin-bottom: 8px;
+          color: var(--text-dark);
+        }
+
+        .t-description {
+          font-size: 0.9rem;
+          color: var(--text-gray);
+          margin-bottom: 20px;
+          line-height: 1.5;
+          flex: 1;
+        }
+
+        .t-btn-outline {
+          width: 100%;
+          padding: 10px;
+          border-radius: 10px;
+          border: 2px solid var(--border-color);
+          background: transparent;
+          color: var(--text-dark);
+          font-weight: 600;
+          cursor: pointer;
+          transition: 0.2s;
+        }
+
+        .t-btn-outline:hover {
+          border-color: var(--primary);
+          color: var(--primary);
+          background: rgba(78, 62, 255, 0.05);
+        }
+
+        .ranking-container {
+          background: var(--bg-card);
+          border-radius: 24px;
+          border: 1px solid var(--border-color);
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .ranking-header-bg {
+          background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+          padding: 24px;
+          color: white;
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .ranking-header-content {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .ranking-list {
+          padding: 0;
+          margin: 0;
+          list-style: none;
+        }
+
+        .rank-row-modern {
+          display: flex;
+          align-items: center;
+          padding: 16px 20px;
+          border-bottom: 1px solid var(--border-color);
+          transition: background 0.2s;
+        }
+
+        .rank-row-modern:hover {
+          background: var(--hover-bg);
+        }
+
+        .rank-pos-box {
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 1rem;
+          border-radius: 8px;
+          margin-right: 16px;
+          flex-shrink: 0;
+        }
+        
+        .pos-1 { background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%); color: #fff; box-shadow: 0 4px 10px rgba(253, 185, 49, 0.4); }
+        .pos-2 { background: linear-gradient(135deg, #E0E0E0 0%, #BDBDBD 100%); color: #fff; }
+        .pos-3 { background: linear-gradient(135deg, #CD7F32 0%, #A0522D 100%); color: #fff; }
+        .pos-n { color: var(--text-gray); background: var(--border-color); font-size: 0.9rem; }
+
+        .rank-avatar-box {
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
+          margin-right: 16px;
+          flex-shrink: 0;
+          overflow: hidden;
+          background: var(--border-color);
+          position: relative;
+        }
+
+        .rank-avatar-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .rank-player-info {
+          flex: 1;
+          min-width: 0; /* CRUCIAL FOR TEXT OVERFLOW */
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        .rank-name-txt {
+          font-weight: 700;
+          color: var(--text-dark);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-size: 1rem;
+          margin-bottom: 4px;
+        }
+
+        .rank-discord-txt {
+          color: var(--text-gray);
+          font-size: 0.8rem;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .rank-score-box {
+          background: rgba(78, 62, 255, 0.1);
+          padding: 6px 12px;
+          border-radius: 8px;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          flex-shrink: 0;
+          margin-left: 10px;
+        }
+
+        .score-val {
+          color: var(--primary);
+          font-weight: 800;
+          font-size: 1rem;
+        }
+
+        .score-label {
+          font-size: 0.65rem;
+          text-transform: uppercase;
+          color: var(--text-gray);
+          letter-spacing: 0.5px;
+        }
+
+        .load-more-strip {
+          padding: 15px;
+          text-align: center;
+          cursor: pointer;
+          color: var(--text-gray);
+          font-size: 0.9rem;
+          font-weight: 600;
+          transition: 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+
+        .load-more-strip:hover {
+          background: var(--hover-bg);
+          color: var(--primary);
+        }
+
+        /* Responsividade Ajustada */
+        @media (max-width: 1100px) {
+          .grid-layout {
+            grid-template-columns: 1fr;
+          }
+          
+          .hero-section {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 30px;
+          }
+          
+          .hero-content {
+            max-width: 100%;
+            margin-bottom: 20px;
+          }
+
+          .hero-title {
+            font-size: 2rem;
+          }
+
+          .rank-avatar-box {
+            width: 40px;
+            height: 40px;
+            margin-right: 12px;
+          }
+
+          .rank-pos-box {
+            width: 28px;
+            height: 28px;
+            font-size: 0.9rem;
+            margin-right: 12px;
+          }
+        }
+      `}</style>
+
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="logo-area">
           <div className="logo-icon">
@@ -233,7 +662,12 @@ export function TorneiosPage() {
             </button>
             <div className="search-bar">
               <Search size={20} />
-              <input type="text" placeholder="Buscar..." />
+              <input 
+                type="text" 
+                placeholder="Buscar jogador..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
           
@@ -284,110 +718,130 @@ export function TorneiosPage() {
         </header>
 
         <div className="page-content">
-          <div className="hero-banner full-width-banner">
-              <div className="hero-overlay"></div>
-              <div className="hero-content">
-              <span className="badge-live">Ao Vivo em Breve</span>
-              <h2>Grande Final da Liga Real DDO</h2>
-              <div className="matchup-text">
-                  LÚCIO <span className="vs">VS</span> DANIEL DDO
+          
+          <div className="hero-section">
+            <div className="hero-bg-anim"></div>
+            <div className="hero-content">
+              <div className="hero-tag">
+                <span className="pulse-dot"></span> TEMPORADA 2026
               </div>
-              <div className="timer-pill">
-                  Domingo 07/12 - 19:00H
-              </div>
-              </div>
+              <h1 className="hero-title">Domine o Campo<br/>Virtual</h1>
+              <p className="hero-desc">Participe dos torneios mais competitivos, suba no ranking e conquiste a glória na comunidade DDO.</p>
+              
+              {!currentUser ? (
+                <button className="btn-glow" onClick={() => setShowReivindicarPopup(true)}>
+                  Entrar na Arena <Swords size={20} />
+                </button>
+              ) : (
+                <button className="btn-glow" onClick={() => navigate('/competicoes')}>
+                  Ver Meus Torneios <Target size={20} />
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="content-split">
+          <div className="grid-layout">
             
-            <div className="left-column">
-              <div className="section-header">
-                <h3>Torneios em Destaque</h3>
-                <a href="#" className="view-all">Ver todos</a>
+            <div className="left-section">
+              <div className="section-header-styled">
+                <div className="section-title">
+                  <Gamepad2 size={24} className="text-primary" />
+                  Competições Ativas
+                </div>
               </div>
 
-              <div className="tournaments-list">
+              <div className="tournament-cards">
                 {torneios.map(torneio => (
-                  <div key={torneio.id} className="tournament-row">
-                    <div className="t-image" style={{backgroundImage: `url(${torneio.imagem})`}}></div>
-                    <div className="t-info">
-                      <h4>{torneio.nome}</h4>
-                      <p>{torneio.descricao}</p>
-                    </div>
-                    <div className="t-status">
-                        <span className={`status-pill ${torneio.status}`}>
+                  <div key={torneio.id} className="t-card-glass">
+                    <div className="t-img-area" style={{backgroundImage: `url(${torneio.imagem})`}}>
+                      <div className="t-img-overlay">
+                        <span className={`t-status-badge ${torneio.status}`}>
                           {getStatusLabel(torneio.status)}
                         </span>
+                      </div>
                     </div>
-                    <button className="t-btn">{torneio.botao_texto}</button>
+                    <div className="t-body">
+                      <h4 className="t-name">{torneio.nome}</h4>
+                      <p className="t-description">{torneio.descricao}</p>
+                      <button className="t-btn-outline">{torneio.botao_texto}</button>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <aside className="right-column">
-              {!currentUser && (
-                <button 
-                  onClick={() => setShowReivindicarPopup(true)}
-                  style={{
-                    width: '100%',
-                    marginBottom: '20px',
-                    padding: '15px',
-                    background: 'linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%)', 
-                    border: 'none',
-                    borderRadius: '16px',
-                    color: 'white',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                  onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                >
-                  <div style={{ textAlign: 'left' }}>
-                    <span style={{ display: 'block', fontSize: '0.8rem', opacity: 0.9, marginBottom: '2px' }}>Sou Jogador?</span>
-                    <span style={{ display: 'block', fontSize: '1rem', fontWeight: 'bold' }}>Reivindicar Conta</span>
+            <div className="right-section">
+              <div className="ranking-container">
+                <div className="ranking-header-bg">
+                  <div className="ranking-header-content">
+                    <div>
+                      <h3 style={{fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px'}}>
+                        <Crown size={20} fill="white" /> Top Ranking
+                      </h3>
+                      <span style={{fontSize: '0.85rem', opacity: 0.8}}>Melhores por Coeficiente</span>
+                    </div>
+                    <TrendingUp size={32} style={{opacity: 0.3}} />
                   </div>
-                  <div style={{ background: 'rgba(255,255,255,0.2)', padding: '8px', borderRadius: '10px' }}>
-                    <LogIn size={20} />
-                  </div>
-                </button>
-              )}
-              <div className="ranking-card">
-                <div className="ranking-header">
-                  <h3>Top Players</h3>
-                  <span>Global</span>
-                </div>
-                
-                <div className="leader-graph">
-                    <div className="bar bar-2"><span>2</span></div>
-                    <div className="bar bar-1"><span>1</span></div>
-                    <div className="bar bar-3"><span>3</span></div>
                 </div>
 
-                <div className="players-list">
-                  {players.map((player) => (
-                    <div key={player.id} className="player-row">
-                      <div className="player-rank">#{player.posicao}</div>
-                      <div className="player-avatar">
-                        {player.nome.charAt(0)}
-                      </div>
-                      <div className="player-details">
-                        <span className="p-name">{player.nome}</span>
-                        <span className="p-location">Brasil</span>
-                      </div>
-                      <div className="player-points">
-                        {player.pontos}
-                      </div>
+                <div className="ranking-list">
+                  {isLoadingPlayers ? (
+                    <div style={{padding: '40px', display: 'flex', justifyContent: 'center'}}>
+                      <Loader2 className="animate-spin text-primary" size={28} />
                     </div>
-                  ))}
+                  ) : filteredPlayers.length > 0 ? (
+                    <>
+                      {displayedPlayers.map((player, index) => {
+                        const avatarUrl = player.imagem ? avatarMap[player.imagem] : null;
+                        const posClass = index === 0 ? 'pos-1' : index === 1 ? 'pos-2' : index === 2 ? 'pos-3' : 'pos-n';
+                        
+                        return (
+                          <div key={player.id} className="rank-row-modern">
+                            <div className={`rank-pos-box ${posClass}`}>
+                              {index + 1}
+                            </div>
+                            
+                            <div className="rank-avatar-box">
+                              {avatarUrl ? (
+                                <img src={avatarUrl} alt={player.nome} className="rank-avatar-img" />
+                              ) : (
+                                <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background: 'var(--border-color)', fontWeight:'bold', color:'var(--text-gray)'}}>
+                                  {player.nome.charAt(0)}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="rank-player-info">
+                              <span className="rank-name-txt">{player.nome}</span>
+                              <span className="rank-discord-txt">@{player.discord}</span>
+                            </div>
+
+                            <div className="rank-score-box">
+                              <span className="score-val">{player.pontosCoeficiente.toFixed(2)}</span>
+                              <span className="score-label">pts</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {filteredPlayers.length > 5 && (
+                        <div className="load-more-strip" onClick={togglePlayersLimit}>
+                          {playersLimit === 5 ? (
+                            <>Ver ranking completo <ChevronDown size={16} /></>
+                          ) : (
+                            <>Recolher <ChevronUp size={16} /></>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{padding: '30px', textAlign: 'center', color: 'var(--text-gray)'}}>
+                      Nenhum jogador encontrado.
+                    </div>
+                  )}
                 </div>
               </div>
-            </aside>
+            </div>
           </div>
         </div>
       </main>
