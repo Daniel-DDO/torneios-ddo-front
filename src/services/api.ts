@@ -27,6 +27,14 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      console.warn('Sessão expirada. Redirecionando para o início...');
+      
+      localStorage.removeItem('token');
+    
+      window.location.href = '/';
+    }
+
     return Promise.reject(error);
   }
 );
