@@ -3,50 +3,59 @@ import { X, Trophy, Shield, Users, ArrowRight, ArrowLeft, Search, AlertCircle, C
 import { API } from '../services/api';
 import './PopupCopaReal.css';
 
-interface InscricaoDTO {
+interface ParticipanteDTO {
   id: string;
-  jogadorId: string;
   jogadorNome: string;
-  clubeId: string;
   clubeNome: string;
   clubeImagem: string;
+  posicaoClassificacao?: number;
 }
 
 interface PopupCopaRealProps {
   faseId: string;
-  temporadaId: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export default function PopupCopaReal({ faseId, temporadaId, onClose, onSuccess }: PopupCopaRealProps) {
+export default function PopupCopaReal({ faseId, onClose, onSuccess }: PopupCopaRealProps) {
   const [loading, setLoading] = useState(false);
   const [fadeout, setFadeout] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
   
-  const [elite, setElite] = useState<InscricaoDTO[]>([]);
-  const [intermediario, setIntermediario] = useState<InscricaoDTO[]>([]);
-  const [resto, setResto] = useState<InscricaoDTO[]>([]);
+  const [elite, setElite] = useState<ParticipanteDTO[]>([]);
+  const [intermediario, setIntermediario] = useState<ParticipanteDTO[]>([]);
+  const [resto, setResto] = useState<ParticipanteDTO[]>([]);
 
   useEffect(() => {
-    const carregarInscritos = async () => {
+    const carregarJogadores = async () => {
       try {
         setLoading(true);
-        const response = await API.get(`/inscricao/temporada/${temporadaId}`);
-        const dados = Array.isArray(response.data) ? response.data : (response.data?.content || []);
-        setResto(dados);
+        const response = await API.get(`/participacao-fase/fase-a/${faseId}`);
+        const dados = response.data;
+
+        const formatados: ParticipanteDTO[] = dados.map((item: any) => ({
+          id: item.id,
+          jogadorNome: item.jogadorNome,
+          clubeNome: item.clubeNome,
+          clubeImagem: item.clubeImagem,
+          posicaoClassificacao: item.posicaoClassificacao
+        }));
+
+        setResto(formatados);
+
       } catch (err) {
-        setError("Erro ao carregar lista de jogadores.");
+        console.error(err);
+        setError('Erro ao carregar jogadores da fase anterior.');
       } finally {
         setLoading(false);
       }
     };
 
-    if (temporadaId) {
-      carregarInscritos();
+    if (faseId) {
+      carregarJogadores();
     }
-  }, [temporadaId]);
+  }, [faseId]);
 
   const handleClose = () => {
     setFadeout(true);
@@ -54,7 +63,7 @@ export default function PopupCopaReal({ faseId, temporadaId, onClose, onSuccess 
   };
 
   const moverJogador = (
-    item: InscricaoDTO, 
+    item: ParticipanteDTO, 
     origem: 'ELITE' | 'INTER' | 'RESTO', 
     destino: 'ELITE' | 'INTER' | 'RESTO'
   ) => {
@@ -70,12 +79,27 @@ export default function PopupCopaReal({ faseId, temporadaId, onClose, onSuccess 
     }
 
     if (origem === 'ELITE') setElite(prev => prev.filter(p => p.id !== item.id));
-    else if (origem === 'INTER') setIntermediario(prev => prev.filter(p => p.id !== item.id));
-    else setResto(prev => prev.filter(p => p.id !== item.id));
+    if (origem === 'INTER') setIntermediario(prev => prev.filter(p => p.id !== item.id));
+    if (origem === 'RESTO') setResto(prev => prev.filter(p => p.id !== item.id));
 
-    if (destino === 'ELITE') setElite(prev => [...prev, item]);
-    else if (destino === 'INTER') setIntermediario(prev => [...prev, item]);
-    else setResto(prev => [...prev, item]);
+    if (destino === 'ELITE') {
+      setElite(prev => {
+        if (prev.some(p => p.id === item.id)) return prev;
+        return [...prev, item];
+      });
+    }
+    if (destino === 'INTER') {
+      setIntermediario(prev => {
+        if (prev.some(p => p.id === item.id)) return prev;
+        return [...prev, item];
+      });
+    }
+    if (destino === 'RESTO') {
+      setResto(prev => {
+        if (prev.some(p => p.id === item.id)) return prev;
+        return [...prev, item];
+      });
+    }
   };
 
   const handleSubmit = async () => {
@@ -87,7 +111,7 @@ export default function PopupCopaReal({ faseId, temporadaId, onClose, onSuccess 
     setLoading(true);
     try {
       const payload = {
-        faseId,
+        faseId: faseId,
         idsElite: elite.map(p => p.id),
         idsIntermediarios: intermediario.map(p => p.id),
         idsResto: resto.map(p => p.id)
@@ -97,7 +121,8 @@ export default function PopupCopaReal({ faseId, temporadaId, onClose, onSuccess 
       onSuccess();
       handleClose();
     } catch (err: any) {
-      setError(err.response?.data?.error || "Erro ao gerar Copa Real.");
+      console.error(err);
+      setError(err.response?.data?.error || err.response?.data?.message || "Erro ao gerar Copa Real.");
     } finally {
       setLoading(false);
     }
@@ -112,98 +137,110 @@ export default function PopupCopaReal({ faseId, temporadaId, onClose, onSuccess 
 
   return (
     <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
-      <div className="popup-content copa-real-mode">
-        <button className="popup-close-btn" onClick={handleClose}>
-          <X size={20} />
-        </button>
-
-        <div className="popup-header-fixed">
-          <div className="icon-badge-wrapper fase-badge">
-            <Trophy size={28} />
+      <div className={`popup-content-large ${fadeout ? 'scale-out' : ''}`}>
+        
+        <div className="popup-header">
+          <div className="header-title">
+            <Trophy className="header-icon" size={24} />
+            <h2>Distribuição Copa Real</h2>
           </div>
-          <h2 className="popup-title">Distribuição Copa Real</h2>
-          <p className="popup-subtitle">Defina os participantes da Elite, Intermediário e Resto</p>
+          <button className="close-btn" onClick={handleClose}>
+            <X size={24} />
+          </button>
         </div>
 
-        <div className="popup-body-scroll">
-          <div className="copa-real-columns">
+        <div className="copa-real-container">
+          
+          <div className="column elite-col">
+            <div className="col-header">
+              <Crown className="col-icon" size={20} color="#FFD700" />
+              <h3>Elite ({elite.length}/8)</h3>
+            </div>
+            <div className="player-list">
+              {elite.map(p => (
+                <div key={p.id} className="player-card elite-card">
+                  <div className="card-content">
+                    {p.clubeImagem && <img src={p.clubeImagem} alt="" className="escudo-img" />}
+                    <div className="card-info">
+                      <span className="player-name">{p.jogadorNome}</span>
+                      <span className="club-name">{p.clubeNome}</span>
+                    </div>
+                  </div>
+                  <div className="actions">
+                    <button className="move-btn" onClick={() => moverJogador(p, 'ELITE', 'INTER')} title="Mover para Intermediário">
+                      <ArrowRight size={16} />
+                    </button>
+                    <button className="move-btn" onClick={() => moverJogador(p, 'ELITE', 'RESTO')} title="Mover para Resto">
+                      <ArrowRight size={16} style={{ transform: 'rotate(45deg)' }} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {elite.length < 8 && Array.from({ length: 8 - elite.length }).map((_, i) => (
+                <div key={`empty-elite-${i}`} className="empty-placeholder" style={{padding: '10px', minHeight: '40px'}}>Vazio</div>
+              ))}
+            </div>
+          </div>
+
+          <div className="column inter-col">
+            <div className="col-header">
+              <Shield className="col-icon" size={20} color="#C0C0C0" />
+              <h3>Intermediário ({intermediario.length}/8)</h3>
+            </div>
+            <div className="player-list">
+              {intermediario.map(p => (
+                <div key={p.id} className="player-card inter-card">
+                  <button className="move-btn" onClick={() => moverJogador(p, 'INTER', 'ELITE')}>
+                    <ArrowLeft size={16} />
+                  </button>
+                  <div className="card-content">
+                    {p.clubeImagem && <img src={p.clubeImagem} alt="" className="escudo-img" />}
+                    <div className="card-info">
+                      <span className="player-name">{p.jogadorNome}</span>
+                      <span className="club-name">{p.clubeNome}</span>
+                    </div>
+                  </div>
+                  <button className="move-btn" onClick={() => moverJogador(p, 'INTER', 'RESTO')}>
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+              ))}
+              {intermediario.length < 8 && Array.from({ length: 8 - intermediario.length }).map((_, i) => (
+                <div key={`empty-inter-${i}`} className="empty-placeholder" style={{padding: '10px', minHeight: '40px'}}>Vazio</div>
+              ))}
+            </div>
+          </div>
+
+          <div className="column resto-col">
+            <div className="col-header">
+              <Users className="col-icon" size={20} />
+              <h3>Resto ({filteredResto.length})</h3>
+            </div>
             
-            <div className="column-pote elite">
-              <div className="pote-header elite">
-                <Crown size={18} />
-                <span>Elite ({elite.length}/8)</span>
-              </div>
-              <div className="pote-list custom-scrollbar">
-                {elite.map(p => (
-                  <div key={p.id} className="player-card card-elite">
-                    <div className="card-content">
-                      {p.clubeImagem && <img src={p.clubeImagem} alt="" className="escudo-img" />}
-                      <div className="card-info">
-                        <span className="player-name">{p.jogadorNome}</span>
-                        <span className="club-name">{p.clubeNome}</span>
-                      </div>
-                    </div>
-                    <button className="move-btn" onClick={() => moverJogador(p, 'ELITE', 'INTER')}>
-                      <ArrowRight size={16} />
-                    </button>
-                  </div>
-                ))}
-                {Array.from({ length: 8 - elite.length }).map((_, i) => (
-                  <div key={i} className="empty-slot">Vazio</div>
-                ))}
-              </div>
-            </div>
-
-            <div className="column-pote inter">
-              <div className="pote-header inter">
-                <Shield size={18} />
-                <span>Intermediário ({intermediario.length}/8)</span>
-              </div>
-              <div className="pote-list custom-scrollbar">
-                {intermediario.map(p => (
-                  <div key={p.id} className="player-card card-inter">
-                    <button className="move-btn" onClick={() => moverJogador(p, 'INTER', 'ELITE')}>
-                      <ArrowLeft size={16} />
-                    </button>
-                    <div className="card-content">
-                      {p.clubeImagem && <img src={p.clubeImagem} alt="" className="escudo-img" />}
-                      <div className="card-info">
-                        <span className="player-name">{p.jogadorNome}</span>
-                        <span className="club-name">{p.clubeNome}</span>
-                      </div>
-                    </div>
-                    <button className="move-btn" onClick={() => moverJogador(p, 'INTER', 'RESTO')}>
-                      <ArrowRight size={16} />
-                    </button>
-                  </div>
-                ))}
-                {Array.from({ length: 8 - intermediario.length }).map((_, i) => (
-                  <div key={i} className="empty-slot">Vazio</div>
-                ))}
-              </div>
-            </div>
-
-            <div className="column-pote resto">
-              <div className="pote-header resto">
-                <Users size={18} />
-                <span>Resto ({filteredResto.length})</span>
-              </div>
-              <div className="cr-search-container">
-                <Search size={16} className="cr-search-icon"/>
+            <div className="search-box-container">
+              <div className="search-box">
+                <Search size={16} />
                 <input 
                   type="text" 
-                  className="cr-search-input"
-                  placeholder="Buscar jogador ou clube..."
+                  placeholder="Buscar jogador..." 
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={e => setSearchTerm(e.target.value)}
                 />
               </div>
-              <div className="pote-list custom-scrollbar">
+            </div>
+
+            <div className="player-list-scroll">
+              <div className="player-list">
                 {filteredResto.map(p => (
-                  <div key={p.id} className="player-card">
-                    <button className="move-btn" onClick={() => moverJogador(p, 'RESTO', 'INTER')}>
-                      <ArrowLeft size={16} />
-                    </button>
+                  <div key={p.id} className="player-card resto-card">
+                    <div style={{display:'flex', gap:'4px'}}>
+                      <button className="move-btn" onClick={() => moverJogador(p, 'RESTO', 'ELITE')} title="Mover para Elite">
+                         <Crown size={14} />
+                      </button>
+                      <button className="move-btn" onClick={() => moverJogador(p, 'RESTO', 'INTER')}>
+                        <ArrowLeft size={16} />
+                      </button>
+                    </div>
                     <div className="card-content">
                       {p.clubeImagem && <img src={p.clubeImagem} alt="" className="escudo-img" />}
                       <div className="card-info">
