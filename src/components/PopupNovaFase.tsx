@@ -35,7 +35,8 @@ const ALGORITMO_MATA_MATA_OPTIONS = [
   { value: 'RANKING_PADRAO', label: 'Ranking (1º vs 16º...)' },
   { value: 'SORTEIO_TOTAL', label: 'Sorteio Total (Aleatório)' },
   { value: 'SORTEIO_DIRIGIDO', label: 'Sorteio Dirigido (Potes A e B)' },
-  { value: 'POTES_MANUAIS', label: 'Potes Manuais (Definido por Grupo)' }
+  { value: 'POTES_MANUAIS', label: 'Potes Manuais (Definido por Grupo)' },
+  { value: 'COPA_REAL_DDO', label: 'Copa Real DDO (Elite/Inter/Resto)' }
 ];
 
 export default function PopupNovaFase({ onClose, onSubmit }: PopupNovaFaseProps) {
@@ -222,6 +223,7 @@ export default function PopupNovaFase({ onClose, onSubmit }: PopupNovaFaseProps)
                       name="faseInicialMataMata"
                       value={formData.faseInicialMataMata}
                       onChange={handleChange}
+                      disabled={formData.algoritmoMataMata === 'COPA_REAL_DDO'}
                     >
                       {FASE_MATA_MATA_OPTIONS.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>

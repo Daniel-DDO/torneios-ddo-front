@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
 import {
-  Menu,
   LayoutDashboard,
   Users,
   Trophy,
@@ -24,7 +23,9 @@ import {
   Download,
   Palette,
   FileText,
-  CalendarDays
+  CalendarDays,
+  Crown,
+  Menu
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -33,6 +34,7 @@ import PopupUser from '../components/PopupUser';
 import PopupAdicionarJFase from '../components/PopupAdicionarJFase';
 import PopupColorirPos from '../components/PopupColorirPos';
 import PopupSorteio from '../components/PopupSorteio';
+import PopupCopaReal from '../components/PopupCopaReal';
 import { PdfRelatorioFase } from '../components/RelatorioFase';
 
 interface FaseTorneioDTO {
@@ -45,6 +47,8 @@ interface FaseTorneioDTO {
   numeroRodadas: number | null;
   faseInicialMataMata: string | null;
   temJogoVolta: boolean | null;
+  algoritmoLiga: string | null;
+  algoritmoMataMata: string | null;
 }
 
 interface ParticipanteFase {
@@ -96,6 +100,7 @@ export function TelaFase() {
   const [showAddPlayerPopup, setShowAddPlayerPopup] = useState(false);
   const [showColorirPopup, setShowColorirPopup] = useState(false);
   const [showSorteioPopup, setShowSorteioPopup] = useState(false);
+  const [showCopaRealPopup, setShowCopaRealPopup] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [gerandoPdf, setGerandoPdf] = useState(false);
 
@@ -453,14 +458,16 @@ export function TelaFase() {
             </div>
 
             <div className="action-area">
-              <button 
-                className="btn-action btn-pdf" 
-                onClick={handleExportarPdf}
-                disabled={gerandoPdf}
-              >
-                {gerandoPdf ? <div className="spinner-mini"></div> : <FileText size={18} />}
-                Gerar PDF
-              </button>
+              {fase?.tipoTorneio !== 'MATA_MATA' && (
+                <button 
+                  className="btn-action btn-pdf" 
+                  onClick={handleExportarPdf}
+                  disabled={gerandoPdf}
+                >
+                  {gerandoPdf ? <div className="spinner-mini"></div> : <FileText size={18} />}
+                  Gerar PDF
+                </button>
+              )}
 
               {isAdmin && (
                 <button className="btn-action btn-add" onClick={() => setShowAddPlayerPopup(true)}>
@@ -469,15 +476,27 @@ export function TelaFase() {
               )}
 
               {isProprietario && (
-                <button className="btn-action btn-utility" onClick={() => setShowColorirPopup(true)} style={{ background: '#6366f1', color: 'white' }}>
-                  <Palette size={18} /> Colorir posições
-                </button>
-              )}
-
-              {isProprietario && (
-                <button className="btn-action btn-utility" onClick={() => setShowSorteioPopup(true)}>
-                  <Dices size={18} /> Sortear
-                </button>
+                <>
+                  {fase?.tipoTorneio === 'MATA_MATA' ? (
+                    <>
+                      <button className="btn-action btn-utility" onClick={() => setShowCopaRealPopup(true)}>
+                        <Crown size={18} /> Sorteio Copa Real
+                      </button>
+                      <button className="btn-action btn-utility" onClick={() => setShowSorteioPopup(true)}>
+                        <Dices size={18} /> Sorteio Eliminatória
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button className="btn-action btn-utility" onClick={() => setShowColorirPopup(true)} style={{ background: '#6366f1', color: 'white' }}>
+                        <Palette size={18} /> Colorir posições
+                      </button>
+                      <button className="btn-action btn-utility" onClick={() => setShowSorteioPopup(true)}>
+                        <Dices size={18} /> Sortear
+                      </button>
+                    </>
+                  )}
+                </>
               )}
 
               {isAdmin && fase?.tipoTorneio === 'MATA_MATA' && (
@@ -638,6 +657,18 @@ export function TelaFase() {
         <PopupSorteio
           faseId={faseId || ''}
           onClose={() => setShowSorteioPopup(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['participantes-fase', faseId] });
+            queryClient.invalidateQueries({ queryKey: ['fase-detalhe', faseId] });
+          }}
+        />
+      )}
+
+      {showCopaRealPopup && (
+        <PopupCopaReal
+          faseId={faseId || ''}
+          temporadaId={temporadaId || ''}
+          onClose={() => setShowCopaRealPopup(false)}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['participantes-fase', faseId] });
             queryClient.invalidateQueries({ queryKey: ['fase-detalhe', faseId] });
