@@ -93,7 +93,7 @@ export default function PopupCopaReal({ faseId, temporadaId, onClose, onSuccess 
         idsResto: resto.map(p => p.id)
       };
 
-      await API.post('/fases/gerar-copa-real', payload);
+      await API.post('/api/fases/gerar-copa-real', payload);
       onSuccess();
       handleClose();
     } catch (err: any) {
