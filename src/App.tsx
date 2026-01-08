@@ -18,7 +18,8 @@ import { TelaPartidaSelecionada } from './pages/TelaPartidaSelecionada';
 import { TelaSuporte } from './pages/TelaSuporte';
 import { TelaInsignia } from './pages/TelaInsignia';
 import { TelaTitulos } from './pages/TelaTitulos';
-import { TelaBracket } from './pages/TelaBracket';
+import TelaBracket from './pages/TelaBracket';
+import { TelaBracketJogos } from './pages/TelaBracketJogos';
 
 import './App.css';
 
@@ -49,6 +50,8 @@ function App() {
           <Route path="/:temporadaId/:torneioId/fases" element={<TelaTorneiosFases />} />
           <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId" element={<TelaFase />} />
           <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/bracket" element={<TelaBracket />} />
+          <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/bracket/:etapa/:chaveIndex" element={<TelaBracketJogos />} />
+          <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/bracket/:etapa/:chaveIndex/partida/:partidaId" element={<TelaPartidaSelecionada />} />
           <Route path="/partidas" element={<TelaPartidas />} />
           <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/rodadas" element={<TelaRodadas />} />
           <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/rodadas/:partidaId" element={<TelaPartidaSelecionada />} />

@@ -5,8 +5,9 @@ import {
   Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search, 
   Bell, ArrowLeft, Gamepad2, Lightbulb, Settings, CalendarSync, 
   CheckCircle, Clock, Award, BarChart3, Target, 
-  Flag, Ban, Swords, Crown, Sparkles, TrendingUp, Info
+  Flag, Ban, Swords, Crown, Sparkles, TrendingUp, Info, FileText
 } from 'lucide-react';
+import jsPDF from 'jspdf';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -68,6 +69,25 @@ interface UserData {
   golsMarcados: number;
 }
 
+interface HistoryData {
+  id: string;
+  nome: string;
+  imagem: string;
+  cargo: string;
+  totalJogos: number;
+  vitorias: number;
+  empates: number;
+  derrotas: number;
+  aproveitamento: string;
+  golsMarcados: number;
+  golsSofridos: number;
+  saldoGols: number;
+  mediaGolsPorJogo: number;
+  titulos: number;
+  finais: number;
+  pontosCoeficiente: number;
+}
+
 const fetchAvatarsService = async () => {
   const response = await API.get('/api/avatares');
   if (Array.isArray(response)) return response;
@@ -88,6 +108,7 @@ export function TelaPerfilJogador() {
 
   const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
@@ -208,10 +229,184 @@ export function TelaPerfilJogador() {
     return new Date(player.suspensoAte) > new Date();
   }, [player]);
 
+  // Função auxiliar para carregar imagem como base64 (necessário para o PDF)
+  const getImageDataUrl = async (url: string): Promise<string | null> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.warn("Erro ao carregar imagem para o PDF", error);
+      return null;
+    }
+  };
+
+  const handleGenerateHistory = async () => {
+    if (!player) return;
+
+    try {
+      setPdfLoading(true);
+      const response = await API.get(`/jogador/${player.id}/historia`);
+      const historyData: HistoryData = response.data;
+
+      const doc = new jsPDF();
+      
+      // Cores da marca
+      const primaryColor = '#4e3eff';
+      const secondaryColor = '#1e1e2e';
+      const accentColor = '#f59e0b';
+      const lightBg = '#f3f4f6';
+
+      // 1. Cabeçalho
+      doc.setFillColor(secondaryColor);
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text("RELATÓRIO DE PERFORMANCE", 105, 20, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text("TORNEIOS DDO", 105, 30, { align: 'center' });
+
+      // 2. Info do Jogador
+      let yPos = 55;
+      
+      // Tentar carregar imagem
+      if (historyData.imagem) {
+        const imgData = await getImageDataUrl(historyData.imagem);
+        if (imgData) {
+           doc.addImage(imgData, 'PNG', 15, yPos, 35, 35); // x, y, w, h
+        } else {
+           // Fallback se imagem falhar: Círculo com inicial
+           doc.setFillColor(200, 200, 200);
+           doc.circle(32.5, yPos + 17.5, 17.5, 'F');
+           doc.setTextColor(50, 50, 50);
+           doc.setFontSize(20);
+           doc.text(historyData.nome.charAt(0), 32.5, yPos + 24, { align: 'center' });
+        }
+      }
+
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text(historyData.nome.toUpperCase(), 60, yPos + 12);
+
+      // Badge do Cargo
+      doc.setFillColor(primaryColor);
+      doc.roundedRect(60, yPos + 20, 50, 10, 3, 3, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text(historyData.cargo || 'JOGADOR', 85, yPos + 26.5, { align: 'center' });
+
+      // Badge do Coeficiente (separado)
+      doc.setFillColor(accentColor);
+      doc.roundedRect(115, yPos + 20, 40, 10, 3, 3, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.text(`COEF: ${historyData.pontosCoeficiente.toFixed(2)}`, 135, yPos + 26.5, { align: 'center' });
+
+      yPos += 50;
+
+      // 3. Grid de Estatísticas (Design moderno de cards)
+      const drawStatCard = (label: string, value: string | number, x: number, y: number, color = secondaryColor) => {
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(220, 220, 220);
+          doc.roundedRect(x, y, 40, 30, 2, 2, 'FD');
+          
+          doc.setTextColor(color);
+          doc.setFontSize(16);
+          doc.setFont('helvetica', 'bold');
+          doc.text(String(value), x + 20, y + 14, { align: 'center' });
+          
+          doc.setTextColor(100, 100, 100);
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'normal');
+          doc.text(label.toUpperCase(), x + 20, y + 24, { align: 'center' });
+      };
+
+      // Fundo cinza suave para a área de stats
+      doc.setFillColor(lightBg);
+      doc.rect(0, yPos - 10, 210, 150, 'F');
+
+      doc.setTextColor(secondaryColor);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text("RESUMO GERAL", 15, yPos + 5);
+
+      // Linha 1
+      let startY = yPos + 15;
+      drawStatCard("Total Jogos", historyData.totalJogos, 15, startY);
+      drawStatCard("Vitórias", historyData.vitorias, 60, startY, '#10b981');
+      drawStatCard("Empates", historyData.empates, 105, startY, '#64748b');
+      drawStatCard("Derrotas", historyData.derrotas, 150, startY, '#ef4444');
+
+      // Linha 2
+      startY += 35;
+      drawStatCard("Gols Pró", historyData.golsMarcados, 15, startY);
+      drawStatCard("Gols Contra", historyData.golsSofridos, 60, startY);
+      drawStatCard("Saldo", historyData.saldoGols, 105, startY, historyData.saldoGols >= 0 ? '#10b981' : '#ef4444');
+      drawStatCard("Média Gols", historyData.mediaGolsPorJogo.toFixed(2), 150, startY);
+
+      // Linha 3 - Conquistas
+      startY += 45;
+      doc.text("CONQUISTAS & APROVEITAMENTO", 15, startY - 5);
+      
+      // Card Grande de Aproveitamento
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(15, startY, 85, 40, 2, 2, 'FD');
+      doc.setTextColor(secondaryColor);
+      doc.setFontSize(22);
+      doc.text(historyData.aproveitamento, 57.5, startY + 20, { align: 'center' });
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.text("APROVEITAMENTO", 57.5, startY + 32, { align: 'center' });
+
+      // Cards de Titulos e Finais
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(105, startY, 40, 40, 2, 2, 'FD');
+      doc.setTextColor(accentColor); // Dourado
+      doc.setFontSize(22);
+      doc.text(String(historyData.titulos), 125, startY + 20, { align: 'center' });
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text("TÍTULOS", 125, startY + 32, { align: 'center' });
+
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(150, startY, 40, 40, 2, 2, 'FD');
+      doc.setTextColor(secondaryColor);
+      doc.setFontSize(22);
+      doc.text(String(historyData.finais), 170, startY + 20, { align: 'center' });
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text("FINAIS", 170, startY + 32, { align: 'center' });
+
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      const today = new Date().toLocaleDateString('pt-BR');
+      doc.text(`Documento gerado automaticamente em ${today}`, 105, 280, { align: 'center' });
+
+      doc.save(`historia-${historyData.nome.replace(/\s+/g, '_').toLowerCase()}.pdf`);
+
+    } catch (error) {
+      console.error("Erro ao gerar PDF", error);
+      alert("Não foi possível gerar a história do jogador no momento.");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       
-      <LoadingSpinner isLoading={loading} />
+      <LoadingSpinner isLoading={loading || pdfLoading} />
 
       <style>{`
         .profile-wrapper {
@@ -239,6 +434,27 @@ export function TelaPerfilJogador() {
             color: var(--primary);
             border-color: var(--primary);
             transform: translateX(-4px);
+        }
+
+        .btn-history {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(78, 62, 255, 0.1);
+            border: 1px solid rgba(78, 62, 255, 0.2);
+            border-radius: 8px;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+        .btn-history:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
         }
 
         .profile-hero {
@@ -741,6 +957,9 @@ export function TelaPerfilJogador() {
                                         <Swords size={16} /> {player.discord}
                                     </span>
                                 </div>
+                                <button className="btn-history" onClick={handleGenerateHistory} disabled={pdfLoading}>
+                                  <FileText size={16} /> {pdfLoading ? "Gerando..." : "Gerar história"}
+                                </button>
                             </div>
 
                             <div className="hero-stats">

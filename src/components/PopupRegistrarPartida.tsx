@@ -48,6 +48,7 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
   const [fadeout, setFadeout] = useState(false);
   const [error, setError] = useState('');
   const [isCountdown, setIsCountdown] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [seconds, setSeconds] = useState(5);
   
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -79,6 +80,7 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
   }, [isCountdown, seconds]);
 
   const handleClose = () => {
+    if (isLoading) return;
     setFadeout(true);
     setTimeout(() => onClose(), 300);
   };
@@ -128,14 +130,43 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
     }
   };
 
+  const executeUndo = async () => {
+    if (!window.confirm("ATENÇÃO: Desfazer um resultado não é recomendado, pois pode gerar instabilidades no sistema de classificação. Deseja realmente continuar?")) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      await API.post(`/partida/${partida.id}/desfazer-resultado`);
+      setFadeout(true);
+      setTimeout(() => {
+        onSuccess();
+        onClose();
+      }, 300);
+    } catch (err: any) {
+      setIsLoading(false);
+      setError(err.response?.data?.message || 'Erro ao desfazer resultado.');
+    }
+  };
+
   const adjustValue = (setter: React.Dispatch<React.SetStateAction<number>>, currentVal: number, delta: number) => {
     setter(Math.max(0, currentVal + delta));
   };
 
   return (
     <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
       <div className="popup-content reivindicar-popup-width">
-        <button className="popup-close-btn" onClick={handleClose}>
+        <button className="popup-close-btn" onClick={handleClose} disabled={isLoading}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -187,17 +218,17 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
 
                 <div className="score-center-controls">
                     <div className="score-control-unit">
-                        <button className="score-arrow up" onClick={() => adjustValue(setGolsMandante, golsMandante, 1)}>▲</button>
+                        <button className="score-arrow up" onClick={() => adjustValue(setGolsMandante, golsMandante, 1)} disabled={isLoading}>▲</button>
                         <div className="score-display">{golsMandante}</div>
-                        <button className="score-arrow down" onClick={() => adjustValue(setGolsMandante, golsMandante, -1)}>▼</button>
+                        <button className="score-arrow down" onClick={() => adjustValue(setGolsMandante, golsMandante, -1)} disabled={isLoading}>▼</button>
                     </div>
                     
                     <span className="score-x">X</span>
 
                     <div className="score-control-unit">
-                        <button className="score-arrow up" onClick={() => adjustValue(setGolsVisitante, golsVisitante, 1)}>▲</button>
+                        <button className="score-arrow up" onClick={() => adjustValue(setGolsVisitante, golsVisitante, 1)} disabled={isLoading}>▲</button>
                         <div className="score-display">{golsVisitante}</div>
-                        <button className="score-arrow down" onClick={() => adjustValue(setGolsVisitante, golsVisitante, -1)}>▼</button>
+                        <button className="score-arrow down" onClick={() => adjustValue(setGolsVisitante, golsVisitante, -1)} disabled={isLoading}>▼</button>
                     </div>
                 </div>
 
@@ -216,15 +247,15 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
               <div className="options-card">
                 <div className="toggles-grid">
                   <label className={`toggle-item ${wo ? 'active' : ''}`}>
-                    <input type="checkbox" checked={wo} onChange={(e) => setWo(e.target.checked)} />
+                    <input type="checkbox" checked={wo} onChange={(e) => setWo(e.target.checked)} disabled={isLoading} />
                     <span className="toggle-label">W.O.</span>
                   </label>
                   <label className={`toggle-item ${houveProrrogacao ? 'active' : ''}`}>
-                    <input type="checkbox" checked={houveProrrogacao} onChange={(e) => setHouveProrrogacao(e.target.checked)} />
+                    <input type="checkbox" checked={houveProrrogacao} onChange={(e) => setHouveProrrogacao(e.target.checked)} disabled={isLoading} />
                     <span className="toggle-label">Prorrogação</span>
                   </label>
                   <label className={`toggle-item ${houvePenaltis ? 'active' : ''}`}>
-                    <input type="checkbox" checked={houvePenaltis} onChange={(e) => setHouvePenaltis(e.target.checked)} />
+                    <input type="checkbox" checked={houvePenaltis} onChange={(e) => setHouvePenaltis(e.target.checked)} disabled={isLoading} />
                     <span className="toggle-label">Pênaltis</span>
                   </label>
                 </div>
@@ -235,15 +266,15 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
                   <label className="section-title">DISPUTA DE PÊNALTIS</label>
                   <div className="penalty-row">
                     <div className="penalty-control">
-                      <button className="mini-btn" onClick={() => adjustValue(setPenaltisMandante, penaltisMandante, -1)}>-</button>
+                      <button className="mini-btn" onClick={() => adjustValue(setPenaltisMandante, penaltisMandante, -1)} disabled={isLoading}>-</button>
                       <span className="penalty-value">{penaltisMandante}</span>
-                      <button className="mini-btn" onClick={() => adjustValue(setPenaltisMandante, penaltisMandante, 1)}>+</button>
+                      <button className="mini-btn" onClick={() => adjustValue(setPenaltisMandante, penaltisMandante, 1)} disabled={isLoading}>+</button>
                     </div>
                     <span className="penalty-x">x</span>
                     <div className="penalty-control">
-                      <button className="mini-btn" onClick={() => adjustValue(setPenaltisVisitante, penaltisVisitante, -1)}>-</button>
+                      <button className="mini-btn" onClick={() => adjustValue(setPenaltisVisitante, penaltisVisitante, -1)} disabled={isLoading}>-</button>
                       <span className="penalty-value">{penaltisVisitante}</span>
-                      <button className="mini-btn" onClick={() => adjustValue(setPenaltisVisitante, penaltisVisitante, 1)}>+</button>
+                      <button className="mini-btn" onClick={() => adjustValue(setPenaltisVisitante, penaltisVisitante, 1)} disabled={isLoading}>+</button>
                     </div>
                   </div>
                 </div>
@@ -258,11 +289,11 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
                         <div className="card-inputs-row">
                             <div className="card-unit">
                                 <div className="card-icon yellow"></div>
-                                <input type="number" min="0" className="card-input" value={cam} onChange={(e) => setCam(Number(e.target.value))} />
+                                <input type="number" min="0" className="card-input" value={cam} onChange={(e) => setCam(Number(e.target.value))} disabled={isLoading} />
                             </div>
                             <div className="card-unit">
                                 <div className="card-icon red"></div>
-                                <input type="number" min="0" className="card-input" value={cvm} onChange={(e) => setCvm(Number(e.target.value))} />
+                                <input type="number" min="0" className="card-input" value={cvm} onChange={(e) => setCvm(Number(e.target.value))} disabled={isLoading} />
                             </div>
                         </div>
                     </div>
@@ -272,11 +303,11 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
                         <div className="card-inputs-row">
                             <div className="card-unit">
                                 <div className="card-icon yellow"></div>
-                                <input type="number" min="0" className="card-input" value={cav} onChange={(e) => setCav(Number(e.target.value))} />
+                                <input type="number" min="0" className="card-input" value={cav} onChange={(e) => setCav(Number(e.target.value))} disabled={isLoading} />
                             </div>
                             <div className="card-unit">
                                 <div className="card-icon red"></div>
-                                <input type="number" min="0" className="card-input" value={cvv} onChange={(e) => setCvv(Number(e.target.value))} />
+                                <input type="number" min="0" className="card-input" value={cvv} onChange={(e) => setCvv(Number(e.target.value))} disabled={isLoading} />
                             </div>
                         </div>
                     </div>
@@ -292,6 +323,7 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
                   placeholder="https://youtube.com/..." 
                   value={linkPartida} 
                   onChange={(e) => setLinkPartida(e.target.value)} 
+                  disabled={isLoading}
                 />
               </div>
 
@@ -302,14 +334,47 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
 
         <div className="popup-footer-fixed">
            {!isCountdown && (
-             <button 
-                type="button" 
-                className="submit-btn" 
-                onClick={partida.realizada ? undefined : startCountdown}
-                disabled={partida.realizada}
-             >
-               {partida.realizada ? "RESULTADO JÁ INSERIDO" : "CONFIRMAR RESULTADO"}
-             </button>
+             partida.realizada ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '8px' }}>
+                    <span style={{ color: '#e74c3c', fontSize: '0.8rem', fontWeight: 500 }}>
+                        Não recomendado fazer isso, pois pode gerar instabilidades no sistema.
+                    </span>
+                    <button 
+                        type="button" 
+                        className="submit-btn" 
+                        style={{ 
+                          backgroundColor: '#e74c3c', 
+                          opacity: isLoading ? 0.7 : 1, 
+                          cursor: isLoading ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '10px'
+                        }}
+                        onClick={executeUndo}
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                          <>
+                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }}>
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                             </svg>
+                             <span>PROCESSANDO...</span>
+                          </>
+                        ) : (
+                          "DESFAZER RESULTADO"
+                        )}
+                    </button>
+                </div>
+             ) : (
+                <button 
+                    type="button" 
+                    className="submit-btn" 
+                    onClick={startCountdown}
+                >
+                    CONFIRMAR RESULTADO
+                </button>
+             )
            )}
         </div>
       </div>
