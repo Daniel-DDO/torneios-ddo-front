@@ -487,10 +487,10 @@ export function TelaPartidaSelecionada() {
                 
                 <div className="hero-content">
                   <div className="team-display">
-                    <img src={partida.mandante.clubeImagem} alt={partida.mandante.clubeNome} className="team-logo-lg" />
-                    <div className="team-name-lg">{partida.mandante.clubeNome}</div>
+                    <img src={partida.mandante?.clubeImagem} alt={partida.mandante?.clubeNome} className="team-logo-lg" />
+                    <div className="team-name-lg">{partida.mandante?.clubeNome}</div>
                     <div className="player-badge">
-                      <Users size={12} /> {partida.mandante.jogadorNome}
+                      <Users size={12} /> {partida.mandante?.jogadorNome}
                     </div>
                   </div>
 
@@ -517,10 +517,10 @@ export function TelaPartidaSelecionada() {
                   </div>
 
                   <div className="team-display">
-                    <img src={partida.visitante.clubeImagem} alt={partida.visitante.clubeNome} className="team-logo-lg" />
-                    <div className="team-name-lg">{partida.visitante.clubeNome}</div>
+                    <img src={partida.visitante?.clubeImagem} alt={partida.visitante?.clubeNome} className="team-logo-lg" />
+                    <div className="team-name-lg">{partida.visitante?.clubeNome}</div>
                     <div className="player-badge">
-                        <Users size={12} /> {partida.visitante.jogadorNome}
+                        <Users size={12} /> {partida.visitante?.jogadorNome}
                     </div>
                   </div>
                 </div>
@@ -556,7 +556,7 @@ export function TelaPartidaSelecionada() {
                         <div className="card-header"><Banknote size={20} /> Financeiro e Pontuação</div>
                         
                         <div className="info-row">
-                            <div className="info-label">{partida.mandante.clubeSigla} <span className="info-sub">(Receita)</span></div>
+                            <div className="info-label">{partida.mandante?.clubeSigla} <span className="info-sub">(Receita)</span></div>
                             <div className="info-value" style={{color:'var(--success)'}}>+ {formatCurrency(partida.receitaMandante)}</div>
                         </div>
                         <div className="info-row">
@@ -567,7 +567,7 @@ export function TelaPartidaSelecionada() {
                         <hr style={{margin: '10px 0', border: 0, borderTop: '1px dashed var(--border-color)'}} />
 
                         <div className="info-row">
-                            <div className="info-label">{partida.visitante.clubeSigla} <span className="info-sub">(Receita)</span></div>
+                            <div className="info-label">{partida.visitante?.clubeSigla} <span className="info-sub">(Receita)</span></div>
                             <div className="info-value" style={{color:'var(--success)'}}>+ {formatCurrency(partida.receitaVisitante)}</div>
                         </div>
                         <div className="info-row">
@@ -580,7 +580,7 @@ export function TelaPartidaSelecionada() {
                         </div>
                         
                         <div className="stats-row">
-                             <div style={{fontSize:'0.9rem', width: 40}}>{partida.mandante.clubeSigla}</div>
+                             <div style={{fontSize:'0.9rem', width: 40}}>{partida.mandante?.clubeSigla}</div>
                              <div className="cards-area">
                                 {[...Array(partida.cartoesAmarelosMandante || 0)].map((_, i) => <span key={`ym-${i}`} className="card-box c-yellow"/>)}
                                 {[...Array(partida.cartoesVermelhosMandante || 0)].map((_, i) => <span key={`rm-${i}`} className="card-box c-red"/>)}
@@ -588,7 +588,7 @@ export function TelaPartidaSelecionada() {
                         </div>
                         
                         <div className="stats-row">
-                             <div style={{fontSize:'0.9rem', width: 40}}>{partida.visitante.clubeSigla}</div>
+                             <div style={{fontSize:'0.9rem', width: 40}}>{partida.visitante?.clubeSigla}</div>
                              <div className="cards-area">
                                 {[...Array(partida.cartoesAmarelosVisitante || 0)].map((_, i) => <span key={`yv-${i}`} className="card-box c-yellow"/>)}
                                 {[...Array(partida.cartoesVermelhosVisitante || 0)].map((_, i) => <span key={`rv-${i}`} className="card-box c-red"/>)}
@@ -602,13 +602,13 @@ export function TelaPartidaSelecionada() {
                                 </button>
                             )}
 
-                            {hasEditPermission() && (
+                            {hasEditPermission() && partida.mandante && partida.visitante && (
                                 <button className="btn-full btn-admin" onClick={() => setShowRegistrarPopup(true)}>
                                     <Edit3 size={18} /> Registrar Resultado
                                 </button>
                             )}
 
-                            {hasReportPermission() && (
+                            {hasReportPermission() && partida.mandante && partida.visitante && (
                                 <button className="btn-full btn-report" onClick={() => setShowReportarPopup(true)}>
                                     <AlertTriangle size={18} /> Reportar Problema
                                 </button>
@@ -628,7 +628,7 @@ export function TelaPartidaSelecionada() {
 
       {showLoginPopup && <PopupLogin onClose={() => setShowLoginPopup(false)} onLoginSuccess={setCurrentUser} />}
       {showUserPopup && currentUser && <PopupUser user={{...currentUser, imagem: avatarMap[currentUser.imagem || ''] || currentUser.imagem}} onClose={() => setShowUserPopup(false)} onLogout={() => { localStorage.removeItem('token'); localStorage.removeItem('user_data'); setCurrentUser(null); setShowUserPopup(false); }} />}
-      {showRegistrarPopup && partida && (
+      {showRegistrarPopup && partida && partida.mandante && partida.visitante && (
         <PopupRegistrarPartida 
           partida={{
             ...partida,
@@ -666,7 +666,7 @@ export function TelaPartidaSelecionada() {
           onSuccess={() => { refetch(); }} 
         />
       )}
-      {showReportarPopup && partida && (
+      {showReportarPopup && partida && partida.mandante && partida.visitante && (
         <PopupReportarPartida
           isOpen={showReportarPopup}
           onClose={() => setShowReportarPopup(false)}

@@ -1,34 +1,51 @@
 .bracket-screen {
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   background-color: var(--bg-body);
   color: var(--text-dark);
   font-family: 'Inter', sans-serif;
-  overflow-x: auto;
-  overflow-y: hidden;
-  transition: background-color 0.3s ease;
-  padding-bottom: 40px;
+  overflow: hidden;
 }
 
 .bracket-header {
   height: 80px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 40px;
   background-color: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  z-index: 50;
   box-shadow: var(--shadow-sm);
 }
 
-.header-title h1 {
-  font-size: 1.8rem;
+.header-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.road-to-label {
+  font-size: 0.7rem;
+  letter-spacing: 3px;
+  color: var(--primary);
   font-weight: 800;
-  margin: 0;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stadium-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--text-dark);
-  letter-spacing: -0.5px;
+  font-weight: 800;
+  font-size: 1.4rem;
 }
 
 .btn-back {
@@ -49,6 +66,13 @@
   background: var(--hover-bg);
   transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
+}
+
+.bracket-scroll-area {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  width: 100%;
 }
 
 .bracket-container {

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Share2, Shield, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, Share2, Shield, Loader2, Trophy } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TelaBracket.css';
 
@@ -43,6 +44,11 @@ interface BracketData {
   [key: string]: MatchRaw[];
 }
 
+interface BracketResponse {
+  estadioFinal: string;
+  partidas: BracketData;
+}
+
 const STAGE_ORDER = [
   'SESSENTA_E_QUATRO_AVOS',
   'TRINTA_E_DOIS_AVOS',
@@ -66,28 +72,20 @@ const STAGE_LABELS: Record<string, string> = {
 export default function TelaBracket() {
   const { faseId } = useParams();
   const navigate = useNavigate();
-  const [data, setData] = useState<BracketData | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (faseId) {
-      const loadBracket = async () => {
-        try {
-          setLoading(true);
-          const response = await API.get(`/api/bracket/${faseId}`);
-          setData(response.data);
-        } catch (error) {
-          console.error(error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      loadBracket();
-    }
-  }, [faseId]);
+  const { data: bracketInfo, isLoading } = useQuery<BracketResponse>({
+    queryKey: ['bracket', faseId],
+    queryFn: async () => {
+      const response = await API.get(`/api/bracket/${faseId}`);
+      return response.data;
+    },
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false
+  });
 
   const processedStages = useMemo(() => {
-    if (!data) return [];
+    if (!bracketInfo?.partidas) return [];
+    const data = bracketInfo.partidas;
 
     return STAGE_ORDER.filter(key => data[key] && data[key].length > 0)
       .map(key => {
@@ -146,7 +144,7 @@ export default function TelaBracket() {
           matches: Object.values(matchesByChave).sort((a, b) => a.chaveIndex - b.chaveIndex)
         };
       });
-  }, [data]);
+  }, [bracketInfo]);
 
   const handleMatchClick = (etapa: string, chaveIndex: number) => {
     navigate(`${window.location.pathname}/${etapa}/${chaveIndex}`);
@@ -219,7 +217,7 @@ export default function TelaBracket() {
     );
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="loading-container">
         <Loader2 size={48} className="spinner" />
@@ -236,9 +234,17 @@ export default function TelaBracket() {
             <span>Voltar</span>
           </button>
         </div>
+        
         <div className="header-title">
-          <h1>Mata-Mata</h1>
+          <div className="road-to-label">
+            <Trophy size={12} />
+            ROAD TO
+          </div>
+          <div className="stadium-name">
+            {bracketInfo?.estadioFinal || 'Grande Final'}
+          </div>
         </div>
+
         <div className="header-actions">
            <button className="btn-back">
              <Share2 size={20} />
@@ -246,43 +252,45 @@ export default function TelaBracket() {
         </div>
       </header>
 
-      <div className="bracket-container">
-        {processedStages.map((stage, stageIndex) => (
-          <div key={stage.id} className="bracket-column">
-            <div className="column-title">{stage.label}</div>
-            {stage.matches.map((match, matchIndex) => (
-              <div 
-                key={match.chaveIndex} 
-                className="match-wrapper" 
-                style={{ animationDelay: `${matchIndex * 0.1}s` }}
-              >
+      <div className="bracket-scroll-area">
+        <div className="bracket-container">
+          {processedStages.map((stage, stageIndex) => (
+            <div key={stage.id} className="bracket-column">
+              <div className="column-title">{stage.label}</div>
+              {stage.matches.map((match, matchIndex) => (
                 <div 
-                    className="match-card" 
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => handleMatchClick(stage.id, match.chaveIndex)}
+                  key={match.chaveIndex} 
+                  className="match-wrapper" 
+                  style={{ animationDelay: `${matchIndex * 0.1}s` }}
                 >
-                  {renderTeamRow(
-                    match.mandante, 
-                    match.placarMandanteTotal, 
-                    match.vencedor === 'mandante',
-                    match.realizada,
-                    match.placarMandanteIda,
-                    match.placarMandanteVolta
-                  )}
-                  {renderTeamRow(
-                    match.visitante, 
-                    match.placarVisitanteTotal, 
-                    match.vencedor === 'visitante',
-                    match.realizada,
-                    match.placarVisitanteIda,
-                    match.placarVisitanteVolta
-                  )}
+                  <div 
+                      className="match-card" 
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => handleMatchClick(stage.id, match.chaveIndex)}
+                  >
+                    {renderTeamRow(
+                      match.mandante, 
+                      match.placarMandanteTotal, 
+                      match.vencedor === 'mandante',
+                      match.realizada,
+                      match.placarMandanteIda,
+                      match.placarMandanteVolta
+                    )}
+                    {renderTeamRow(
+                      match.visitante, 
+                      match.placarVisitanteTotal, 
+                      match.vencedor === 'visitante',
+                      match.realizada,
+                      match.placarVisitanteIda,
+                      match.placarVisitanteVolta
+                    )}
+                  </div>
+                  {renderConnector(stageIndex, matchIndex)}
                 </div>
-                {renderConnector(stageIndex, matchIndex)}
-              </div>
-            ))}
-          </div>
-        ))}
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
