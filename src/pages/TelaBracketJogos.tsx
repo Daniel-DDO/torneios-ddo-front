@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Calendar, MapPin } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
+import '../styles/TelaBracket.css';
 
 interface TeamData {
   id: string;
@@ -271,13 +272,14 @@ export function TelaBracketJogos() {
             </div>
 
             <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+              display: 'grid', 
+              gridTemplateColumns: '1fr auto 1fr',
               alignItems: 'center',
-              padding: '10px 0'
+              padding: '10px 0',
+              gap: '20px'
             }}>
               
-              <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                 {match.mandante ? (
                   <>
                     <div style={{ position: 'relative' }}>
@@ -287,9 +289,9 @@ export function TelaBracketJogos() {
                         style={{ width: '90px', height: '90px', objectFit: 'contain', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))' }} 
                         />
                     </div>
-                    <div>
-                        <div style={{ fontWeight: 800, fontSize: '1.1rem', lineHeight: '1.2' }}>{match.mandante.jogadorNome}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-gray)', marginTop: '4px' }}>{match.mandante.clubeNome}</div>
+                    <div style={{ width: '100%' }}>
+                        <div style={{ fontWeight: 800, fontSize: '1.1rem', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={match.mandante.jogadorNome}>{match.mandante.jogadorNome}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-gray)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={match.mandante.clubeNome}>{match.mandante.clubeNome}</div>
                     </div>
                   </>
                 ) : (
@@ -313,7 +315,8 @@ export function TelaBracketJogos() {
                     padding: '15px 40px',
                     borderRadius: '24px',
                     fontVariantNumeric: 'tabular-nums',
-                    letterSpacing: '-2px'
+                    letterSpacing: '-2px',
+                    whiteSpace: 'nowrap'
                 }}>
                     <span style={{ color: match.realizada ? 'var(--text-dark)' : 'var(--text-gray)' }}>
                         {match.realizada && match.golsMandante !== null ? match.golsMandante : '-'}
@@ -326,19 +329,19 @@ export function TelaBracketJogos() {
                 {renderPenalties(match)}
               </div>
 
-              <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                 {match.visitante ? (
                   <>
-                     <div style={{ position: 'relative' }}>
+                      <div style={{ position: 'relative' }}>
                         <img 
                         src={match.visitante.clubeImagem} 
                         alt={match.visitante.clubeNome} 
                         style={{ width: '90px', height: '90px', objectFit: 'contain', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))' }} 
                         />
                     </div>
-                    <div>
-                        <div style={{ fontWeight: 800, fontSize: '1.1rem', lineHeight: '1.2' }}>{match.visitante.jogadorNome}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-gray)', marginTop: '4px' }}>{match.visitante.clubeNome}</div>
+                    <div style={{ width: '100%' }}>
+                        <div style={{ fontWeight: 800, fontSize: '1.1rem', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={match.visitante.jogadorNome}>{match.visitante.jogadorNome}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-gray)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={match.visitante.clubeNome}>{match.visitante.clubeNome}</div>
                     </div>
                   </>
                 ) : (

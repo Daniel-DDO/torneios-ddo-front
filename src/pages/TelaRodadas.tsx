@@ -128,6 +128,17 @@ export function TelaRodadas() {
   const rodadas = rodadasData?.content || [];
   const currentRodada = rodadas[currentRodadaIndex];
 
+  useEffect(() => {
+    if (rodadas.length > 0) {
+      const activeIndex = rodadas.findIndex(r => !r.completa);
+      if (activeIndex !== -1) {
+        setCurrentRodadaIndex(activeIndex);
+      } else {
+        setCurrentRodadaIndex(rodadas.length - 1);
+      }
+    }
+  }, [rodadasData]);
+
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};
     avatars.forEach((avatar: Avatar) => {
@@ -280,10 +291,11 @@ export function TelaRodadas() {
         }
 
         .teams-container {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr min-content 1fr;
             align-items: center;
-            justify-content: space-between;
             gap: 10px;
+            width: 100%;
         }
 
         .team-info {
@@ -291,8 +303,9 @@ export function TelaRodadas() {
             flex-direction: column;
             align-items: center;
             gap: 8px;
-            flex: 1;
             text-align: center;
+            min-width: 0;
+            overflow: hidden;
         }
 
         .team-logo {
@@ -306,29 +319,43 @@ export function TelaRodadas() {
             font-size: 0.9rem;
             line-height: 1.2;
             color: var(--text-dark);
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .player-name {
             font-size: 0.75rem;
             color: var(--text-gray);
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .score-board {
             display: flex;
             align-items: center;
-            gap: 15px;
+            justify-content: center;
+            gap: 8px;
             font-weight: 800;
             font-size: 1.5rem;
             color: var(--text-dark);
+            white-space: nowrap;
+            padding: 0 5px;
         }
 
         .score-box {
             background: var(--bg-body);
-            padding: 5px 12px;
+            padding: 5px 0;
+            width: 36px;
             border-radius: 6px;
-            min-width: 40px;
             text-align: center;
             border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .vs-text {
@@ -365,7 +392,7 @@ export function TelaRodadas() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+      <aside className={`sidebar ${sidebarOpen ? 'mobile-open' : 'closed'}`}>
         <div className="logo-area">
           <div className="logo-icon">
             <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
@@ -551,8 +578,8 @@ export function TelaRodadas() {
                                         alt={partida.mandante.clubeNome} 
                                         className="team-logo" 
                                     />
-                                    <div className="team-name">{partida.mandante.clubeNome}</div>
-                                    <div className="player-name">{partida.mandante.jogadorNome}</div>
+                                    <div className="team-name" title={partida.mandante.clubeNome}>{partida.mandante.clubeNome}</div>
+                                    <div className="player-name" title={partida.mandante.jogadorNome}>{partida.mandante.jogadorNome}</div>
                                 </div>
 
                                 <div className="score-board">
@@ -573,8 +600,8 @@ export function TelaRodadas() {
                                         alt={partida.visitante.clubeNome} 
                                         className="team-logo" 
                                     />
-                                    <div className="team-name">{partida.visitante.clubeNome}</div>
-                                    <div className="player-name">{partida.visitante.jogadorNome}</div>
+                                    <div className="team-name" title={partida.visitante.clubeNome}>{partida.visitante.clubeNome}</div>
+                                    <div className="player-name" title={partida.visitante.jogadorNome}>{partida.visitante.jogadorNome}</div>
                                 </div>
                             </div>
 

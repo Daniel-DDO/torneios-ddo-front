@@ -219,8 +219,10 @@ export default function TelaBracket() {
 
   if (isLoading) {
     return (
-      <div className="loading-container">
-        <Loader2 size={48} className="spinner" />
+      <div className="bracket-screen">
+        <div className="loading-container">
+          <Loader2 size={48} className="spinner" />
+        </div>
       </div>
     );
   }
