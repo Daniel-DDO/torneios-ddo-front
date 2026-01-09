@@ -17,12 +17,17 @@ interface MatchRaw {
   id: string;
   etapaMataMata: string;
   chaveIndex: number;
-  tipoPartida: 'MATA_MATA_IDA' | 'MATA_MATA_VOLTA' | 'MATA_MATA_UNICA';
+  tipoPartida: 'MATA_MATA_IDA' | 'MATA_MATA_VOLTA' | 'MATA_MATA_UNICA' | 'FINAL_IDA' | 'FINAL_VOLTA' | 'FINAL_UNICA';
   realizada: boolean;
   mandante: TeamData | null;
   visitante: TeamData | null;
   golsMandante: number | null;
   golsVisitante: number | null;
+  placarAgregadoMandante: number | null;
+  placarAgregadoVisitante: number | null;
+  penaltisMandante: number | null;
+  penaltisVisitante: number | null;
+  houvePenaltis: boolean;
 }
 
 interface ProcessedMatch {
@@ -35,6 +40,8 @@ interface ProcessedMatch {
   placarVisitanteVolta?: number | null;
   placarMandanteTotal: number | null;
   placarVisitanteTotal: number | null;
+  penaltisMandante?: number | null;
+  penaltisVisitante?: number | null;
   vencedor?: 'mandante' | 'visitante';
   realizada: boolean;
   status: 'agendado' | 'em_andamento' | 'finalizado';
@@ -106,35 +113,85 @@ export default function TelaBracket() {
           }
 
           const current = matchesByChave[match.chaveIndex];
-          const isIda = match.tipoPartida === 'MATA_MATA_IDA';
+          
+          const isIda = match.tipoPartida === 'MATA_MATA_IDA' || match.tipoPartida === 'FINAL_IDA';
+          const isVolta = match.tipoPartida === 'MATA_MATA_VOLTA' || match.tipoPartida === 'FINAL_VOLTA';
+          const isUnica = match.tipoPartida === 'MATA_MATA_UNICA' || match.tipoPartida === 'FINAL_UNICA';
           
           if (match.realizada || (match.golsMandante !== null && match.golsVisitante !== null)) {
             current.realizada = true;
             current.status = 'finalizado';
             
-            const gm = match.golsMandante || 0;
-            const gv = match.golsVisitante || 0;
+            const gm = match.golsMandante;
+            const gv = match.golsVisitante;
 
-            if (current.placarMandanteTotal === null) current.placarMandanteTotal = 0;
-            if (current.placarVisitanteTotal === null) current.placarVisitanteTotal = 0;
-
-            current.placarMandanteTotal += gm;
-            current.placarVisitanteTotal += gv;
+            const isInverted = current.mandante?.id !== match.mandante?.id;
 
             if (isIda) {
-              current.placarMandanteIda = gm;
-              current.placarVisitanteIda = gv;
-            } else {
-              current.placarMandanteVolta = gm;
-              current.placarVisitanteVolta = gv;
+              if (isInverted) {
+                 current.placarMandanteIda = gv;
+                 current.placarVisitanteIda = gm;
+              } else {
+                 current.placarMandanteIda = gm;
+                 current.placarVisitanteIda = gv;
+              }
+            } 
+            else if (isVolta) {
+              if (isInverted) {
+                 current.placarMandanteVolta = gv;
+                 current.placarVisitanteVolta = gm;
+              } else {
+                 current.placarMandanteVolta = gm;
+                 current.placarVisitanteVolta = gv;
+              }
+            }
+
+            if (isVolta || isUnica) {
+              if (isInverted) {
+                  current.placarMandanteTotal = match.placarAgregadoVisitante;
+                  current.placarVisitanteTotal = match.placarAgregadoMandante;
+                  
+                  if (match.houvePenaltis) {
+                    current.penaltisMandante = match.penaltisVisitante;
+                    current.penaltisVisitante = match.penaltisMandante;
+                  }
+              } else {
+                  current.placarMandanteTotal = match.placarAgregadoMandante;
+                  current.placarVisitanteTotal = match.placarAgregadoVisitante;
+                  
+                  if (match.houvePenaltis) {
+                    current.penaltisMandante = match.penaltisMandante;
+                    current.penaltisVisitante = match.penaltisVisitante;
+                  }
+              }
+            } 
+            else if (isIda && current.placarMandanteTotal === null) {
+               if (isInverted) {
+                  current.placarMandanteTotal = match.placarAgregadoVisitante;
+                  current.placarVisitanteTotal = match.placarAgregadoMandante;
+               } else {
+                  current.placarMandanteTotal = match.placarAgregadoMandante;
+                  current.placarVisitanteTotal = match.placarAgregadoVisitante;
+               }
             }
           }
         });
 
         Object.values(matchesByChave).forEach(m => {
             if (m.realizada && m.placarMandanteTotal !== null && m.placarVisitanteTotal !== null) {
-                if (m.placarMandanteTotal > m.placarVisitanteTotal) m.vencedor = 'mandante';
-                else if (m.placarVisitanteTotal > m.placarMandanteTotal) m.vencedor = 'visitante';
+                if (m.placarMandanteTotal > m.placarVisitanteTotal) {
+                  m.vencedor = 'mandante';
+                } else if (m.placarVisitanteTotal > m.placarMandanteTotal) {
+                  m.vencedor = 'visitante';
+                } else {
+                  const pm = m.penaltisMandante ?? -1;
+                  const pv = m.penaltisVisitante ?? -1;
+                  
+                  if (pm !== -1 && pv !== -1) {
+                    if (pm > pv) m.vencedor = 'mandante';
+                    else if (pv > pm) m.vencedor = 'visitante';
+                  }
+                }
             }
         });
 
@@ -173,7 +230,8 @@ export default function TelaBracket() {
     isWinner: boolean, 
     realizada: boolean,
     scoreIda?: number | null, 
-    scoreVolta?: number | null
+    scoreVolta?: number | null,
+    penaltis?: number | null
   ) => {
     if (!team) {
       return (
@@ -209,9 +267,14 @@ export default function TelaBracket() {
                     {scoreVolta !== undefined && <span>{renderScore(scoreVolta, realizada)}</span>}
                 </div>
             )}
-            <span className="score-main">
-                {renderScore(totalScore, realizada)}
-            </span>
+            <div className="score-main-wrapper">
+              <span className="score-main">
+                  {renderScore(totalScore, realizada)}
+              </span>
+              {penaltis !== undefined && penaltis !== null && (
+                 <span className="score-penalties">({penaltis})</span>
+              )}
+            </div>
         </div>
       </div>
     );
@@ -276,7 +339,8 @@ export default function TelaBracket() {
                       match.vencedor === 'mandante',
                       match.realizada,
                       match.placarMandanteIda,
-                      match.placarMandanteVolta
+                      match.placarMandanteVolta,
+                      match.penaltisMandante
                     )}
                     {renderTeamRow(
                       match.visitante, 
@@ -284,7 +348,8 @@ export default function TelaBracket() {
                       match.vencedor === 'visitante',
                       match.realizada,
                       match.placarVisitanteIda,
-                      match.placarVisitanteVolta
+                      match.placarVisitanteVolta,
+                      match.penaltisVisitante
                     )}
                   </div>
                   {renderConnector(stageIndex, matchIndex)}
