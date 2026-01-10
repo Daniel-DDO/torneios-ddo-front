@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Share2, Shield, Loader2, Trophy } from 'lucide-react';
+import { ArrowLeft, Share2, Shield, Loader2, Trophy, AlertCircle, MapPin } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TelaBracket.css';
 
@@ -80,14 +80,26 @@ export default function TelaBracket() {
   const { faseId } = useParams();
   const navigate = useNavigate();
 
-  const { data: bracketInfo, isLoading } = useQuery<BracketResponse>({
+  useLayoutEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, []);
+
+  const { data: bracketInfo, isLoading, isError, refetch } = useQuery<BracketResponse>({
     queryKey: ['bracket', faseId],
     queryFn: async () => {
       const response = await API.get(`/api/bracket/${faseId}`);
       return response.data;
     },
     staleTime: 1000 * 60 * 5,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    retry: 2
   });
 
   const processedStages = useMemo(() => {
@@ -124,7 +136,6 @@ export default function TelaBracket() {
             
             const gm = match.golsMandante;
             const gv = match.golsVisitante;
-
             const isInverted = current.mandante?.id !== match.mandante?.id;
 
             if (isIda) {
@@ -150,7 +161,6 @@ export default function TelaBracket() {
               if (isInverted) {
                   current.placarMandanteTotal = match.placarAgregadoVisitante;
                   current.placarVisitanteTotal = match.placarAgregadoMandante;
-                  
                   if (match.houvePenaltis) {
                     current.penaltisMandante = match.penaltisVisitante;
                     current.penaltisVisitante = match.penaltisMandante;
@@ -158,7 +168,6 @@ export default function TelaBracket() {
               } else {
                   current.placarMandanteTotal = match.placarAgregadoMandante;
                   current.placarVisitanteTotal = match.placarAgregadoVisitante;
-                  
                   if (match.houvePenaltis) {
                     current.penaltisMandante = match.penaltisMandante;
                     current.penaltisVisitante = match.penaltisVisitante;
@@ -186,7 +195,6 @@ export default function TelaBracket() {
                 } else {
                   const pm = m.penaltisMandante ?? -1;
                   const pv = m.penaltisVisitante ?? -1;
-                  
                   if (pm !== -1 && pv !== -1) {
                     if (pm > pv) m.vencedor = 'mandante';
                     else if (pv > pm) m.vencedor = 'visitante';
@@ -209,9 +217,7 @@ export default function TelaBracket() {
 
   const renderConnector = (stageIndex: number, matchIndex: number) => {
     if (stageIndex === processedStages.length - 1) return null;
-
     const isEven = matchIndex % 2 === 0;
-    
     return (
       <div className={`connector ${isEven ? 'connect-down' : 'connect-up'}`}>
         <div className="connector-line"></div>
@@ -257,7 +263,7 @@ export default function TelaBracket() {
             alt={team.clubeNome} 
             className="team-logo" 
           />
-          <span className="team-name">{team.jogadorNome}</span>
+          <span className="team-name" title={team.jogadorNome}>{team.jogadorNome}</span>
         </div>
         
         <div className="score-container">
@@ -285,6 +291,24 @@ export default function TelaBracket() {
       <div className="bracket-screen">
         <div className="loading-container">
           <Loader2 size={48} className="spinner" />
+          <span className="loading-text">Carregando chaveamento...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="bracket-screen">
+        <div className="error-container">
+          <AlertCircle size={48} />
+          <div className="error-content">
+            <h2>Não foi possível carregar o chaveamento</h2>
+            <p>Verifique sua conexão e tente novamente.</p>
+          </div>
+          <button className="btn-retry" onClick={() => refetch()}>
+            Tentar Novamente
+          </button>
         </div>
       </div>
     );
@@ -293,25 +317,25 @@ export default function TelaBracket() {
   return (
     <div className="bracket-screen">
       <header className="bracket-header">
-        <div className="header-actions">
-          <button onClick={() => navigate(-1)} className="btn-back">
+        <div className="header-left">
+          <button onClick={() => navigate(-1)} className="btn-icon-back">
             <ArrowLeft size={20} />
-            <span>Voltar</span>
           </button>
         </div>
         
-        <div className="header-title">
-          <div className="road-to-label">
-            <Trophy size={12} />
-            ROAD TO
+        <div className="header-center">
+          <div className="road-badge">
+            <Trophy size={14} />
+            <span>ROAD TO</span>
           </div>
-          <div className="stadium-name">
-            {bracketInfo?.estadioFinal || 'Grande Final'}
-          </div>
+          <h1 className="stadium-title">
+            <MapPin size={20} className="map-icon" />
+            {bracketInfo?.estadioFinal || 'GRANDE FINAL'}
+          </h1>
         </div>
 
-        <div className="header-actions">
-           <button className="btn-back">
+        <div className="header-right">
+           <button className="btn-icon-share">
              <Share2 size={20} />
            </button>
         </div>
@@ -321,40 +345,45 @@ export default function TelaBracket() {
         <div className="bracket-container">
           {processedStages.map((stage, stageIndex) => (
             <div key={stage.id} className="bracket-column">
-              <div className="column-title">{stage.label}</div>
-              {stage.matches.map((match, matchIndex) => (
-                <div 
-                  key={match.chaveIndex} 
-                  className="match-wrapper" 
-                  style={{ animationDelay: `${matchIndex * 0.1}s` }}
-                >
+              <div className="column-header">
+                <span className="stage-name">{stage.label}</span>
+                <div className="stage-indicator"></div>
+              </div>
+              
+              <div className="matches-list">
+                {stage.matches.map((match, matchIndex) => (
                   <div 
-                      className="match-card" 
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => handleMatchClick(stage.id, match.chaveIndex)}
+                    key={match.chaveIndex} 
+                    className="match-wrapper"
+                    style={{ animationDelay: `${stageIndex * 0.1 + matchIndex * 0.05}s` }}
                   >
-                    {renderTeamRow(
-                      match.mandante, 
-                      match.placarMandanteTotal, 
-                      match.vencedor === 'mandante',
-                      match.realizada,
-                      match.placarMandanteIda,
-                      match.placarMandanteVolta,
-                      match.penaltisMandante
-                    )}
-                    {renderTeamRow(
-                      match.visitante, 
-                      match.placarVisitanteTotal, 
-                      match.vencedor === 'visitante',
-                      match.realizada,
-                      match.placarVisitanteIda,
-                      match.placarVisitanteVolta,
-                      match.penaltisVisitante
-                    )}
+                    <div 
+                        className="match-card" 
+                        onClick={() => handleMatchClick(stage.id, match.chaveIndex)}
+                    >
+                      {renderTeamRow(
+                        match.mandante, 
+                        match.placarMandanteTotal, 
+                        match.vencedor === 'mandante',
+                        match.realizada,
+                        match.placarMandanteIda,
+                        match.placarMandanteVolta,
+                        match.penaltisMandante
+                      )}
+                      {renderTeamRow(
+                        match.visitante, 
+                        match.placarVisitanteTotal, 
+                        match.vencedor === 'visitante',
+                        match.realizada,
+                        match.placarVisitanteIda,
+                        match.placarVisitanteVolta,
+                        match.penaltisVisitante
+                      )}
+                    </div>
+                    {renderConnector(stageIndex, matchIndex)}
                   </div>
-                  {renderConnector(stageIndex, matchIndex)}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ))}
         </div>
