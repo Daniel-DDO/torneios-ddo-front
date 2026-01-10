@@ -219,8 +219,8 @@ export default function TelaBracket() {
     if (stageIndex === processedStages.length - 1) return null;
     const isEven = matchIndex % 2 === 0;
     return (
-      <div className={`connector ${isEven ? 'connect-down' : 'connect-up'}`}>
-        <div className="connector-line"></div>
+      <div className={`tb-connector ${isEven ? 'tb-connect-down' : 'tb-connect-up'}`}>
+        <div className="tb-connector-line"></div>
       </div>
     );
   };
@@ -241,44 +241,44 @@ export default function TelaBracket() {
   ) => {
     if (!team) {
       return (
-        <div className="team-row">
-          <div className="team-info">
-            <div className="team-logo-placeholder">
+        <div className="tb-team-row">
+          <div className="tb-team-info">
+            <div className="tb-team-logo-placeholder">
                 <Shield size={14} />
             </div>
-            <span className="team-name waiting-text">Aguardando</span>
+            <span className="tb-team-name tb-waiting-text">Aguardando</span>
           </div>
-          <div className="score-container">
-            <span className="score-main">-</span>
+          <div className="tb-score-container">
+            <span className="tb-score-main">-</span>
           </div>
         </div>
       );
     }
 
     return (
-      <div className={`team-row ${isWinner ? 'winner' : ''}`}>
-        <div className="team-info">
+      <div className={`tb-team-row ${isWinner ? 'tb-winner' : ''}`}>
+        <div className="tb-team-info">
           <img 
             src={team.clubeImagem} 
             alt={team.clubeNome} 
-            className="team-logo" 
+            className="tb-team-logo" 
           />
-          <span className="team-name" title={team.jogadorNome}>{team.jogadorNome}</span>
+          <span className="tb-team-name" title={team.jogadorNome}>{team.jogadorNome}</span>
         </div>
         
-        <div className="score-container">
+        <div className="tb-score-container">
             {(scoreIda !== undefined || scoreVolta !== undefined) && (
-                <div className="score-details">
+                <div className="tb-score-details">
                     {scoreIda !== undefined && <span>{renderScore(scoreIda, realizada)}</span>}
                     {scoreVolta !== undefined && <span>{renderScore(scoreVolta, realizada)}</span>}
                 </div>
             )}
-            <div className="score-main-wrapper">
-              <span className="score-main">
+            <div className="tb-score-main-wrapper">
+              <span className="tb-score-main">
                   {renderScore(totalScore, realizada)}
               </span>
               {penaltis !== undefined && penaltis !== null && (
-                 <span className="score-penalties">({penaltis})</span>
+                 <span className="tb-score-penalties">({penaltis})</span>
               )}
             </div>
         </div>
@@ -288,10 +288,10 @@ export default function TelaBracket() {
 
   if (isLoading) {
     return (
-      <div className="bracket-screen">
-        <div className="loading-container">
-          <Loader2 size={48} className="spinner" />
-          <span className="loading-text">Carregando chaveamento...</span>
+      <div className="tb-screen">
+        <div className="tb-loading-container">
+          <Loader2 size={48} className="tb-spinner" />
+          <span className="tb-loading-text">Carregando chaveamento...</span>
         </div>
       </div>
     );
@@ -299,14 +299,14 @@ export default function TelaBracket() {
 
   if (isError) {
     return (
-      <div className="bracket-screen">
-        <div className="error-container">
+      <div className="tb-screen">
+        <div className="tb-error-container">
           <AlertCircle size={48} />
-          <div className="error-content">
+          <div className="tb-error-content">
             <h2>Não foi possível carregar o chaveamento</h2>
             <p>Verifique sua conexão e tente novamente.</p>
           </div>
-          <button className="btn-retry" onClick={() => refetch()}>
+          <button className="tb-btn-retry" onClick={() => refetch()}>
             Tentar Novamente
           </button>
         </div>
@@ -315,50 +315,50 @@ export default function TelaBracket() {
   }
 
   return (
-    <div className="bracket-screen">
-      <header className="bracket-header">
-        <div className="header-left">
-          <button onClick={() => navigate(-1)} className="btn-icon-back">
+    <div className="tb-screen">
+      <header className="tb-header">
+        <div className="tb-header-left">
+          <button onClick={() => navigate(-1)} className="tb-btn-icon-back">
             <ArrowLeft size={20} />
           </button>
         </div>
         
-        <div className="header-center">
-          <div className="road-badge">
+        <div className="tb-header-center">
+          <div className="tb-road-badge">
             <Trophy size={14} />
             <span>ROAD TO</span>
           </div>
-          <h1 className="stadium-title">
-            <MapPin size={20} className="map-icon" />
+          <h1 className="tb-stadium-title">
+            <MapPin size={20} className="tb-map-icon" />
             {bracketInfo?.estadioFinal || 'GRANDE FINAL'}
           </h1>
         </div>
 
-        <div className="header-right">
-           <button className="btn-icon-share">
+        <div className="tb-header-right">
+           <button className="tb-btn-icon-share">
              <Share2 size={20} />
            </button>
         </div>
       </header>
 
-      <div className="bracket-scroll-area">
-        <div className="bracket-container">
+      <div className="tb-scroll-area">
+        <div className="tb-container">
           {processedStages.map((stage, stageIndex) => (
-            <div key={stage.id} className="bracket-column">
-              <div className="column-header">
-                <span className="stage-name">{stage.label}</span>
-                <div className="stage-indicator"></div>
+            <div key={stage.id} className="tb-column">
+              <div className="tb-column-header">
+                <span className="tb-stage-name">{stage.label}</span>
+                <div className="tb-stage-indicator"></div>
               </div>
               
-              <div className="matches-list">
+              <div className="tb-matches-list">
                 {stage.matches.map((match, matchIndex) => (
                   <div 
                     key={match.chaveIndex} 
-                    className="match-wrapper"
+                    className="tb-match-wrapper"
                     style={{ animationDelay: `${stageIndex * 0.1 + matchIndex * 0.05}s` }}
                   >
                     <div 
-                        className="match-card" 
+                        className="tb-match-card" 
                         onClick={() => handleMatchClick(stage.id, match.chaveIndex)}
                     >
                       {renderTeamRow(

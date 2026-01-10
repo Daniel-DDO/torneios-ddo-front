@@ -166,7 +166,7 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
         `}
       </style>
       <div className="popup-content reivindicar-popup-width">
-        <button className="popup-close-btn" onClick={handleClose} disabled={isLoading}>
+        <button className="popup-close-btn" onClick={handleClose} disabled={isLoading || (isCountdown && seconds === 0)}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -184,12 +184,62 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
 
         <div className="popup-body-scroll custom-scrollbar">
           {isCountdown ? (
-            <div className="countdown-wrapper">
+            <div className="countdown-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              
+              {/* === NOVO: Resumo do Placar durante contagem === */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', marginBottom: '25px', marginTop: '10px' }}>
+                  {/* Mandante */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                     {partida.mandante.imgUrl ? (
+                       <img src={partida.mandante.imgUrl} alt="Mandante" style={{ width: '45px', height: '45px', objectFit: 'contain' }} />
+                     ) : (
+                       <div className="team-abbr" style={{ width: '45px', height: '45px', fontSize: '14px' }}>{partida.mandante.nome.substring(0,2)}</div>
+                     )}
+                     <span style={{ fontSize: '12px', fontWeight: '600', maxWidth: '80px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                       {partida.mandante.nome}
+                     </span>
+                  </div>
+
+                  {/* Placar Central */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <span style={{ fontSize: '32px', fontWeight: '800', lineHeight: 1 }}>
+                        {golsMandante} <span style={{fontSize: '20px', verticalAlign: 'middle', opacity: 0.5}}>x</span> {golsVisitante}
+                    </span>
+                    {houvePenaltis && (
+                       <span style={{ fontSize: '12px', color: '#888', marginTop: '4px', fontWeight: '600' }}>
+                         (Pên: {penaltisMandante} - {penaltisVisitante})
+                       </span>
+                    )}
+                  </div>
+
+                  {/* Visitante */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                     {partida.visitante.imgUrl ? (
+                       <img src={partida.visitante.imgUrl} alt="Visitante" style={{ width: '45px', height: '45px', objectFit: 'contain' }} />
+                     ) : (
+                       <div className="team-abbr" style={{ width: '45px', height: '45px', fontSize: '14px' }}>{partida.visitante.nome.substring(0,2)}</div>
+                     )}
+                     <span style={{ fontSize: '12px', fontWeight: '600', maxWidth: '80px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                       {partida.visitante.nome}
+                     </span>
+                  </div>
+              </div>
+              {/* ============================================== */}
+
               <div className="countdown-circle">
                 <span className="countdown-number">{seconds}</span>
               </div>
               <p className="countdown-label">Registrando resultado...</p>
-              <button className="cancel-countdown-btn" onClick={cancelCountdown}>
+              
+              <button 
+                className="cancel-countdown-btn" 
+                onClick={cancelCountdown}
+                disabled={seconds === 0}
+                style={{
+                    opacity: seconds === 0 ? 0.5 : 1,
+                    cursor: seconds === 0 ? 'not-allowed' : 'pointer'
+                }}
+              >
                 CANCELAR
               </button>
             </div>
