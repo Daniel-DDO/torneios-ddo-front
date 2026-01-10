@@ -191,11 +191,12 @@ export function TorneiosPage() {
     },
     {
       id: 3,
-      nome: 'Supercopa',
-      descricao: 'O confronto final dos campeões.',
-      status: 'finalizado',
-      imagem: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      botao_texto: 'Ver Resultados',
+      nome: 'Mercado',
+      descricao: 'Avaliação e valor de mercado de clubes e seleções',
+      status: 'disponivel',
+      imagem: 'https://lh7-us.googleusercontent.com/OTAj3_arkkVj7wlDpWovqngMbuVUHQxEbvgJ7P-YU_mfZzr11Lp7K2630V2hFARaXYnOi6lIlyLIK2xpjyaTY3UZ6-u3hRX90RY4SheZQ2Gpf5vGIgvlxAoddvr2FXNKM37tQ_GTyxtqkQCD3kUk8UA?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      botao_texto: 'Ver Mercado',
+      link_destino: '/mercado'
     },
     {
       id: 4,

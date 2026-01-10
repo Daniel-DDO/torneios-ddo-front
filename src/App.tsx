@@ -20,6 +20,7 @@ import { TelaInsignia } from './pages/TelaInsignia';
 import { TelaTitulos } from './pages/TelaTitulos';
 import TelaBracket from './pages/TelaBracket';
 import { TelaBracketJogos } from './pages/TelaBracketJogos';
+import { TelaMercado } from './pages/TelaMercado';
 
 import './App.css';
 
@@ -59,6 +60,7 @@ function App() {
           <Route path="/suporte" element={<TelaSuporte />} />
           <Route path="/titulos" element={<TelaTitulos />} />
           <Route path="/insignias" element={<TelaInsignia />} />
+          <Route path="/mercado" element={<TelaMercado />} />
         </Routes>
       </Router>
     </QueryClientProvider>
