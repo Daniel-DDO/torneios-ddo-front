@@ -1,7 +1,7 @@
-import { useMemo, useLayoutEffect } from 'react';
+import { useMemo, useLayoutEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Share2, Shield, Loader2, Trophy, AlertCircle, MapPin } from 'lucide-react';
+import { ArrowLeft, Shield, Loader2, Trophy, AlertCircle, MapPin, Download } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TelaBracket.css';
 
@@ -79,6 +79,7 @@ const STAGE_LABELS: Record<string, string> = {
 export default function TelaBracket() {
   const { faseId } = useParams();
   const navigate = useNavigate();
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useLayoutEffect(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -211,6 +212,188 @@ export default function TelaBracket() {
       });
   }, [bracketInfo]);
 
+  const handleDownloadBracket = async () => {
+    if (!processedStages.length || !bracketInfo) return;
+    setIsDownloading(true);
+
+    try {
+      const canvas = document.createElement('canvas');
+      const width = 1920;
+      const height = 1080;
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context not supported');
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      const gradient = ctx.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, '#001e4d'); 
+      gradient.addColorStop(0.5, '#0047ba');
+      gradient.addColorStop(1, '#000814');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.globalAlpha = 0.05;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(width / 2, height / 2, 400, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff';
+      
+      ctx.font = 'bold 30px Montserrat, Arial, sans-serif';
+      ctx.fillText('ROAD TO', width / 2, 60);
+
+      ctx.font = '900 60px Montserrat, Arial, sans-serif';
+      const estadioNome = (bracketInfo.estadioFinal || 'GRANDE FINAL').toUpperCase();
+      ctx.fillText(estadioNome, width / 2, 120);
+
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect((width / 2) - 100, 140, 200, 4);
+
+      const loadImg = (src: string): Promise<HTMLImageElement> => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'Anonymous';
+          img.onload = () => resolve(img);
+          img.onerror = () => {
+            const fallback = new Image();
+            fallback.width = 1; 
+            resolve(fallback);
+          };
+          img.src = src;
+        });
+      };
+
+      const stagesCount = processedStages.length;
+      const paddingX = 80;
+      const startY = 200;
+      const usableHeight = height - startY - 50;
+      const colWidth = (width - (paddingX * 2)) / stagesCount;
+      const cardWidth = 240;
+      const cardHeight = 80;
+
+      for (let sIndex = 0; sIndex < processedStages.length; sIndex++) {
+        const stage = processedStages[sIndex];
+        const x = paddingX + (sIndex * colWidth) + (colWidth / 2) - (cardWidth / 2);
+        const matchesCount = stage.matches.length;
+        const rowHeight = usableHeight / matchesCount;
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(stage.label.toUpperCase(), x + (cardWidth/2), startY - 20);
+
+        for (let mIndex = 0; mIndex < stage.matches.length; mIndex++) {
+          const match = stage.matches[mIndex];
+          const y = startY + (mIndex * rowHeight) + (rowHeight / 2) - (cardHeight / 2);
+
+          ctx.fillStyle = '#1e293b';
+          ctx.shadowColor = 'rgba(0,0,0,0.5)';
+          ctx.shadowBlur = 10;
+          ctx.fillRect(x, y, cardWidth, cardHeight);
+          ctx.shadowBlur = 0;
+
+          ctx.strokeStyle = match.realizada ? '#fbbf24' : '#334155';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x, y, cardWidth, cardHeight);
+
+          const drawTeamRow = async (team: TeamData | null, score: number | null, isWinner: boolean, rowY: number, penaltis: number | null) => {
+            if (isWinner) {
+               ctx.fillStyle = 'rgba(251, 191, 36, 0.1)';
+               ctx.fillRect(x + 2, rowY, cardWidth - 4, (cardHeight/2) - 2);
+            }
+
+            if (team && team.clubeImagem) {
+              const img = await loadImg(team.clubeImagem);
+              
+              const maxDim = 28;
+              const scale = Math.min(maxDim / img.width, maxDim / img.height);
+              const w = img.width * scale;
+              const h = img.height * scale;
+              const offsetX = (maxDim - w) / 2;
+              const offsetY = (maxDim - h) / 2;
+
+              ctx.drawImage(img, x + 8 + offsetX, rowY + 6 + offsetY, w, h);
+            } else {
+               ctx.fillStyle = '#475569';
+               ctx.beginPath();
+               ctx.arc(x + 22, rowY + 20, 10, 0, Math.PI * 2);
+               ctx.fill();
+            }
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = isWinner ? 'bold 14px Arial' : '14px Arial';
+            ctx.textAlign = 'left';
+            const name = team ? (team.jogadorNome.length > 12 ? team.jogadorNome.substring(0,12)+'...' : team.jogadorNome) : 'Aguardando';
+            ctx.fillText(name, x + 44, rowY + 26);
+
+            if (match.realizada && score !== null) {
+              ctx.fillStyle = isWinner ? '#fbbf24' : '#ffffff';
+              ctx.font = 'bold 16px Arial';
+              ctx.textAlign = 'right';
+              
+              let scoreText = score.toString();
+              if (penaltis !== null && penaltis !== undefined) {
+                 scoreText += ` (${penaltis})`;
+                 ctx.font = 'bold 12px Arial';
+              }
+              
+              ctx.fillText(scoreText, x + cardWidth - 10, rowY + 26);
+            }
+          };
+
+          await drawTeamRow(
+            match.mandante, 
+            match.placarMandanteTotal, 
+            match.vencedor === 'mandante',
+            y + 1,
+            match.penaltisMandante ?? null
+          );
+
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(x, y + (cardHeight/2), cardWidth, 1);
+
+          await drawTeamRow(
+            match.visitante, 
+            match.placarVisitanteTotal, 
+            match.vencedor === 'visitante',
+            y + (cardHeight/2),
+            match.penaltisVisitante ?? null
+          );
+        }
+      }
+
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'right';
+      ctx.fillText('Torneios DDO', width - 40, height - 30);
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `bracket-${bracketInfo.estadioFinal.toLowerCase().replace(/\s/g, '-')}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
+        setIsDownloading(false);
+      }, 'image/png');
+
+    } catch (err) {
+      console.error(err);
+      setIsDownloading(false);
+      alert('Erro ao gerar a imagem.');
+    }
+  };
+
   const handleMatchClick = (etapa: string, chaveIndex: number) => {
     navigate(`${window.location.pathname}/${etapa}/${chaveIndex}`);
   };
@@ -335,8 +518,13 @@ export default function TelaBracket() {
         </div>
 
         <div className="tb-header-right">
-           <button className="tb-btn-icon-share">
-             <Share2 size={20} />
+           <button 
+             className="tb-btn-icon-share" 
+             onClick={handleDownloadBracket}
+             disabled={isDownloading}
+             title="Baixar Bracket"
+           >
+             {isDownloading ? <Loader2 size={20} className="tb-spinner" /> : <Download size={20} />}
            </button>
         </div>
       </header>
@@ -368,7 +556,7 @@ export default function TelaBracket() {
                         match.realizada,
                         match.placarMandanteIda,
                         match.placarMandanteVolta,
-                        match.penaltisMandante
+                        match.penaltisMandante ?? null
                       )}
                       {renderTeamRow(
                         match.visitante, 
@@ -377,7 +565,7 @@ export default function TelaBracket() {
                         match.realizada,
                         match.placarVisitanteIda,
                         match.placarVisitanteVolta,
-                        match.penaltisVisitante
+                        match.penaltisVisitante ?? null
                       )}
                     </div>
                     {renderConnector(stageIndex, matchIndex)}
