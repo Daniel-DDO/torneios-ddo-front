@@ -15,8 +15,7 @@ import {
   Settings,
   CalendarSync,
   Lightbulb,
-  Medal,
-  Crown
+  Coins
 } from 'lucide-react';
 import { API } from '../services/api';
 import PopupLogin from '../components/PopupLogin';
@@ -37,14 +36,12 @@ interface UserData {
 }
 
 interface Titulo {
-  id: number;
+  id: string;
   nome: string;
+  valor: number;
   descricao: string;
-  temporada: string;
-  dataConquista: string;
-  imagem?: string;
-  vencedorNome?: string;
-  clubeNome?: string;
+  imagem: string;
+  imagemGerarPost: string;
 }
 
 export function TelaTitulos() {
@@ -53,6 +50,7 @@ export function TelaTitulos() {
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
   const { data: avatars = [] } = useQuery({
@@ -69,7 +67,10 @@ export function TelaTitulos() {
     queryKey: ['titulos'],
     queryFn: async () => {
       const response = await API.get('/titulos');
-      return Array.isArray(response.data) ? response.data : [];
+      const data = (response && (response as any).data) ? (response as any).data : response;
+      if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.conteudo)) return data.conteudo;
+      return [];
     },
     staleTime: 1000 * 60 * 5
   });
@@ -95,6 +96,10 @@ export function TelaTitulos() {
     if (storedUser) setCurrentUser(JSON.parse(storedUser));
   }, []);
 
+  const filteredTitulos = titulos.filter((t: Titulo) => 
+    t.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       <style>{`
@@ -102,7 +107,7 @@ export function TelaTitulos() {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
           gap: 24px;
-          padding: 24px;
+          padding: 24px 0;
         }
 
         .titulo-card {
@@ -117,6 +122,7 @@ export function TelaTitulos() {
           transition: transform 0.2s, box-shadow 0.2s;
           position: relative;
           overflow: hidden;
+          height: 100%;
         }
 
         .titulo-card:hover {
@@ -125,50 +131,65 @@ export function TelaTitulos() {
           border-color: var(--primary);
         }
 
-        .titulo-icon-wrapper {
-          width: 80px;
-          height: 80px;
-          background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.05) 100%);
-          border-radius: 50%;
+        .titulo-image-container {
+          width: 120px;
+          height: 120px;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-bottom: 16px;
-          border: 1px solid rgba(255,215,0,0.2);
+          margin-bottom: 20px;
+          transition: transform 0.3s ease;
+        }
+
+        .titulo-card:hover .titulo-image-container {
+            transform: scale(1.1);
+        }
+
+        .titulo-img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
         }
 
         .titulo-name {
           font-size: 1.1rem;
           font-weight: 700;
           color: var(--text-dark);
-          margin-bottom: 8px;
+          margin-bottom: 12px;
+          line-height: 1.4;
         }
 
-        .titulo-season {
+        .titulo-desc {
           font-size: 0.85rem;
-          color: var(--primary);
-          font-weight: 600;
-          background: rgba(var(--primary-rgb), 0.1);
-          padding: 4px 12px;
-          border-radius: 12px;
-          margin-bottom: 16px;
+          color: var(--text-gray);
+          margin-bottom: 20px;
+          flex-grow: 1;
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
-        .titulo-details {
+        .titulo-footer {
           width: 100%;
           border-top: 1px solid var(--border-color);
           padding-top: 16px;
           display: flex;
-          justify-content: space-between;
+          justify-content: center;
           align-items: center;
-          font-size: 0.85rem;
-          color: var(--text-gray);
         }
 
-        .titulo-winner {
+        .titulo-value {
           display: flex;
           align-items: center;
           gap: 6px;
+          background: rgba(var(--primary-rgb), 0.1);
+          color: var(--primary);
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-weight: 700;
+          font-size: 0.9rem;
         }
 
         .shimmer {
@@ -225,7 +246,11 @@ export function TelaTitulos() {
             </button>
             <div className="search-bar">
               <Search size={18} />
-              <input placeholder="Buscar títulos..." />
+              <input 
+                placeholder="Buscar títulos..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
           <div className="header-actions">
@@ -271,49 +296,47 @@ export function TelaTitulos() {
         <div className="page-content">
           <div className="page-header-simple">
             <h2>Galeria de Títulos</h2>
-            <p>Histórico de conquistas e campeões das temporadas</p>
+            <p>Conquistas e premiações dos Torneios DDO</p>
           </div>
 
           <div className="titulos-grid">
             {isLoading ? (
               Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="titulo-card shimmer" style={{ height: '240px' }}></div>
+                <div key={i} className="titulo-card shimmer" style={{ height: '300px' }}></div>
               ))
-            ) : titulos.length > 0 ? (
-              titulos.map((titulo: Titulo) => (
+            ) : filteredTitulos.length > 0 ? (
+              filteredTitulos.map((titulo: Titulo) => (
                 <div key={titulo.id} className="titulo-card">
-                  <div className="titulo-icon-wrapper">
+                  <div className="titulo-image-container">
                     {titulo.imagem ? (
                       <img
                         src={titulo.imagem}
                         alt={titulo.nome}
-                        style={{ width: '50px', height: '50px', objectFit: 'contain' }}
+                        className="titulo-img"
                       />
                     ) : (
-                      <Trophy size={36} color="#FFD700" />
+                      <Trophy size={64} color="#FFD700" strokeWidth={1} />
                     )}
                   </div>
+                  
                   <h3 className="titulo-name">{titulo.nome}</h3>
-                  <span className="titulo-season">{titulo.temporada}</span>
-                  <div className="titulo-details">
-                    <div className="titulo-winner">
-                      <Medal size={14} />
-                      <span>{titulo.vencedorNome || 'Não definido'}</span>
+                  <p className="titulo-desc" title={titulo.descricao}>
+                    {titulo.descricao || 'Sem descrição disponível.'}
+                  </p>
+                  
+                  <div className="titulo-footer">
+                    <div className="titulo-value">
+                        <Coins size={16} />
+                        <span>{titulo.valor}</span>
                     </div>
-                    {titulo.clubeNome && (
-                      <div className="titulo-winner">
-                        <Crown size={14} />
-                        <span>{titulo.clubeNome}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
               ))
             ) : (
               <div className="empty-state">
                 <Trophy size={48} opacity={0.3} />
-                <h3>Nenhum título registrado</h3>
-                <p>Os títulos das competições aparecerão aqui.</p>
+                <h3>Nenhum título encontrado</h3>
+                <p>Não há títulos correspondentes à sua busca.</p>
               </div>
             )}
           </div>
