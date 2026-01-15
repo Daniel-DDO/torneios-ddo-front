@@ -103,18 +103,38 @@ export function TelaMinhaConta() {
   }, [isDarkMode]);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
+    const initializeUser = async () => {
+      const storedUser = localStorage.getItem('user_data');
+      
+      if (!storedUser) {
+        navigate('/');
+        setLoading(false);
+        return;
+      }
+
       try {
         const parsedUser = JSON.parse(storedUser);
         setCurrentUser(parsedUser);
+
+        try {
+          const response = await API.get(`/jogadores/${parsedUser.id}`);
+          const freshData = response.data || response;
+          
+          if (freshData && freshData.id) {
+            setCurrentUser(freshData);
+            localStorage.setItem('user_data', JSON.stringify(freshData));
+          }
+        } catch (apiError) {
+          console.error(apiError);
+        }
       } catch (e) {
         navigate('/');
+      } finally {
+        setLoading(false);
       }
-    } else {
-      navigate('/');
-    }
-    setLoading(false);
+    };
+
+    initializeUser();
   }, [navigate]);
 
   const handleLoginSuccess = (userData: UserData) => {
