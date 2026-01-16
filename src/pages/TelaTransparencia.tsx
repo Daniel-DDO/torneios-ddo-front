@@ -4,7 +4,8 @@ import {
   Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search, 
   Bell, ArrowLeft, Gamepad2, Lightbulb, Settings, 
   CalendarSync, Star, Calculator, 
-  Info, Banknote, Percent, Activity,  Scale
+  Info, Banknote, Percent,
+  Activity, Scale
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -70,8 +71,8 @@ export function TelaTransparencia() {
       nomeVisitante: 'Adversário',
       minhasEstrelas: 3.0,
       estrelasAdversario: 3.0,
-      golsPro: 2,
-      golsContra: 1,
+      golsPro: 0,
+      golsContra: 0,
       cartoesAmarelos: 0,
       cartoesVermelhos: 0,
       pesoCompeticao: 100,
@@ -150,13 +151,11 @@ export function TelaTransparencia() {
     let receitaBilheteria = somaEstrelas * eco.valorPorEstrelaBilheteria;
 
     const diferencaGols = s.golsContra - s.golsPro;
-    let tevePunicaoGoleada = false;
     let valorPunicaoGoleada = 0;
 
     if (resultadoJogo === 'DERROTA' && diferencaGols >= 4) {
         valorPunicaoGoleada = receitaBilheteria * eco.fatorPunicaoGoleada;
         receitaBilheteria = receitaBilheteria - valorPunicaoGoleada;
-        tevePunicaoGoleada = true;
     }
 
     let receitaPremiacao = 0;
@@ -213,7 +212,8 @@ export function TelaTransparencia() {
                 premiacao: receitaPremiacao,
                 zebra: bonusZebra,
                 custo: custoOperacional,
-                punicao: valorPunicaoGoleada
+                punicao: valorPunicaoGoleada,
+                pesoAplicado: pesoEfetivoEco
             }
         },
         coeficiente: {
@@ -339,6 +339,8 @@ export function TelaTransparencia() {
             color: var(--primary);
         }
 
+        .val-highlight.negative { color: #ef4444; }
+
         .simulator-grid {
             display: grid;
             grid-template-columns: 1.5fr 1fr;
@@ -357,7 +359,7 @@ export function TelaTransparencia() {
         .teams-comparison {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
-            gap: 20px;
+            gap: 30px;
             align-items: flex-start;
             margin-top: 20px;
         }
@@ -365,7 +367,7 @@ export function TelaTransparencia() {
         .team-col {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 24px;
         }
 
         .vs-divider {
@@ -374,46 +376,56 @@ export function TelaTransparencia() {
             align-items: center;
             justify-content: center;
             height: 100%;
-            padding-top: 40px;
+            padding-top: 60px;
             font-weight: 900;
             color: var(--border-color);
-            font-size: 1.5rem;
+            font-size: 2rem;
+            opacity: 0.5;
         }
 
         .input-block {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
         }
 
         .input-label {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 700;
             color: var(--text-gray);
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .big-input {
             width: 100%;
-            padding: 12px;
+            padding: 14px;
             font-size: 1.1rem;
             font-weight: 600;
             text-align: center;
             background: var(--hover-bg);
             border: 1px solid var(--border-color);
-            border-radius: 10px;
+            border-radius: 12px;
             color: var(--text-dark);
+            transition: all 0.2s;
+        }
+
+        .big-input:focus {
+            border-color: var(--primary);
+            outline: none;
+            background: var(--bg-card);
         }
 
         .score-display {
-            font-size: 3rem;
-            font-weight: 800;
+            font-size: 3.5rem;
+            font-weight: 900;
             background: transparent;
             border: none;
             width: 100%;
             text-align: center;
             color: var(--text-dark);
             border-bottom: 2px solid var(--border-color);
+            padding: 10px 0;
         }
 
         .score-display:focus {
@@ -421,19 +433,14 @@ export function TelaTransparencia() {
             border-color: var(--primary);
         }
 
-        .slider-container {
+        .range-block {
+            background: var(--hover-bg);
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
             display: flex;
             align-items: center;
-            gap: 10px;
-            background: var(--hover-bg);
-            padding: 8px 12px;
-            border-radius: 10px;
-        }
-
-        .slider-val {
-            font-weight: 700;
-            min-width: 30px;
-            text-align: center;
+            gap: 15px;
         }
 
         .results-panel {
@@ -446,41 +453,52 @@ export function TelaTransparencia() {
 
         .res-card {
             background: var(--bg-card);
-            border-radius: 16px;
-            padding: 24px;
+            border-radius: 20px;
+            padding: 30px;
             border: 1px solid var(--border-color);
             position: relative;
             overflow: hidden;
+            box-shadow: var(--shadow-sm);
         }
 
-        .res-card.eco { border-left: 5px solid #10b981; }
-        .res-card.rank { border-left: 5px solid #3b82f6; }
+        .res-card.eco { border-top: 6px solid #10b981; }
+        .res-card.rank { border-top: 6px solid #3b82f6; }
 
         .res-header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-            font-weight: 700;
-            font-size: 1.1rem;
+            gap: 12px;
+            margin-bottom: 20px;
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: var(--text-dark);
         }
 
         .res-main-value {
-            font-size: 2.2rem;
-            font-weight: 800;
-            margin-bottom: 15px;
+            font-size: 2.8rem;
+            font-weight: 900;
+            margin-bottom: 20px;
+            line-height: 1;
         }
 
         .breakdown-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
             color: var(--text-gray);
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .breakdown-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
         }
 
         .breakdown-val {
-            font-weight: 600;
+            font-weight: 700;
             color: var(--text-dark);
         }
 
@@ -726,15 +744,14 @@ export function TelaTransparencia() {
                             {/* AREA DE INPUTS */}
                             <div className="sim-input-card">
                                 <div className="input-block">
-                                    <div className="input-label">Peso da Competição</div>
-                                    <div className="slider-container">
-                                        <Percent size={16} />
+                                    <div className="input-label">Peso da Competição: {simulacao.pesoCompeticao}%</div>
+                                    <div className="range-block">
+                                        <Percent size={18} className="text-gray" />
                                         <input 
                                             type="range" min="0" max="100" step="5" style={{flex: 1}}
                                             value={simulacao.pesoCompeticao}
                                             onChange={(e) => setSimulacao({...simulacao, pesoCompeticao: Number(e.target.value)})}
                                         />
-                                        <div className="slider-val">{simulacao.pesoCompeticao}%</div>
                                     </div>
                                 </div>
 
@@ -752,42 +769,47 @@ export function TelaTransparencia() {
                                         </div>
 
                                         <div className="input-block">
-                                            <div className="input-label">Placar (Gols)</div>
+                                            <div className="input-label">Gols</div>
                                             <input 
                                                 type="number" min="0"
                                                 className="score-display"
                                                 value={simulacao.golsPro}
-                                                onChange={(e) => setSimulacao({...simulacao, golsPro: Number(e.target.value)})}
+                                                onChange={(e) => setSimulacao({...simulacao, golsPro: Math.max(0, Number(e.target.value))})}
                                             />
                                         </div>
 
                                         <div className="input-block">
-                                            <div className="input-label">Suas Estrelas: {simulacao.minhasEstrelas.toFixed(1)}</div>
-                                            <input 
-                                                type="range" min="0.5" max="5" step="0.5"
-                                                value={simulacao.minhasEstrelas}
-                                                onChange={(e) => setSimulacao({...simulacao, minhasEstrelas: Number(e.target.value)})}
-                                            />
+                                            <div className="input-label">Estrelas: {simulacao.minhasEstrelas.toFixed(1)}</div>
+                                            <div className="range-block">
+                                                <Star size={18} className="text-gray" />
+                                                <input 
+                                                    type="range" min="0.5" max="5" step="0.5" style={{flex: 1}}
+                                                    value={simulacao.minhasEstrelas}
+                                                    onChange={(e) => setSimulacao({...simulacao, minhasEstrelas: Number(e.target.value)})}
+                                                />
+                                            </div>
                                         </div>
 
-                                        <div style={{display: 'flex', gap: '10px'}}>
+                                        <div style={{display: 'flex', gap: '15px'}}>
                                             <div className="input-block" style={{flex: 1}}>
                                                 <div className="input-label" style={{color: '#f59e0b'}}>Amarelos</div>
-                                                <input 
-                                                    type="number" min="0"
-                                                    className="big-input"
-                                                    value={simulacao.cartoesAmarelos}
-                                                    onChange={(e) => setSimulacao({...simulacao, cartoesAmarelos: Math.max(0, Number(e.target.value))})}
-                                                />
+                                                <div className="range-block" style={{padding: '8px'}}>
+                                                    <input 
+                                                        type="number" min="0" style={{width: '100%', background: 'transparent', border: 'none', textAlign: 'center', fontWeight: 'bold'}}
+                                                        value={simulacao.cartoesAmarelos}
+                                                        onChange={(e) => setSimulacao({...simulacao, cartoesAmarelos: Math.max(0, Number(e.target.value))})}
+                                                    />
+                                                </div>
                                             </div>
                                             <div className="input-block" style={{flex: 1}}>
                                                 <div className="input-label" style={{color: '#ef4444'}}>Vermelhos</div>
-                                                <input 
-                                                    type="number" min="0"
-                                                    className="big-input"
-                                                    value={simulacao.cartoesVermelhos}
-                                                    onChange={(e) => setSimulacao({...simulacao, cartoesVermelhos: Math.max(0, Number(e.target.value))})}
-                                                />
+                                                <div className="range-block" style={{padding: '8px'}}>
+                                                    <input 
+                                                        type="number" min="0" style={{width: '100%', background: 'transparent', border: 'none', textAlign: 'center', fontWeight: 'bold'}}
+                                                        value={simulacao.cartoesVermelhos}
+                                                        onChange={(e) => setSimulacao({...simulacao, cartoesVermelhos: Math.max(0, Number(e.target.value))})}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -807,22 +829,29 @@ export function TelaTransparencia() {
                                         </div>
 
                                         <div className="input-block">
-                                            <div className="input-label">Placar (Gols)</div>
+                                            <div className="input-label">Gols</div>
                                             <input 
                                                 type="number" min="0"
                                                 className="score-display"
                                                 value={simulacao.golsContra}
-                                                onChange={(e) => setSimulacao({...simulacao, golsContra: Number(e.target.value)})}
+                                                onChange={(e) => setSimulacao({...simulacao, golsContra: Math.max(0, Number(e.target.value))})}
                                             />
                                         </div>
 
                                         <div className="input-block">
-                                            <div className="input-label">Estrelas Adv: {simulacao.estrelasAdversario.toFixed(1)}</div>
-                                            <input 
-                                                type="range" min="0.5" max="5" step="0.5"
-                                                value={simulacao.estrelasAdversario}
-                                                onChange={(e) => setSimulacao({...simulacao, estrelasAdversario: Number(e.target.value)})}
-                                            />
+                                            <div className="input-label">Estrelas: {simulacao.estrelasAdversario.toFixed(1)}</div>
+                                            <div className="range-block">
+                                                <Star size={18} className="text-gray" />
+                                                <input 
+                                                    type="range" min="0.5" max="5" step="0.5" style={{flex: 1}}
+                                                    value={simulacao.estrelasAdversario}
+                                                    onChange={(e) => setSimulacao({...simulacao, estrelasAdversario: Number(e.target.value)})}
+                                                />
+                                            </div>
+                                        </div>
+                                        
+                                        <div style={{marginTop: 'auto', padding: '15px', background: 'var(--hover-bg)', borderRadius: '12px', fontSize: '0.8rem', color: 'var(--text-gray)', textAlign: 'center'}}>
+                                            Configure apenas os dados do seu time para ver os resultados.
                                         </div>
                                     </div>
                                 </div>
@@ -857,6 +886,9 @@ export function TelaTransparencia() {
                                                         <span className="breakdown-val negative">-{formatCurrency(resultados.economia.detalhes.punicao)}</span>
                                                     </div>
                                                 )}
+                                                <div style={{marginTop: '10px', fontSize: '0.8rem', color: 'var(--text-gray)', textAlign: 'right'}}>
+                                                    Fator Peso: {(resultados.economia.detalhes.pesoAplicado * 100).toFixed(0)}%
+                                                </div>
                                             </div>
                                         </div>
 
@@ -881,6 +913,11 @@ export function TelaTransparencia() {
                                                     Limites: {dados?.coeficiente.pontuacaoMinima} a {dados?.coeficiente.pontuacaoMaxima}
                                                 </div>
                                             </div>
+                                        </div>
+                                        
+                                        <div style={{padding: '15px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px dashed var(--border-color)', fontSize: '0.85rem', color: 'var(--text-gray)'}}>
+                                            <Info size={16} style={{display: 'inline', marginRight: '5px', verticalAlign: 'text-bottom'}} />
+                                            <strong>Nota:</strong> {dados.economico.explicacaoFatorCompeticao}
                                         </div>
                                     </>
                                 )}
