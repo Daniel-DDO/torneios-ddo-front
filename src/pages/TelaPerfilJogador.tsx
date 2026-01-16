@@ -3,9 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search, 
-  Bell, ArrowLeft, Gamepad2, Lightbulb, Settings, CalendarSync, 
-  CheckCircle, Clock, Award, BarChart3, Target, 
-  Flag, Ban, Swords, Crown, Sparkles, TrendingUp, Info, FileText
+  Bell, ArrowLeft, Gamepad2, Lightbulb, Settings, 
+  CheckCircle, Clock, Award, BarChart3, Target, CalendarSync,
+  Flag, Ban, TrendingUp, Info, FileText, Star
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { API } from '../services/api';
@@ -27,6 +27,22 @@ interface PlayerInsignia {
   imagem?: string;
   descricao?: string;
   cor?: string;
+}
+
+interface Achievement {
+  idConquista: string;
+  idTitulo: string;
+  nomeTitulo: string;
+  nomeEdicao: string;
+  imagemConquista: string;
+  idJogador: string;
+  nomeJogador: string;
+  imagemJogador: string | null;
+  idClube: string;
+  nomeClube: string;
+  siglaClube: string;
+  imagemClube: string;
+  dataHora: string;
 }
 
 interface Player {
@@ -102,6 +118,15 @@ const fetchInsigniasService = async () => {
     return [];
 };
 
+const fetchPlayerAchievementsService = async (playerId: string) => {
+    try {
+        const response = await API.get(`/conquistas/jogador/${playerId}`);
+        return response.data;
+    } catch (error) {
+        return [];
+    }
+};
+
 export function TelaPerfilJogador() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -126,6 +151,12 @@ export function TelaPerfilJogador() {
     queryKey: ['insigniasDefinitions'],
     queryFn: fetchInsigniasService,
     staleTime: 1000 * 60 * 15,
+  });
+
+  const { data: achievements = [], isLoading: isLoadingAchievements } = useQuery<Achievement[]>({
+    queryKey: ['playerAchievements', id],
+    queryFn: () => fetchPlayerAchievementsService(id!),
+    enabled: !!id,
   });
 
   const avatarMap = useMemo(() => {
@@ -221,7 +252,7 @@ export function TelaPerfilJogador() {
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    return 'D$ ' + new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
   };
 
   const isSuspended = useMemo(() => {
@@ -229,7 +260,6 @@ export function TelaPerfilJogador() {
     return new Date(player.suspensoAte) > new Date();
   }, [player]);
 
-  // Função auxiliar para carregar imagem como base64 (necessário para o PDF)
   const getImageDataUrl = async (url: string): Promise<string | null> => {
     try {
       const response = await fetch(url);
@@ -256,13 +286,11 @@ export function TelaPerfilJogador() {
 
       const doc = new jsPDF();
       
-      // Cores da marca
       const primaryColor = '#4e3eff';
       const secondaryColor = '#1e1e2e';
       const accentColor = '#f59e0b';
       const lightBg = '#f3f4f6';
 
-      // 1. Cabeçalho
       doc.setFillColor(secondaryColor);
       doc.rect(0, 0, 210, 40, 'F');
       
@@ -275,16 +303,13 @@ export function TelaPerfilJogador() {
       doc.setFont('helvetica', 'normal');
       doc.text("TORNEIOS DDO", 105, 30, { align: 'center' });
 
-      // 2. Info do Jogador
       let yPos = 55;
       
-      // Tentar carregar imagem
       if (historyData.imagem) {
         const imgData = await getImageDataUrl(historyData.imagem);
         if (imgData) {
-           doc.addImage(imgData, 'PNG', 15, yPos, 35, 35); // x, y, w, h
+           doc.addImage(imgData, 'PNG', 15, yPos, 35, 35);
         } else {
-           // Fallback se imagem falhar: Círculo com inicial
            doc.setFillColor(200, 200, 200);
            doc.circle(32.5, yPos + 17.5, 17.5, 'F');
            doc.setTextColor(50, 50, 50);
@@ -298,7 +323,6 @@ export function TelaPerfilJogador() {
       doc.setFont('helvetica', 'bold');
       doc.text(historyData.nome.toUpperCase(), 60, yPos + 12);
 
-      // Badge do Cargo
       doc.setFillColor(primaryColor);
       doc.roundedRect(60, yPos + 20, 50, 10, 3, 3, 'F');
       doc.setTextColor(255, 255, 255);
@@ -306,7 +330,6 @@ export function TelaPerfilJogador() {
       doc.setFont('helvetica', 'bold');
       doc.text(historyData.cargo || 'JOGADOR', 85, yPos + 26.5, { align: 'center' });
 
-      // Badge do Coeficiente (separado)
       doc.setFillColor(accentColor);
       doc.roundedRect(115, yPos + 20, 40, 10, 3, 3, 'F');
       doc.setTextColor(255, 255, 255);
@@ -314,7 +337,6 @@ export function TelaPerfilJogador() {
 
       yPos += 50;
 
-      // 3. Grid de Estatísticas (Design moderno de cards)
       const drawStatCard = (label: string, value: string | number, x: number, y: number, color = secondaryColor) => {
           doc.setFillColor(255, 255, 255);
           doc.setDrawColor(220, 220, 220);
@@ -331,7 +353,6 @@ export function TelaPerfilJogador() {
           doc.text(label.toUpperCase(), x + 20, y + 24, { align: 'center' });
       };
 
-      // Fundo cinza suave para a área de stats
       doc.setFillColor(lightBg);
       doc.rect(0, yPos - 10, 210, 150, 'F');
 
@@ -340,25 +361,21 @@ export function TelaPerfilJogador() {
       doc.setFont('helvetica', 'bold');
       doc.text("RESUMO GERAL", 15, yPos + 5);
 
-      // Linha 1
       let startY = yPos + 15;
       drawStatCard("Total Jogos", historyData.totalJogos, 15, startY);
       drawStatCard("Vitórias", historyData.vitorias, 60, startY, '#10b981');
       drawStatCard("Empates", historyData.empates, 105, startY, '#64748b');
       drawStatCard("Derrotas", historyData.derrotas, 150, startY, '#ef4444');
 
-      // Linha 2
       startY += 35;
       drawStatCard("Gols Pró", historyData.golsMarcados, 15, startY);
       drawStatCard("Gols Contra", historyData.golsSofridos, 60, startY);
       drawStatCard("Saldo", historyData.saldoGols, 105, startY, historyData.saldoGols >= 0 ? '#10b981' : '#ef4444');
       drawStatCard("Média Gols", historyData.mediaGolsPorJogo.toFixed(2), 150, startY);
 
-      // Linha 3 - Conquistas
       startY += 45;
       doc.text("CONQUISTAS & APROVEITAMENTO", 15, startY - 5);
       
-      // Card Grande de Aproveitamento
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(15, startY, 85, 40, 2, 2, 'FD');
       doc.setTextColor(secondaryColor);
@@ -368,10 +385,9 @@ export function TelaPerfilJogador() {
       doc.setTextColor(100, 100, 100);
       doc.text("APROVEITAMENTO", 57.5, startY + 32, { align: 'center' });
 
-      // Cards de Titulos e Finais
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(105, startY, 40, 40, 2, 2, 'FD');
-      doc.setTextColor(accentColor); // Dourado
+      doc.setTextColor(accentColor);
       doc.setFontSize(22);
       doc.text(String(historyData.titulos), 125, startY + 20, { align: 'center' });
       doc.setFontSize(8);
@@ -387,7 +403,6 @@ export function TelaPerfilJogador() {
       doc.setTextColor(100, 100, 100);
       doc.text("FINAIS", 170, startY + 32, { align: 'center' });
 
-      // Footer
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       const today = new Date().toLocaleDateString('pt-BR');
@@ -472,7 +487,6 @@ export function TelaPerfilJogador() {
             display: flex;
             align-items: center;
             gap: 30px;
-            flex-wrap: wrap;
         }
 
         .avatar-container {
@@ -483,6 +497,7 @@ export function TelaPerfilJogador() {
             background: var(--bg-card);
             border: 2px solid var(--border-color);
             box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            flex-shrink: 0;
         }
         .avatar-img {
             width: 100%;
@@ -540,36 +555,61 @@ export function TelaPerfilJogador() {
             border-radius: 12px;
         }
 
-        .hero-stats {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
+        .stats-overview-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
         }
-        .stat-pill {
-            background: var(--hover-bg);
+
+        .stat-overview-card {
+            background: var(--bg-card);
             border: 1px solid var(--border-color);
-            padding: 12px 20px;
-            border-radius: 16px;
-            text-align: right;
-            min-width: 100px;
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
             transition: transform 0.2s;
         }
-        .stat-pill:hover { transform: translateY(-2px); border-color: var(--primary); }
-        .stat-pill-value {
-            font-size: 1.3rem;
-            font-weight: 800;
-            display: block;
+        .stat-overview-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
         }
-        .stat-pill-label {
-            font-size: 0.7rem;
-            text-transform: uppercase;
+
+        .stat-ov-icon-wrapper {
+            margin-bottom: 12px;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .stat-ov-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .stat-ov-label {
+            font-size: 0.8rem;
             color: var(--text-gray);
             font-weight: 600;
-            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        .text-green { color: #10b981; }
-        .text-purple { color: #8b5cf6; }
-        .text-orange { color: #f59e0b; }
+
+        .bg-gold { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .bg-purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+        .bg-blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .bg-green { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 
         .content-grid {
             display: grid;
@@ -587,7 +627,7 @@ export function TelaPerfilJogador() {
             position: relative;
         }
         .card-box:last-child { margin-bottom: 0; }
-
+        
         .card-header {
             display: flex;
             align-items: center;
@@ -602,7 +642,7 @@ export function TelaPerfilJogador() {
             align-items: center;
             gap: 10px;
         }
-        
+
         .w-d-l-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -667,11 +707,7 @@ export function TelaPerfilJogador() {
         .stat-k { color: var(--text-gray); font-weight: 500; }
         .stat-v { color: var(--text-dark); font-weight: 700; }
 
-        .discipline-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
+        .discipline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .discipline-card {
             background: var(--hover-bg);
             border: 1px solid var(--border-color);
@@ -691,7 +727,7 @@ export function TelaPerfilJogador() {
         .card-red { background: #ef4444; }
         .disc-info h4 { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); line-height: 1; }
         .disc-info span { font-size: 0.7rem; text-transform: uppercase; color: var(--text-gray); font-weight: 700; }
-
+        
         .suspension-alert {
             margin-top: 16px;
             background: rgba(239, 68, 68, 0.1);
@@ -770,60 +806,135 @@ export function TelaPerfilJogador() {
             border-style: solid;
             border-color: rgba(20, 20, 30, 0.95) transparent transparent transparent;
         }
-        .tooltip-title {
-            font-weight: 700;
-            font-size: 0.9rem;
-            margin-bottom: 4px;
-            color: #fff;
-        }
-        .tooltip-desc {
-            font-size: 0.75rem;
-            color: #cbd5e1;
-            line-height: 1.4;
-        }
+        .tooltip-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; color: #fff; }
+        .tooltip-desc { font-size: 0.75rem; color: #cbd5e1; line-height: 1.4; }
 
         .bio-box {
             background: var(--hover-bg);
             padding: 16px;
             border-radius: 16px;
-            border: 1px solid var(--border-color);
-            margin-bottom: 20px;
             font-style: italic;
             color: var(--text-gray);
-            font-size: 0.95rem;
-            line-height: 1.5;
+            line-height: 1.6;
+        }
+        
+        .info-list { display: flex; flex-direction: column; gap: 16px; }
+        .info-item { display: flex; justify-content: space-between; align-items: center; }
+        .info-label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--text-gray); }
+        .info-value { font-weight: 600; color: var(--text-dark); }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; }
+        .status-active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .status-inactive { background: rgba(100, 116, 139, 0.1); color: #64748b; }
+
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            margin-top: 16px;
         }
 
-        .info-list { display: flex; flex-direction: column; gap: 4px; }
-        .info-item {
+        .trophy-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            overflow: hidden;
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .trophy-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--primary);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        .trophy-img-container {
+            width: 100%;
+            height: 180px;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .trophy-img-container::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);
+        }
+
+        .trophy-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s ease;
+        }
+
+        .trophy-card:hover .trophy-img {
+            transform: scale(1.1);
+        }
+
+        .trophy-content {
+            padding: 16px 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .trophy-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .trophy-footer {
+            margin-top: auto;
+            padding-top: 12px;
+            border-top: 1px dashed var(--border-color);
+            display: flex;
             align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px dashed var(--border-color);
+            justify-content: space-between;
         }
-        .info-item:last-child { border-bottom: none; }
-        .info-label { display: flex; align-items: center; gap: 8px; color: var(--text-gray); font-size: 0.9rem; }
-        .info-value { font-weight: 600; color: var(--text-dark); font-size: 0.9rem; }
 
-        .status-badge {
-            padding: 4px 10px;
-            border-radius: 8px;
+        .trophy-club {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .club-icon-sm {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+        }
+        
+        .trophy-date {
             font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
+            color: var(--text-gray);
+            background: var(--hover-bg);
+            padding: 4px 8px;
+            border-radius: 6px;
         }
-        .status-active { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-        .status-inactive { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
 
-        @media (max-width: 900px) {
-            .hero-body { flex-direction: column; align-items: center; text-align: center; justify-content: center; }
-            .hero-stats { justify-content: center; width: 100%; }
-            .content-grid { grid-template-columns: 1fr; }
+        @media (max-width: 768px) {
+            .profile-hero { padding: 24px; }
+            .hero-body { flex-direction: column; text-align: center; gap: 20px; }
             .user-name { justify-content: center; }
             .user-tags { justify-content: center; }
+            .stats-overview-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+            .content-grid { grid-template-columns: 1fr; }
+            .achievements-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
         }
-        @keyframes fadeIn { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
       `}</style>
 
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
@@ -837,32 +948,32 @@ export function TelaPerfilJogador() {
         </div>
 
         <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item">
+          <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}>
             <LayoutDashboard size={20} /> Dashboard
           </a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item active">
+          <a onClick={() => navigate('/jogadores')} className="nav-item active" style={{cursor: 'pointer'}}>
             <Users size={20} /> Jogadores
           </a>
-          <a onClick={() => navigate('/clubes')} className="nav-item">
+          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
             <Shield size={20} /> Clubes
           </a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item">
+          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
             <Trophy size={20} /> Competições
           </a>
-          <a onClick={() => navigate('/titulos')} className="nav-item">
-            <Award size={20} /> Títulos
+          <a onClick={() => navigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
+            <Star size={20} /> Títulos
           </a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item">
+          <a onClick={() => navigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
             <CalendarSync size={20} /> Temporadas
           </a>
           <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item">
+          <a onClick={() => navigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
             <Gamepad2 size={20} /> Partidas
           </a>
-           <a onClick={() => navigate('/minha-conta')} className="nav-item">
+           <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
             <Wallet size={20} /> Minha conta
           </a>
-          <a onClick={() => navigate('/suporte')} className="nav-item">
+          <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
             <Settings size={20} /> Suporte
           </a>
         </nav>
@@ -872,7 +983,11 @@ export function TelaPerfilJogador() {
         
         <header className="top-header compact">
           <div className="left-header">
-            <button className="toggle-btn menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <button 
+              className="toggle-btn menu-toggle" 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              title="Alternar Menu"
+            >
               <Menu size={24} />
             </button>
             <div className="search-bar">
@@ -888,7 +1003,7 @@ export function TelaPerfilJogador() {
           </div>
           
           <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme}>
+            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
             <button className="icon-btn"><Bell size={20} /></button>
@@ -900,6 +1015,13 @@ export function TelaPerfilJogador() {
                 style={{
                   backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
                   backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
                   cursor: 'pointer'
                 }}
               >
@@ -927,66 +1049,82 @@ export function TelaPerfilJogador() {
         </header>
 
         <div className="page-content">
-            <button onClick={() => navigate('/jogadores')} className="btn-back">
-                <ArrowLeft size={18} /> Voltar para Jogadores
-            </button>
-
-            {!loading && player && (
+            {player && (
                 <div className="profile-wrapper">
-                    
+                    <button onClick={() => navigate('/jogadores')} className="btn-back">
+                        <ArrowLeft size={18} /> Voltar para lista
+                    </button>
+
                     <div className="profile-hero">
                         <div className="hero-body">
                             <div className="avatar-container">
-                                {getPlayerAvatar() ? (
+                                {player.imagem ? (
                                     <img src={getPlayerAvatar()!} alt={player.nome} className="avatar-img" />
                                 ) : (
                                     <div className="avatar-img">{player.nome.charAt(0)}</div>
                                 )}
                             </div>
-                            
-                            <div className="user-identity">
-                                <h1 className="user-name">
-                                    {player.nome}
-                                    {player.contaReivindicada && <CheckCircle className="verified-icon" size={24} fill="currentColor" />}
-                                </h1>
-                                <div className="user-tags">
-                                    <span className="tag-role">
-                                        {typeof player.cargo === 'string' ? player.cargo : (player.cargo?.nome || 'Jogador')}
-                                    </span>
-                                    <span className="tag-discord">
-                                        <Swords size={16} /> {player.discord}
-                                    </span>
-                                </div>
-                                <button className="btn-history" onClick={handleGenerateHistory} disabled={pdfLoading}>
-                                  <FileText size={16} /> {pdfLoading ? "Gerando..." : "Gerar história"}
-                                </button>
-                            </div>
 
-                            <div className="hero-stats">
-                                <div className="stat-pill">
-                                    <span className="stat-pill-value text-green">{formatCurrency(player.saldoVirtual)}</span>
-                                    <span className="stat-pill-label">Saldo</span>
+                            <div className="user-identity">
+                                <div className="user-name">
+                                    {player.nome}
+                                    {player.contaReivindicada && <CheckCircle size={24} className="verified-icon" fill="currentColor" stroke="var(--bg-card)" />}
                                 </div>
-                                <div className="stat-pill">
-                                    <span className="stat-pill-value text-purple">{player.pontosCoeficiente.toFixed(2)}</span>
-                                    <span className="stat-pill-label">Coeficiente</span>
-                                </div>
-                                <div className="stat-pill">
-                                    <span className="stat-pill-value text-orange">{player.titulos}</span>
-                                    <span className="stat-pill-label">Títulos</span>
+                                <div className="user-tags">
+                                    <span className="tag-role">{player.cargo || 'JOGADOR'}</span>
+                                    <span className="tag-discord">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.956 2.419-2.157 2.419zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.946 2.419-2.157 2.419z"/>
+                                        </svg>
+                                        {player.discord}
+                                    </span>
+                                    <button onClick={handleGenerateHistory} className="btn-history" disabled={pdfLoading}>
+                                       <FileText size={14} /> 
+                                       {pdfLoading ? "Gerando..." : "Gerar História (PDF)"}
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    <div className="stats-overview-grid">
+                        <div className="stat-overview-card">
+                            <div className="stat-ov-icon-wrapper bg-gold">
+                                <Trophy size={20} />
+                            </div>
+                            <span className="stat-ov-value">{player.titulos}</span>
+                            <span className="stat-ov-label">Títulos</span>
+                        </div>
+                        <div className="stat-overview-card">
+                            <div className="stat-ov-icon-wrapper bg-blue">
+                                <Target size={20} />
+                            </div>
+                            <span className="stat-ov-value">{player.finais}</span>
+                            <span className="stat-ov-label">Finais Disputadas</span>
+                        </div>
+                        <div className="stat-overview-card">
+                            <div className="stat-ov-icon-wrapper bg-purple">
+                                <TrendingUp size={20} />
+                            </div>
+                            <span className="stat-ov-value">{player.pontosCoeficiente.toFixed(2)}</span>
+                            <span className="stat-ov-label">Coeficiente</span>
+                        </div>
+                        <div className="stat-overview-card">
+                            <div className="stat-ov-icon-wrapper bg-green">
+                                <Wallet size={20} />
+                            </div>
+                            <span className="stat-ov-value">{formatCurrency(player.saldoVirtual)}</span>
+                            <span className="stat-ov-label">Saldo em Conta</span>
+                        </div>
+                    </div>
+
                     <div className="content-grid">
-                        
-                        <div className="main-stats-col">
+                        <div className="left-col">
                             <div className="card-box">
                                 <div className="card-header">
-                                    <h3 className="card-title"><BarChart3 className="text-purple" size={22}/> Desempenho em Partidas</h3>
+                                    <div className="card-title"><BarChart3 size={20} className="text-purple" /> Resumo Geral</div>
                                 </div>
-
+                                
                                 <div className="w-d-l-grid">
                                     <div className="wdl-item">
                                         <span className="wdl-val val-win">{player.vitorias}</span>
@@ -1004,49 +1142,65 @@ export function TelaPerfilJogador() {
 
                                 <div className="progress-section">
                                     <div className="progress-header">
-                                        <span>Taxa de Vitória</span>
-                                        <span>{player.partidasJogadas > 0 ? ((player.vitorias / player.partidasJogadas) * 100).toFixed(1) : 0}%</span>
+                                        <span>Aproveitamento</span>
+                                        <span>
+                                            {player.partidasJogadas > 0 
+                                                ? Math.round((player.vitorias / player.partidasJogadas) * 100) 
+                                                : 0}%
+                                        </span>
                                     </div>
                                     <div className="progress-track">
-                                        <div className="progress-bar bar-win" style={{width: `${(player.vitorias / player.partidasJogadas) * 100}%`}}></div>
-                                        <div className="progress-bar bar-draw" style={{width: `${(player.empates / player.partidasJogadas) * 100}%`}}></div>
-                                        <div className="progress-bar bar-loss" style={{width: `${(player.derrotas / player.partidasJogadas) * 100}%`}}></div>
+                                        <div className="progress-bar bar-win" style={{width: `${(player.vitorias/player.partidasJogadas)*100}%`}}></div>
+                                        <div className="progress-bar bar-draw" style={{width: `${(player.empates/player.partidasJogadas)*100}%`}}></div>
+                                        <div className="progress-bar bar-loss" style={{width: `${(player.derrotas/player.partidasJogadas)*100}%`}}></div>
                                     </div>
                                 </div>
 
-                                <div className="stats-row">
-                                    <span className="stat-k">Gols Pró</span>
-                                    <span className="stat-v">{player.golsMarcados}</span>
-                                </div>
-                                <div className="stats-row">
-                                    <span className="stat-k">Gols Contra</span>
-                                    <span className="stat-v">{player.golsSofridos}</span>
-                                </div>
-                                <div className="stats-row">
-                                    <span className="stat-k">Saldo de Gols</span>
-                                    <span className="stat-v" style={{color: (player.golsMarcados - player.golsSofridos) >= 0 ? 'var(--success)' : '#ef4444'}}>
-                                        {player.golsMarcados - player.golsSofridos}
-                                    </span>
+                                <div className="stats-list">
+                                    <div className="stats-row">
+                                        <span className="stat-k">Partidas Jogadas</span>
+                                        <span className="stat-v">{player.partidasJogadas}</span>
+                                    </div>
+                                    <div className="stats-row">
+                                        <span className="stat-k">Gols Marcados</span>
+                                        <span className="stat-v">{player.golsMarcados}</span>
+                                    </div>
+                                    <div className="stats-row">
+                                        <span className="stat-k">Gols Sofridos</span>
+                                        <span className="stat-v">{player.golsSofridos}</span>
+                                    </div>
+                                    <div className="stats-row">
+                                        <span className="stat-k">Saldo de Gols</span>
+                                        <span className="stat-v" style={{color: (player.golsMarcados - player.golsSofridos) >= 0 ? '#10b981' : '#ef4444'}}>
+                                            {player.golsMarcados - player.golsSofridos}
+                                        </span>
+                                    </div>
+                                    <div className="stats-row">
+                                        <span className="stat-k">Média Gols/Jogo</span>
+                                        <span className="stat-v">
+                                            {player.partidasJogadas > 0 ? (player.golsMarcados / player.partidasJogadas).toFixed(2) : '0.00'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
                             <div className="card-box">
                                 <div className="card-header">
-                                    <h3 className="card-title"><Shield className="text-orange" size={22}/> Disciplina</h3>
+                                    <div className="card-title"><Flag size={20} className="text-orange" /> Disciplina</div>
                                 </div>
                                 <div className="discipline-grid">
                                     <div className="discipline-card">
                                         <div className="card-visual card-yellow"></div>
                                         <div className="disc-info">
                                             <h4>{player.cartoesAmarelos}</h4>
-                                            <span>Cartões Amarelos</span>
+                                            <span>Amarelos</span>
                                         </div>
                                     </div>
                                     <div className="discipline-card">
                                         <div className="card-visual card-red"></div>
                                         <div className="disc-info">
                                             <h4>{player.cartoesVermelhos}</h4>
-                                            <span>Cartões Vermelhos</span>
+                                            <span>Vermelhos</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1059,61 +1213,55 @@ export function TelaPerfilJogador() {
                             </div>
                         </div>
 
-                        <div className="side-info-col">
+                        <div className="right-col">
                             <div className="card-box">
                                 <div className="card-header">
-                                    <h3 className="card-title"><Crown className="text-orange" size={22}/> Insígnias</h3>
-                                    <span className="badge-count">{player.insignias?.length || 0}</span>
+                                    <div className="card-title"><Award size={20} className="text-purple" /> Insígnias</div>
+                                    <span style={{fontSize: '0.8rem', color: 'var(--text-gray)'}}>{player.insignias.length} Total</span>
                                 </div>
-                                <div className="badges-grid">
-                                    {player.insignias && player.insignias.length > 0 ? (
-                                        player.insignias.map((insignia, idx) => {
-                                            const details = insigniaDetailsMap[insignia.nome] || insignia;
-                                            const uniqueId = insignia.id || `badge-${idx}`;
+                                
+                                {player.insignias.length === 0 ? (
+                                    <div style={{textAlign: 'center', padding: '20px', color: 'var(--text-gray)', fontSize: '0.9rem'}}>
+                                        Nenhuma insígnia conquistada ainda.
+                                    </div>
+                                ) : (
+                                    <div className="badges-grid">
+                                        {player.insignias.map((badge, idx) => {
+                                            const def = insigniaDetailsMap[badge.nome];
+                                            const imgSrc = def?.imagem || badge.imagem || 'https://via.placeholder.com/64';
+                                            const desc = def?.descricao || badge.descricao || badge.nome;
+                                            
                                             return (
                                                 <div 
-                                                    key={uniqueId} 
-                                                    className="badge-slot" 
-                                                    onMouseEnter={() => setHoveredBadgeId(uniqueId)}
+                                                    key={idx} 
+                                                    className="badge-slot"
+                                                    onMouseEnter={() => setHoveredBadgeId(String(idx))}
                                                     onMouseLeave={() => setHoveredBadgeId(null)}
-                                                    onClick={() => setHoveredBadgeId(hoveredBadgeId === uniqueId ? null : uniqueId)}
                                                 >
-                                                    {insignia.imagem ? (
-                                                        <img src={insignia.imagem} alt={insignia.nome} className="badge-icon"/>
-                                                    ) : (
-                                                        <Sparkles size={20} className="text-orange"/>
-                                                    )}
+                                                    <img src={imgSrc} alt={badge.nome} className="badge-icon" />
                                                     
-                                                    {hoveredBadgeId === uniqueId && (
+                                                    {hoveredBadgeId === String(idx) && (
                                                         <div className="badge-tooltip">
-                                                            <div className="tooltip-title">{details.nome}</div>
-                                                            <div className="tooltip-desc">{details.descricao || "Sem descrição disponível."}</div>
+                                                            <div className="tooltip-title">{badge.nome}</div>
+                                                            <div className="tooltip-desc">{desc}</div>
                                                         </div>
                                                     )}
                                                 </div>
                                             );
-                                        })
-                                    ) : (
-                                        <div style={{gridColumn: '1/-1', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '20px', color: 'var(--text-gray)'}}>
-                                            <Info size={24} opacity={0.5}/>
-                                            <span style={{fontSize: '0.9rem'}}>Nenhuma insígnia conquistada.</span>
-                                        </div>
-                                    )}
-                                </div>
+                                        })}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="card-box">
                                 <div className="card-header">
-                                    <h3 className="card-title"><Target className="text-purple" size={22}/> Informações</h3>
+                                    <div className="card-title"><Info size={20} className="text-green" /> Informações</div>
+                                </div>
+                                <div className="bio-box">
+                                    {player.descricao || "Este jogador ainda não escreveu uma biografia."}
                                 </div>
                                 
-                                {player.descricao && (
-                                    <div className="bio-box">
-                                        "{player.descricao}"
-                                    </div>
-                                )}
-
-                                <div className="info-list">
+                                <div className="info-list" style={{marginTop: '24px'}}>
                                     <div className="info-item">
                                         <span className="info-label"><Clock size={16}/> Membro desde</span>
                                         <span className="info-value">{formatDate(player.criacaoConta)}</span>
@@ -1131,7 +1279,74 @@ export function TelaPerfilJogador() {
                                 </div>
                             </div>
                         </div>
+                    </div>
 
+                    <div className="card-box" style={{ marginTop: '24px' }}>
+                         <div className="card-header">
+                            <div className="card-title"><Trophy size={20} className="text-orange" /> Galeria de Troféus</div>
+                            <span style={{fontSize: '0.9rem', color: 'var(--text-gray)', fontWeight: 600}}>
+                                {achievements.length} {achievements.length === 1 ? 'Conquista' : 'Conquistas'}
+                            </span>
+                        </div>
+
+                        {isLoadingAchievements ? (
+                            <div style={{ padding: '40px', textAlign: 'center' }}>
+                                <div style={{ 
+                                    width: '30px', 
+                                    height: '30px', 
+                                    border: '3px solid var(--border-color)', 
+                                    borderTopColor: 'var(--primary)', 
+                                    borderRadius: '50%', 
+                                    margin: '0 auto',
+                                    animation: 'spin 0.8s linear infinite'
+                                }}></div>
+                                <p style={{ marginTop: '10px', color: 'var(--text-gray)', fontSize: '0.9rem' }}>Carregando sala de troféus...</p>
+                            </div>
+                        ) : achievements.length === 0 ? (
+                            <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-gray)' }}>
+                                <div style={{ 
+                                    width: '80px', 
+                                    height: '80px', 
+                                    background: 'var(--hover-bg)', 
+                                    borderRadius: '50%', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    margin: '0 auto 16px auto' 
+                                }}>
+                                    <Trophy size={40} style={{ opacity: 0.4 }} />
+                                </div>
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '4px' }}>Nenhum título encontrado</h3>
+                                <p style={{ fontSize: '0.9rem' }}>Este jogador ainda não levantou nenhuma taça.</p>
+                            </div>
+                        ) : (
+                            <div className="achievements-grid">
+                                {achievements.map((ach) => (
+                                    <a key={ach.idConquista} className="trophy-card" href={ach.imagemConquista} target="_blank" rel="noopener noreferrer">
+                                        <div className="trophy-img-container">
+                                            <img src={ach.imagemConquista} alt={ach.nomeTitulo} className="trophy-img" />
+                                        </div>
+                                        <div className="trophy-content">
+                                            <div className="trophy-title">{ach.nomeTitulo}</div>
+                                            
+                                            <div className="trophy-footer">
+                                                <div className="trophy-club">
+                                                    {ach.imagemClube ? (
+                                                        <img src={ach.imagemClube} alt={ach.siglaClube} className="club-icon-sm" />
+                                                    ) : (
+                                                        <Shield size={16} />
+                                                    )}
+                                                    {ach.nomeClube}
+                                                </div>
+                                                <div className="trophy-date">
+                                                    {new Date(ach.dataHora).toLocaleDateString('pt-BR')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

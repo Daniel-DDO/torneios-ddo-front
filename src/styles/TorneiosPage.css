@@ -809,3 +809,166 @@ html, body {
     flex-direction: column; 
   }
 }
+
+.tp-hero-skeleton {
+  width: 100%;
+  height: 280px;
+  border-radius: 24px;
+  background: linear-gradient(90deg, var(--bg-card) 25%, var(--border-color) 37%, var(--bg-card) 63%);
+  background-size: 400% 100%;
+  animation: tp-skeleton-loading 1.4s ease infinite;
+  border: 1px solid var(--border-color);
+  margin-bottom: 30px;
+}
+
+@keyframes tp-skeleton-loading {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+.tp-dashboard-grid {
+  display: grid;
+  grid-template-columns: 2.5fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.tp-hero-container {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  padding: 40px;
+  color: white;
+  margin-bottom: 30px;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  animation: tp-fade-in 0.5s ease-out forwards;
+}
+
+.tp-hero-default {
+  background: linear-gradient(120deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.tp-hero-champion {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #423205 100%);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.tp-hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 60%;
+}
+
+.tp-hero-visual {
+  position: relative;
+  z-index: 2;
+  height: 220px;
+  width: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tp-ranking-panel {
+  background: var(--bg-card);
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  height: 520px;
+  overflow: hidden;
+  position: sticky;
+  top: 100px;
+}
+
+.tp-ranking-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tp-ranking-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.tp-ranking-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.tp-ranking-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 10px;
+}
+
+.tp-rank-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.2s;
+}
+
+.tp-rank-item:hover {
+  background: var(--hover-bg);
+}
+
+.tp-rank-pos {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  border-radius: 8px;
+  margin-right: 12px;
+  font-size: 0.9rem;
+}
+
+.tp-pos-1 { background: #FFD700; color: #fff; box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4); }
+.tp-pos-2 { background: #C0C0C0; color: #fff; }
+.tp-pos-3 { background: #CD7F32; color: #fff; }
+.tp-pos-n { background: var(--border-color); color: var(--text-gray); }
+
+.tp-tournaments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.tp-card {
+  background: var(--bg-card);
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.tp-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+}
+
+@keyframes tp-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1100px) {
+  .tp-dashboard-grid { grid-template-columns: 1fr; }
+  .tp-ranking-panel { height: auto; max-height: 500px; }
+  .tp-hero-container { flex-direction: column; align-items: flex-start; }
+  .tp-hero-visual { width: 100%; margin-top: 20px; height: 180px; }
+  .tp-hero-content { max-width: 100%; }
+}

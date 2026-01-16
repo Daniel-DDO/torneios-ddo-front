@@ -23,6 +23,7 @@ import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupNovaFase from '../components/PopupNovaFase';
+import PopupConcederTitulo from '../components/PopupConcederTitulo';
 
 interface FaseTorneioDTO {
   id: string;
@@ -97,6 +98,7 @@ export function TelaTorneiosFases() {
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [showNovaFasePopup, setShowNovaFasePopup] = useState(false);
+  const [showConcederPopup, setShowConcederPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -380,15 +382,41 @@ export function TelaTorneiosFases() {
                     <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Gerencie as etapas deste torneio</p>
                 </div>
 
-                {currentUser && ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo) && (
-                    <button 
-                      className="t-btn" 
-                      onClick={() => setShowNovaFasePopup(true)}
-                      style={{background: 'var(--primary)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '8px'}}
-                    >
-                        <Plus size={18} /> Nova Fase
-                    </button>
-                )}
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    {currentUser?.cargo === 'PROPRIETARIO' && (
+                        <button 
+                          className="t-btn" 
+                          onClick={() => setShowConcederPopup(true)}
+                          style={{
+                              background: '#d97706', 
+                              color: 'white', 
+                              border: 'none', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '8px'
+                          }}
+                        >
+                            <Trophy size={18} /> Conceder Título
+                        </button>
+                    )}
+
+                    {currentUser && ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo) && (
+                        <button 
+                          className="t-btn" 
+                          onClick={() => setShowNovaFasePopup(true)}
+                          style={{
+                              background: 'var(--primary)', 
+                              color: 'white', 
+                              border: 'none', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '8px'
+                          }}
+                        >
+                            <Plus size={18} /> Nova Fase
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="table-container">
@@ -454,6 +482,14 @@ export function TelaTorneiosFases() {
         <PopupNovaFase 
           onClose={() => setShowNovaFasePopup(false)} 
           onSubmit={handleNovaFaseSubmit} 
+        />
+      )}
+
+      {showConcederPopup && (
+        <PopupConcederTitulo
+            onClose={() => setShowConcederPopup(false)}
+            temporadaId={temporadaId || ''}
+            nomeTemporada={temporadaId || ''}
         />
       )}
     </div>

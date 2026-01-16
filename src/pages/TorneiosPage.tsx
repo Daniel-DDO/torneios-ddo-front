@@ -15,14 +15,13 @@ import {
   Star,
   Lightbulb,
   CalendarSync,
-  Loader2,
-  ChevronDown,
-  ChevronUp,
   Crown,
   TrendingUp,
   Target,
-  Swords,
-  Lock
+  Medal,
+  Calendar,
+  ChevronRight,
+  ArrowRight
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -30,6 +29,22 @@ import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupReivindicar from '../components/PopupReivindicar';
 import PopupRecuperarSenha from '../components/PopupRecuperarSenha';
+
+interface Conquista {
+  idConquista: string;
+  idTitulo: string;
+  nomeTitulo: string;
+  nomeEdicao: string;
+  imagemConquista: string;
+  idJogador: string;
+  nomeJogador: string;
+  imagemJogador: string | null;
+  idClube: string;
+  nomeClube: string;
+  siglaClube: string;
+  imagemClube: string;
+  dataHora: string;
+}
 
 interface Torneio {
   id: number;
@@ -80,6 +95,11 @@ const fetchTopPlayersService = async () => {
   return response.data || [];
 };
 
+const fetchConquistasRecentesService = async () => {
+  const response = await API.get('/conquistas/recentes');
+  return response.data || [];
+};
+
 export function TorneiosPage() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
@@ -88,8 +108,8 @@ export function TorneiosPage() {
   const [showRecuperarSenhaPopup, setShowRecuperarSenhaPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [playersLimit, setPlayersLimit] = useState(5);
-
+  const [trophyHover, setTrophyHover] = useState(false);
+  
   const { data: avatars = [] } = useQuery({
     queryKey: ['avatares'],
     queryFn: fetchAvatarsService,
@@ -101,6 +121,29 @@ export function TorneiosPage() {
     queryFn: fetchTopPlayersService,
     staleTime: 1000 * 60 * 5, 
   });
+
+  const { data: conquistas = [], isLoading: isLoadingConquistas } = useQuery<Conquista[]>({
+    queryKey: ['conquistasRecentes'],
+    queryFn: fetchConquistasRecentesService,
+    staleTime: 1000 * 60 * 2,
+  });
+
+  const destaque = useMemo(() => {
+    if (!conquistas || conquistas.length === 0) return null;
+    
+    const ultimaConquista = conquistas[0];
+    const dataConquista = new Date(ultimaConquista.dataHora);
+    const dataAtual = new Date();
+    
+    const diffTime = Math.abs(dataAtual.getTime() - dataConquista.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+
+    if (diffDays > 10) {
+      return null;
+    }
+
+    return ultimaConquista;
+  }, [conquistas]);
 
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -117,18 +160,6 @@ export function TorneiosPage() {
       player.discord.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [topPlayers, searchTerm]);
-
-  const displayedPlayers = useMemo(() => {
-    return filteredPlayers.slice(0, playersLimit);
-  }, [filteredPlayers, playersLimit]);
-
-  const togglePlayersLimit = () => {
-    if (playersLimit === 5) {
-      setPlayersLimit(filteredPlayers.length);
-    } else {
-      setPlayersLimit(5);
-    }
-  };
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -172,6 +203,11 @@ export function TorneiosPage() {
     return avatarMap[currentUser.imagem] || currentUser.imagem;
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+  };
+
   const torneios: Torneio[] = [
     {
       id: 1,
@@ -191,8 +227,8 @@ export function TorneiosPage() {
     },
     {
       id: 3,
-      nome: 'Mercado',
-      descricao: 'Avaliação e valor de mercado de clubes e seleções',
+      nome: 'Mercado da Bola',
+      descricao: 'Valor de mercado de clubes e seleções.',
       status: 'disponivel',
       imagem: 'https://lh7-us.googleusercontent.com/OTAj3_arkkVj7wlDpWovqngMbuVUHQxEbvgJ7P-YU_mfZzr11Lp7K2630V2hFARaXYnOi6lIlyLIK2xpjyaTY3UZ6-u3hRX90RY4SheZQ2Gpf5vGIgvlxAoddvr2FXNKM37tQ_GTyxtqkQCD3kUk8UA?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
       botao_texto: 'Ver Mercado',
@@ -201,7 +237,7 @@ export function TorneiosPage() {
     {
       id: 4,
       nome: 'Galeria de Insígnias',
-      descricao: 'Conheça todas as conquistas e medalhas disponíveis.',
+      descricao: 'Conquistas e medalhas disponíveis.',
       status: 'disponivel',
       imagem: 'https://images.unsplash.com/photo-1611606063065-ee7946f0787a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
       botao_texto: 'Ver Insígnias',
@@ -211,10 +247,10 @@ export function TorneiosPage() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'em_andamento': return 'AO VIVO';
-      case 'inscricoes_abertas': return 'ABERTO';
-      case 'finalizado': return 'FINALIZADO';
-      case 'disponivel': return 'NOVIDADE';
+      case 'em_andamento': return 'Ao Vivo';
+      case 'inscricoes_abertas': return 'Aberto';
+      case 'finalizado': return 'Finalizado';
+      case 'disponivel': return 'Novidade';
       default: return status;
     }
   };
@@ -223,405 +259,7 @@ export function TorneiosPage() {
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
-       <style>{`
-        .glass-panel {
-          background: var(--bg-card);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border: 1px solid var(--border-color);
-          border-radius: 24px;
-          overflow: hidden;
-          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
-        }
-
-        .hero-section {
-          position: relative;
-          border-radius: 24px;
-          background: linear-gradient(120deg, #1a1a2e 0%, #16213e 100%);
-          overflow: hidden;
-          padding: 40px;
-          color: white;
-          margin-bottom: 30px;
-          box-shadow: 0 20px 40px -10px rgba(0,0,0,0.3);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          min-height: 280px;
-        }
-        
-        .hero-bg-anim {
-          position: absolute;
-          top: -50%;
-          left: -20%;
-          width: 200%;
-          height: 200%;
-          background: radial-gradient(circle, rgba(78,62,255,0.4) 0%, rgba(0,0,0,0) 60%);
-          animation: pulse-glow 10s infinite alternate;
-          pointer-events: none;
-        }
-
-        @keyframes pulse-glow {
-          0% { transform: scale(1); opacity: 0.5; }
-          100% { transform: scale(1.2); opacity: 0.8; }
-        }
-
-        .hero-content {
-          position: relative;
-          z-index: 2;
-          max-width: 600px;
-        }
-
-        .hero-tag {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: rgba(255, 71, 87, 0.2);
-          color: #ff4757;
-          padding: 6px 12px;
-          border-radius: 30px;
-          font-weight: 700;
-          font-size: 0.8rem;
-          margin-bottom: 16px;
-          border: 1px solid rgba(255, 71, 87, 0.3);
-        }
-
-        .hero-title {
-          font-size: 3rem;
-          font-weight: 800;
-          line-height: 1.1;
-          margin-bottom: 16px;
-          background: linear-gradient(to right, #ffffff, #a0aec0);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-
-        .hero-desc {
-          font-size: 1.1rem;
-          color: rgba(255,255,255,0.7);
-          margin-bottom: 24px;
-        }
-
-        .btn-glow {
-          background: #4e3eff;
-          color: white;
-          padding: 12px 28px;
-          border-radius: 12px;
-          font-weight: 600;
-          border: none;
-          cursor: pointer;
-          box-shadow: 0 0 20px rgba(78, 62, 255, 0.4);
-          transition: all 0.3s;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .btn-glow:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 0 30px rgba(78, 62, 255, 0.6);
-        }
-
-        .grid-layout {
-          display: grid;
-          grid-template-columns: 2fr 1.2fr;
-          gap: 24px;
-        }
-
-        .section-header-styled {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 20px;
-        }
-
-        .section-title {
-          font-size: 1.4rem;
-          font-weight: 700;
-          color: var(--text-dark);
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .tournament-cards {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 20px;
-        }
-
-        .t-card-glass {
-          background: var(--bg-card);
-          border-radius: 20px;
-          overflow: hidden;
-          border: 1px solid var(--border-color);
-          transition: 0.3s;
-          position: relative;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .t-card-glass:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 15px 30px rgba(0,0,0,0.1);
-          border-color: var(--primary);
-        }
-
-        .t-img-area {
-          height: 160px;
-          background-size: cover;
-          background-position: center;
-          position: relative;
-        }
-
-        .t-img-overlay {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-end;
-          padding: 16px;
-        }
-
-        .t-status-badge {
-          position: absolute;
-          top: 12px;
-          right: 12px;
-          padding: 6px 12px;
-          border-radius: 8px;
-          font-size: 0.7rem;
-          font-weight: 800;
-          background: rgba(255,255,255,0.95);
-          color: #000;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-        
-        .t-status-badge.em_andamento { color: #00d09c; }
-        .t-status-badge.finalizado { color: var(--text-gray); }
-        .t-status-badge.disponivel { color: #8e44ad; }
-
-        .t-body {
-          padding: 20px;
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .t-name {
-          font-weight: 700;
-          font-size: 1.1rem;
-          margin-bottom: 8px;
-          color: var(--text-dark);
-        }
-
-        .t-description {
-          font-size: 0.9rem;
-          color: var(--text-gray);
-          margin-bottom: 20px;
-          line-height: 1.5;
-          flex: 1;
-        }
-
-        .t-btn-outline {
-          width: 100%;
-          padding: 10px;
-          border-radius: 10px;
-          border: 2px solid var(--border-color);
-          background: transparent;
-          color: var(--text-dark);
-          font-weight: 600;
-          cursor: pointer;
-          transition: 0.2s;
-        }
-
-        .t-btn-outline:hover {
-          border-color: var(--primary);
-          color: var(--primary);
-          background: rgba(78, 62, 255, 0.05);
-        }
-
-        .ranking-container {
-          background: var(--bg-card);
-          border-radius: 24px;
-          border: 1px solid var(--border-color);
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .ranking-header-bg {
-          background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-          padding: 24px;
-          color: white;
-          position: relative;
-          overflow: hidden;
-        }
-        
-        .ranking-header-content {
-          position: relative;
-          z-index: 2;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .ranking-list {
-          padding: 0;
-          margin: 0;
-          list-style: none;
-        }
-
-        .rank-row-modern {
-          display: flex;
-          align-items: center;
-          padding: 16px 20px;
-          border-bottom: 1px solid var(--border-color);
-          transition: background 0.2s;
-        }
-
-        .rank-row-modern:hover {
-          background: var(--hover-bg);
-        }
-
-        .rank-pos-box {
-          width: 32px;
-          height: 32px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 800;
-          font-size: 1rem;
-          border-radius: 8px;
-          margin-right: 16px;
-          flex-shrink: 0;
-        }
-        
-        .pos-1 { background: linear-gradient(135deg, #FFD700 0%, #FDB931 100%); color: #fff; box-shadow: 0 4px 10px rgba(253, 185, 49, 0.4); }
-        .pos-2 { background: linear-gradient(135deg, #E0E0E0 0%, #BDBDBD 100%); color: #fff; }
-        .pos-3 { background: linear-gradient(135deg, #CD7F32 0%, #A0522D 100%); color: #fff; }
-        .pos-n { color: var(--text-gray); background: var(--border-color); font-size: 0.9rem; }
-
-        .rank-avatar-box {
-          width: 48px;
-          height: 48px;
-          border-radius: 14px;
-          margin-right: 16px;
-          flex-shrink: 0;
-          overflow: hidden;
-          background: var(--border-color);
-          position: relative;
-        }
-
-        .rank-avatar-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .rank-player-info {
-          flex: 1;
-          min-width: 0;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-        }
-
-        .rank-name-txt {
-          font-weight: 700;
-          color: var(--text-dark);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          font-size: 1rem;
-          margin-bottom: 4px;
-        }
-
-        .rank-discord-txt {
-          color: var(--text-gray);
-          font-size: 0.8rem;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .rank-score-box {
-          background: rgba(78, 62, 255, 0.1);
-          padding: 6px 12px;
-          border-radius: 8px;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          flex-shrink: 0;
-          margin-left: 10px;
-        }
-
-        .score-val {
-          color: var(--primary);
-          font-weight: 800;
-          font-size: 1rem;
-        }
-
-        .score-label {
-          font-size: 0.65rem;
-          text-transform: uppercase;
-          color: var(--text-gray);
-          letter-spacing: 0.5px;
-        }
-
-        .load-more-strip {
-          padding: 15px;
-          text-align: center;
-          cursor: pointer;
-          color: var(--text-gray);
-          font-size: 0.9rem;
-          font-weight: 600;
-          transition: 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-        }
-
-        .load-more-strip:hover {
-          background: var(--hover-bg);
-          color: var(--primary);
-        }
-
-        @media (max-width: 1100px) {
-          .grid-layout {
-            grid-template-columns: 1fr;
-          }
-          
-          .hero-section {
-            flex-direction: column;
-            align-items: flex-start;
-            padding: 30px;
-          }
-          
-          .hero-content {
-            max-width: 100%;
-            margin-bottom: 20px;
-          }
-
-          .hero-title {
-            font-size: 2rem;
-          }
-
-          .rank-avatar-box {
-            width: 40px;
-            height: 40px;
-            margin-right: 12px;
-          }
-
-          .rank-pos-box {
-            width: 28px;
-            height: 28px;
-            font-size: 0.9rem;
-            margin-right: 12px;
-          }
-        }
-      `}</style>
-
+      
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="logo-area">
           <div className="logo-icon">
@@ -665,7 +303,6 @@ export function TorneiosPage() {
       </aside>
 
       <main className="main-content">
-        
         <header className="top-header compact">
           <div className="left-header">
             <button 
@@ -732,64 +369,335 @@ export function TorneiosPage() {
           </div>
         </header>
 
-        <div className="page-content">
+        <div className="page-content" style={{ animation: 'fadeInUp 0.6s ease-out' }}>
           
-          <div className="hero-section">
-            <div className="hero-bg-anim"></div>
-            <div className="hero-content">
-              <div className="hero-tag">
-                <span className="pulse-dot"></span> TEMPORADA 2026
-              </div>
-              <h1 className="hero-title">Domine o Campo<br/>Virtual</h1>
-              <p className="hero-desc">Participe dos torneios mais competitivos, suba no ranking e conquiste a glória na comunidade DDO.</p>
-              
-              {!currentUser ? (
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  <button className="btn-glow" onClick={() => setShowReivindicarPopup(true)}>
-                    Entrar na Arena <Swords size={20} />
-                  </button>
-                  <button 
-                    className="btn-glow" 
-                    onClick={() => setShowRecuperarSenhaPopup(true)}
-                    style={{ background: 'rgba(255,255,255,0.1)', boxShadow: 'none', border: '1px solid rgba(255,255,255,0.2)' }}
+          {isLoadingConquistas ? (
+            <div className="tp-hero-skeleton"></div>
+          ) : (
+            <>
+              {destaque ? (
+                <div className="tp-hero-container tp-hero-champion">
+                  <div style={{
+                    position:'absolute', 
+                    top: '-50%', 
+                    left:'-20%', 
+                    width:'200%', 
+                    height:'200%', 
+                    background:'radial-gradient(circle, rgba(255,215,0,0.15) 0%, transparent 60%)', 
+                    animation: 'tp-fade-in 3s infinite alternate',
+                    pointerEvents: 'none'
+                  }}></div>
+                  
+                  <div className="tp-hero-content">
+                    <div style={{
+                      display:'inline-flex', 
+                      alignItems:'center', 
+                      gap:'8px', 
+                      background:'rgba(255,215,0,0.15)', 
+                      color:'#ffd700', 
+                      padding:'6px 14px', 
+                      borderRadius:'30px', 
+                      fontSize:'0.75rem', 
+                      fontWeight:'600', 
+                      marginBottom:'16px', 
+                      border:'1px solid rgba(255,215,0,0.3)',
+                      letterSpacing: '0.5px'
+                    }}>
+                      <Crown size={14} fill="currentColor" /> NOVO CAMPEÃO
+                    </div>
+                    
+                    <h1 style={{
+                      fontSize:'3rem', 
+                      fontWeight:'900', 
+                      marginBottom:'10px', 
+                      lineHeight: 1.1,
+                      background:'linear-gradient(to right, #fff, #ffd700)', 
+                      WebkitBackgroundClip:'text', 
+                      WebkitTextFillColor:'transparent',
+                      letterSpacing: '-1px'
+                    }}>
+                      {destaque.nomeTitulo}
+                    </h1>
+                    
+                    <div style={{
+                      fontSize:'1.6rem', 
+                      color:'white', 
+                      fontWeight:'500', 
+                      marginBottom:'24px', 
+                      display:'flex', 
+                      alignItems:'center', 
+                      gap:'16px'
+                    }}>
+                      {destaque.nomeJogador}
+                      <span style={{
+                        background:'rgba(255,255,255,0.1)', 
+                        padding:'4px 12px', 
+                        borderRadius:'8px', 
+                        fontSize:'1rem',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        fontWeight: '400'
+                      }}>
+                        {destaque.siglaClube}
+                      </span>
+                    </div>
+
+                    <div style={{display:'flex', gap:'20px', color:'rgba(255,255,255,0.8)', fontSize:'0.9rem', fontWeight: 400}}>
+                      <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+                        <Medal size={16} className="text-yellow-400" /> {destaque.nomeClube}
+                      </div>
+                      <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+                        <Calendar size={16} /> {formatDate(destaque.dataHora)}
+                      </div>
+                    </div>
+
+                    <button style={{
+                      marginTop:'32px', 
+                      background:'#ffd700', 
+                      color:'black', 
+                      border:'none', 
+                      padding:'12px 28px', 
+                      borderRadius:'10px', 
+                      fontWeight:'600', 
+                      cursor:'pointer', 
+                      display:'flex', 
+                      alignItems:'center', 
+                      gap:'8px', 
+                      boxShadow:'0 0 20px rgba(255,215,0,0.2)',
+                      transition: 'transform 0.2s',
+                      fontSize: '0.95rem'
+                    }} 
+                    onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                    onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                    onClick={() => navigate('/titulos')}>
+                      Ver Detalhes <ChevronRight size={18} />
+                    </button>
+                  </div>
+
+                  <div 
+                    className="tp-hero-visual" 
+                    onMouseEnter={() => setTrophyHover(true)}
+                    onMouseLeave={() => setTrophyHover(false)}
+                    style={{cursor: 'pointer'}}
                   >
-                    Recuperar Senha <Lock size={20} />
-                  </button>
+                    <img 
+                      src={destaque.imagemConquista} 
+                      alt="Troféu" 
+                      style={{
+                        height:'100%', 
+                        objectFit:'contain', 
+                        zIndex:2, 
+                        filter:'drop-shadow(0 0 30px rgba(255,215,0,0.3))',
+                        transform: trophyHover ? 'scale(1.15) rotate(-2deg)' : 'scale(1.05)',
+                        transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                      }} 
+                    />
+                    <img src={destaque.imagemClube} alt="Escudo" style={{
+                      position:'absolute', 
+                      bottom:'0', 
+                      right:'-10px', 
+                      width:'80px', 
+                      height:'80px', 
+                      objectFit:'contain', 
+                      zIndex:3, 
+                      background:'rgba(255,255,255,0.15)', 
+                      backdropFilter:'blur(5px)', 
+                      borderRadius:'50%', 
+                      padding:'10px', 
+                      border:'1px solid rgba(255,255,255,0.2)',
+                      transition: 'transform 0.4s ease',
+                      transform: trophyHover ? 'scale(1.1)' : 'scale(1)'
+                    }} />
+                  </div>
                 </div>
               ) : (
-                <button className="btn-glow" onClick={() => navigate('/competicoes')}>
-                  Ver Meus Torneios <Target size={20} />
-                </button>
+                <div className="tp-hero-container tp-hero-default">
+                  <div style={{
+                    position:'absolute', 
+                    top: '-50%', 
+                    left:'-20%', 
+                    width:'200%', 
+                    height:'200%', 
+                    background:'radial-gradient(circle, rgba(78,62,255,0.2) 0%, transparent 60%)', 
+                    pointerEvents:'none',
+                    animation: 'tp-fade-in 4s infinite alternate'
+                  }}></div>
+                  
+                  <div className="tp-hero-content">
+                    <div style={{
+                      display:'inline-flex', 
+                      alignItems:'center', 
+                      gap:'6px', 
+                      background:'rgba(255,71,87,0.15)', 
+                      color:'#ff4757', 
+                      padding:'6px 12px', 
+                      borderRadius:'20px', 
+                      fontSize:'0.75rem', 
+                      fontWeight:'600', 
+                      marginBottom:'16px', 
+                      border:'1px solid rgba(255,71,87,0.2)'
+                    }}>
+                      <span style={{width:'6px', height:'6px', background:'currentColor', borderRadius:'50%'}}></span> TEMPORADA 2026
+                    </div>
+                    
+                    <h1 style={{
+                      fontSize:'2.8rem', 
+                      fontWeight:'700', 
+                      marginBottom:'12px', 
+                      lineHeight: 1.1,
+                      color: 'white'
+                    }}>
+                      Domine o Campo<br/>Virtual
+                    </h1>
+                    <p style={{
+                      fontSize:'1rem', 
+                      color:'rgba(255,255,255,0.7)', 
+                      marginBottom:'28px', 
+                      lineHeight:1.5,
+                      maxWidth: '480px'
+                    }}>
+                      Participe dos torneios mais competitivos, suba no ranking e conquiste a glória na comunidade DDO.
+                    </p>
+                    
+                    {!currentUser ? (
+                      <div style={{display:'flex', gap:'12px'}}>
+                        <button style={{
+                          background:'#4e3eff', 
+                          color:'white', 
+                          border:'none', 
+                          padding:'12px 24px', 
+                          borderRadius:'10px', 
+                          fontWeight:'500', 
+                          cursor:'pointer', 
+                          display:'flex', 
+                          alignItems:'center', 
+                          gap:'8px',
+                          boxShadow: '0 4px 15px rgba(78, 62, 255, 0.3)'
+                        }} 
+                        onClick={() => setShowReivindicarPopup(true)}>
+                          Entrar na Arena <ArrowRight size={18} />
+                        </button>
+                        <button style={{
+                          background:'rgba(255,255,255,0.08)', 
+                          color:'white', 
+                          border:'1px solid rgba(255,255,255,0.1)', 
+                          padding:'12px 24px', 
+                          borderRadius:'10px', 
+                          fontWeight:'500', 
+                          cursor:'pointer', 
+                          display:'flex', 
+                          alignItems:'center', 
+                          gap:'8px'
+                        }} 
+                        onClick={() => setShowRecuperarSenhaPopup(true)}>
+                          Recuperar Senha
+                        </button>
+                      </div>
+                    ) : (
+                      <button style={{
+                        background:'#4e3eff', 
+                        color:'white', 
+                        border:'none', 
+                        padding:'12px 24px', 
+                        borderRadius:'10px', 
+                        fontWeight:'500', 
+                        cursor:'pointer', 
+                        display:'flex', 
+                        alignItems:'center', 
+                        gap:'8px',
+                        boxShadow: '0 4px 15px rgba(78, 62, 255, 0.3)'
+                      }}
+                      onClick={() => navigate('/competicoes')}>
+                        Ir para Competições <Target size={18} />
+                      </button>
+                    )}
+                  </div>
+                </div>
               )}
-            </div>
-          </div>
+            </>
+          )}
 
-          <div className="grid-layout">
+          <div className="tp-dashboard-grid" style={{ animation: 'fadeInUp 0.8s ease-out' }}>
             
             <div className="left-section">
-              <div className="section-header-styled">
-                <div className="section-title">
-                  <Gamepad2 size={24} className="text-primary" />
+              <div style={{
+                display:'flex', 
+                alignItems:'center', 
+                justifyContent: 'space-between',
+                marginBottom:'20px'
+              }}>
+                <div style={{display:'flex', alignItems:'center', gap:'10px', fontSize:'1.25rem', fontWeight:'600', color:'var(--text-dark)'}}>
+                  <Gamepad2 className="text-primary" size={24} /> 
                   Competições Ativas
                 </div>
               </div>
 
-              <div className="tournament-cards">
+              <div className="tp-tournaments-grid">
                 {torneios.map(torneio => (
-                  <div key={torneio.id} className="t-card-glass">
-                    <div className="t-img-area" style={{backgroundImage: `url(${torneio.imagem})`}}>
-                      <div className="t-img-overlay">
-                        <span className={`t-status-badge ${torneio.status}`}>
-                          {getStatusLabel(torneio.status)}
-                        </span>
+                  <div key={torneio.id} className="tp-card" style={{display:'flex', flexDirection:'column', height:'100%'}}>
+                    <div style={{
+                      height:'140px', 
+                      backgroundImage:`url(${torneio.imagem})`, 
+                      backgroundSize:'cover', 
+                      backgroundPosition:'center', 
+                      position:'relative'
+                    }}>
+                      <div style={{
+                        position:'absolute', 
+                        inset:0, 
+                        background:'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 100%)', 
+                        padding:'12px', 
+                        display:'flex', 
+                        flexDirection:'column', 
+                        justifyContent:'flex-end'
+                      }}>
+                        <div style={{position:'absolute', top:'12px', right:'12px'}}>
+                           <span style={{
+                             padding:'4px 10px', 
+                             borderRadius:'6px', 
+                             background:'rgba(255,255,255,0.95)', 
+                             color:'black', 
+                             fontSize:'0.7rem', 
+                             fontWeight:'600',
+                             boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                             textTransform: 'uppercase'
+                           }}>
+                            {getStatusLabel(torneio.status)}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className="t-body">
-                      <h4 className="t-name">{torneio.nome}</h4>
-                      <p className="t-description">{torneio.descricao}</p>
+                    <div style={{padding:'20px', flex:1, display:'flex', flexDirection:'column'}}>
+                      <h4 style={{fontSize:'1.05rem', fontWeight:'600', marginBottom:'6px', color:'var(--text-dark)'}}>{torneio.nome}</h4>
+                      <p style={{fontSize:'0.9rem', color:'var(--text-gray)', marginBottom:'16px', lineHeight:1.4, flex:1}}>{torneio.descricao}</p>
+                      
                       <button 
-                        className="t-btn-outline"
+                        style={{
+                          width:'100%', 
+                          padding:'10px', 
+                          borderRadius:'10px', 
+                          border:'1px solid var(--border-color)', 
+                          background:'transparent', 
+                          color:'var(--text-dark)', 
+                          fontWeight:'500', 
+                          fontSize:'0.9rem',
+                          cursor:'pointer', 
+                          transition:'0.2s',
+                          display:'flex',
+                          alignItems:'center',
+                          justifyContent:'center',
+                          gap:'6px'
+                        }}
                         onClick={() => torneio.link_destino && navigate(torneio.link_destino)}
+                        onMouseOver={(e) => { 
+                          e.currentTarget.style.borderColor = 'var(--primary)'; 
+                          e.currentTarget.style.color = 'var(--primary)'; 
+                          e.currentTarget.style.background = 'rgba(78, 62, 255, 0.05)';
+                        }}
+                        onMouseOut={(e) => { 
+                          e.currentTarget.style.borderColor = 'var(--border-color)'; 
+                          e.currentTarget.style.color = 'var(--text-dark)';
+                          e.currentTarget.style.background = 'transparent';
+                        }}
                       >
                         {torneio.botao_texto}
                       </button>
@@ -799,78 +707,77 @@ export function TorneiosPage() {
               </div>
             </div>
 
-            <div className="right-section">
-              <div className="ranking-container">
-                <div className="ranking-header-bg">
-                  <div className="ranking-header-content">
+            <div className="right-section" style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
+              <div className="tp-ranking-panel" style={{display: 'flex', flexDirection: 'column', height: '480px'}}>
+                <div className="tp-ranking-header" style={{padding: '16px 20px', borderBottom: '1px solid var(--border-color)'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
+                    <TrendingUp className="text-primary" size={20} />
                     <div>
-                      <h3 style={{fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px'}}>
-                        <Crown size={20} fill="white" /> Top Ranking
-                      </h3>
-                      <span style={{fontSize: '0.85rem', opacity: 0.8}}>Melhores por Coeficiente</span>
+                      <h3 style={{fontSize:'1rem', fontWeight:'600', color:'var(--text-dark)'}}>Top Ranking</h3>
+                      <span style={{fontSize:'0.75rem', fontWeight:'400', color:'var(--text-gray)'}}>Coeficiente</span>
                     </div>
-                    <TrendingUp size={32} style={{opacity: 0.3}} />
                   </div>
                 </div>
 
-                <div className="ranking-list">
+                <div className="tp-ranking-list" style={{flex: 1, overflowY: 'auto'}}>
                   {isLoadingPlayers ? (
-                    <div style={{padding: '40px', display: 'flex', justifyContent: 'center'}}>
-                      <Loader2 className="animate-spin text-primary" size={28} />
+                    <div style={{padding:'40px', display:'flex', flexDirection:'column', alignItems:'center', gap:'10px', color:'var(--text-gray)'}}>
+                      <div className="animate-spin" style={{width:'24px', height:'24px', border:'2px solid var(--primary)', borderTopColor:'transparent', borderRadius:'50%'}}></div>
                     </div>
                   ) : filteredPlayers.length > 0 ? (
-                    <>
-                      {displayedPlayers.map((player, index) => {
-                        const avatarUrl = player.imagem ? avatarMap[player.imagem] : null;
-                        const posClass = index === 0 ? 'pos-1' : index === 1 ? 'pos-2' : index === 2 ? 'pos-3' : 'pos-n';
-                        
-                        return (
-                          <div key={player.id} className="rank-row-modern">
-                            <div className={`rank-pos-box ${posClass}`}>
-                              {index + 1}
-                            </div>
-                            
-                            <div className="rank-avatar-box">
-                              {avatarUrl ? (
-                                <img src={avatarUrl} alt={player.nome} className="rank-avatar-img" />
-                              ) : (
-                                <div style={{width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background: 'var(--border-color)', fontWeight:'bold', color:'var(--text-gray)'}}>
-                                  {player.nome.charAt(0)}
-                                </div>
-                              )}
-                            </div>
+                    filteredPlayers.map((player, index) => {
+                      const avatarUrl = player.imagem ? avatarMap[player.imagem] : null;
+                      const posClass = index === 0 ? 'tp-pos-1' : index === 1 ? 'tp-pos-2' : index === 2 ? 'tp-pos-3' : 'tp-pos-n';
+                      
+                      return (
+                        <div key={player.id} className="tp-rank-item" style={{padding: '12px 16px'}}>
+                          <div className={`tp-rank-pos ${posClass}`} style={{fontSize: '0.8rem', width: '24px', height: '24px'}}>
+                            {index + 1}
+                          </div>
+                          
+                          <div style={{position:'relative'}}>
+                            {avatarUrl ? (
+                              <img src={avatarUrl} alt={player.nome} style={{width:'36px', height:'36px', borderRadius:'10px', marginRight:'12px', objectFit:'cover', background:'var(--border-color)'}} />
+                            ) : (
+                              <div style={{width:'36px', height:'36px', borderRadius:'10px', marginRight:'12px', background:'var(--border-color)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'500', color:'var(--text-gray)', fontSize:'0.9rem'}}>
+                                {player.nome.charAt(0)}
+                              </div>
+                            )}
+                          </div>
 
-                            <div className="rank-player-info">
-                              <span className="rank-name-txt">{player.nome}</span>
-                              <span className="rank-discord-txt">@{player.discord}</span>
+                          <div style={{flex:1, overflow:'hidden', marginRight:'10px'}}>
+                            <div style={{fontWeight:'500', fontSize:'0.9rem', color:'var(--text-dark)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>
+                              {player.nome}
                             </div>
-
-                            <div className="rank-score-box">
-                              <span className="score-val">{player.pontosCoeficiente.toFixed(2)}</span>
-                              <span className="score-label">pts</span>
+                            <div style={{fontSize:'0.75rem', color:'var(--text-gray)'}}>
+                              @{player.discord}
                             </div>
                           </div>
-                        );
-                      })}
 
-                      {filteredPlayers.length > 5 && (
-                        <div className="load-more-strip" onClick={togglePlayersLimit}>
-                          {playersLimit === 5 ? (
-                            <>Ver ranking completo <ChevronDown size={16} /></>
-                          ) : (
-                            <>Recolher <ChevronUp size={16} /></>
-                          )}
+                          <div style={{
+                            background:'rgba(78, 62, 255, 0.05)', 
+                            color:'var(--primary)', 
+                            padding:'4px 8px', 
+                            borderRadius:'6px', 
+                            fontWeight:'600', 
+                            fontSize:'0.8rem',
+                            minWidth: '50px',
+                            textAlign: 'center'
+                          }}>
+                            {player.pontosCoeficiente.toFixed(1)}
+                          </div>
                         </div>
-                      )}
-                    </>
+                      );
+                    })
                   ) : (
-                    <div style={{padding: '30px', textAlign: 'center', color: 'var(--text-gray)'}}>
+                    <div style={{padding:'30px', textAlign:'center', color:'var(--text-gray)'}}>
                       Nenhum jogador encontrado.
                     </div>
                   )}
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </main>
