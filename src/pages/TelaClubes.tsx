@@ -19,7 +19,6 @@ import {
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
-import PopupClubes from '../components/PopupClubes';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupNovoClube from '../components/PopupNovoClube';
@@ -138,7 +137,6 @@ export function TelaClubes() {
     return map;
   }, [avatars]);
 
-  const [selectedClubId, setSelectedClubId] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
@@ -169,11 +167,7 @@ export function TelaClubes() {
   }, []);
 
   const handleVerClube = (id: string) => {
-    setSelectedClubId(id);
-  };
-
-  const handleClosePopup = () => {
-    setSelectedClubId(null);
+    navigate(`/clube/${id}`);
   };
 
   const handleLoginSuccess = (userData: UserData) => {
@@ -208,10 +202,6 @@ export function TelaClubes() {
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       
       <LoadingSpinner isLoading={loading && !isFetchingNextPage} />
-
-      {selectedClubId && (
-        <PopupClubes clubId={selectedClubId} onClose={handleClosePopup} />
-      )}
 
       <style>{`
         .page-content {

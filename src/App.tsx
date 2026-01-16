@@ -21,6 +21,8 @@ import { TelaTitulos } from './pages/TelaTitulos';
 import TelaBracket from './pages/TelaBracket';
 import { TelaBracketJogos } from './pages/TelaBracketJogos';
 import { TelaMercado } from './pages/TelaMercado';
+import { TelaClubeSelecionado } from './pages/TelaClubeSelecionado';
+import { TelaTransparencia } from './pages/TelaTransparencia';
 
 import './App.css';
 
@@ -61,6 +63,8 @@ function App() {
           <Route path="/titulos" element={<TelaTitulos />} />
           <Route path="/insignias" element={<TelaInsignia />} />
           <Route path="/mercado" element={<TelaMercado />} />
+          <Route path="/clube/:clubeId" element={<TelaClubeSelecionado />} />
+          <Route path="/transparencia" element={<TelaTransparencia />} />
         </Routes>
       </Router>
     </QueryClientProvider>

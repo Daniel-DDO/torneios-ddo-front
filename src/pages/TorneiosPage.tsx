@@ -219,11 +219,12 @@ export function TorneiosPage() {
     },
     {
       id: 2,
-      nome: 'Copa das Nações',
-      descricao: 'Represente sua seleção no mata-mata.',
+      nome: 'Portal da Transparência',
+      descricao: 'Descubra e simule como funcionam as partidas',
       status: 'inscricoes_abertas',
-      imagem: 'https://images.unsplash.com/photo-1560272564-c83b66b1ad12?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      botao_texto: 'Inscrever-se',
+      imagem: 'https://editorial.uefa.com/resources/0283-186742eb3cd0-82b67614145f-1000/bayern_muenchen_v_manchester_united_-_friendly_match.jpeg?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      botao_texto: 'Acessar Portal',
+      link_destino: '/transparencia'
     },
     {
       id: 3,
