@@ -215,14 +215,15 @@ export function TorneiosPage() {
       descricao: 'A elite do futebol virtual em disputa.',
       status: 'em_andamento',
       imagem: 'https://images.unsplash.com/photo-1518091043644-c1d4457512c6?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      botao_texto: 'Ver Classificação',
+      botao_texto: 'Ver Temporadas',
+      link_destino: '/temporadas'
     },
     {
       id: 2,
       nome: 'Portal da Transparência',
       descricao: 'Descubra e simule como funcionam as partidas',
-      status: 'inscricoes_abertas',
-      imagem: 'https://editorial.uefa.com/resources/0283-186742eb3cd0-82b67614145f-1000/bayern_muenchen_v_manchester_united_-_friendly_match.jpeg?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      status: 'disponivel',
+      imagem: 'https://upload.wikimedia.org/wikipedia/commons/0/0e/Estadio_Santiago_Bernab%C3%A9u_Madrid.jpg?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
       botao_texto: 'Acessar Portal',
       link_destino: '/transparencia'
     },
@@ -472,6 +473,29 @@ export function TorneiosPage() {
                     onClick={() => navigate('/titulos')}>
                       Ver Detalhes <ChevronRight size={18} />
                     </button>
+                    {!currentUser && (
+                        <button style={{
+                      marginTop:'10px', 
+                      background:'#ffd700', 
+                      color:'black', 
+                      border:'none', 
+                      padding:'12px 28px', 
+                      borderRadius:'10px', 
+                      fontWeight:'600', 
+                      cursor:'pointer', 
+                      display:'flex', 
+                      alignItems:'center', 
+                      gap:'8px', 
+                      boxShadow:'0 0 20px rgba(255,215,0,0.2)',
+                      transition: 'transform 0.2s',
+                      fontSize: '0.95rem'
+                    }} 
+                    onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                    onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'} onClick={() => setShowRecuperarSenhaPopup(true)}>
+                          Recuperar Senha
+                        </button>
+                    )}
+                    
                   </div>
 
                   <div 
@@ -628,7 +652,7 @@ export function TorneiosPage() {
               }}>
                 <div style={{display:'flex', alignItems:'center', gap:'10px', fontSize:'1.25rem', fontWeight:'600', color:'var(--text-dark)'}}>
                   <Gamepad2 className="text-primary" size={24} /> 
-                  Competições Ativas
+                  Principais Novidades
                 </div>
               </div>
 

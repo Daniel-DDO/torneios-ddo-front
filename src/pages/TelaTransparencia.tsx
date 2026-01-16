@@ -4,7 +4,7 @@ import {
   Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search, 
   Bell, ArrowLeft, Gamepad2, Lightbulb, Settings, 
   CalendarSync, Star, Calculator, 
-  AlertTriangle, Info, Coins, Banknote, Percent
+  Info, Banknote, Percent, Activity,  Scale
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -31,15 +31,34 @@ interface ParametrosEconomicos {
     fatorPunicaoGoleada: number;
     percentualMinimoCompeticao: number;
     explicacaoFatorCompeticao: string;
-    premioBaseCampeao?: number;
-    premioBaseVice?: number;
+}
+
+interface ParametrosCoeficiente {
+    tetoGols: number;
+    pontosVitoria: number;
+    pontosEmpate: number;
+    pontosGoleada: number;
+    pontosCleanSheet: number;
+    pontosDerrota: number;
+    penalidadePorAmarelo: number;
+    limiteAmarelosSemPunicao: number;
+    penalidadePorVermelho: number;
+    penalidadePorGolSofrido: number;
+    divisorNivelTime: number;
+    pontuacaoMinima: number;
+    pontuacaoMaxima: number;
+}
+
+interface TransparenciaResponse {
+    economico: ParametrosEconomicos;
+    coeficiente: ParametrosCoeficiente;
 }
 
 export function TelaTransparencia() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [parametros, setParametros] = useState<ParametrosEconomicos | null>(null);
+  const [dados, setDados] = useState<TransparenciaResponse | null>(null);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
@@ -47,13 +66,15 @@ export function TelaTransparencia() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const [simulacao, setSimulacao] = useState({
+      nomeMandante: 'Meu Time',
+      nomeVisitante: 'Adversário',
       minhasEstrelas: 3.0,
       estrelasAdversario: 3.0,
       golsPro: 2,
       golsContra: 1,
+      cartoesAmarelos: 0,
+      cartoesVermelhos: 0,
       pesoCompeticao: 100,
-      cartoesAmarelos: 0, 
-      cartoesVermelhos: 0
   });
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -84,7 +105,7 @@ export function TelaTransparencia() {
       setLoading(true);
       const response = await API.get('/torneio/transparencia');
       const data = (response && (response as any).data) ? (response as any).data : response;
-      setParametros(data);
+      setDados(data);
     } catch (error) {
       console.error(error);
     } finally {
@@ -112,69 +133,102 @@ export function TelaTransparencia() {
     return 'D$ ' + new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
   };
 
-  const resultadoSimulado = useMemo(() => {
-    if (!parametros) return null;
+  const resultados = useMemo(() => {
+    if (!dados?.economico || !dados?.coeficiente) return null;
+    
+    const eco = dados.economico;
+    const coef = dados.coeficiente;
+    const s = simulacao;
 
-    const {
-        cotaTvFixa, valorPorEstrelaBilheteria, premioVitoria, premioEmpate,
-        custoBaseEstrela, bonusZebraPorEstrela, fatorPunicaoGoleada, percentualMinimoCompeticao
-    } = parametros;
+    let resultadoJogo: 'VITORIA' | 'EMPATE' | 'DERROTA';
+    if (s.golsPro > s.golsContra) resultadoJogo = 'VITORIA';
+    else if (s.golsPro === s.golsContra) resultadoJogo = 'EMPATE';
+    else resultadoJogo = 'DERROTA';
 
-    const {
-        minhasEstrelas, estrelasAdversario, golsPro, golsContra, pesoCompeticao
-    } = simulacao;
+    const custoOperacional = (s.minhasEstrelas * s.minhasEstrelas) * eco.custoBaseEstrela;
+    const somaEstrelas = s.minhasEstrelas + s.estrelasAdversario;
+    let receitaBilheteria = somaEstrelas * eco.valorPorEstrelaBilheteria;
 
-    let resultado: 'VITORIA' | 'EMPATE' | 'DERROTA';
-    if (golsPro > golsContra) resultado = 'VITORIA';
-    else if (golsPro === golsContra) resultado = 'EMPATE';
-    else resultado = 'DERROTA';
-
-    const custoOperacional = (minhasEstrelas * minhasEstrelas) * custoBaseEstrela;
-
-    const somaEstrelas = minhasEstrelas + estrelasAdversario;
-    let receitaBilheteria = somaEstrelas * valorPorEstrelaBilheteria;
-
-    const diferencaGols = golsContra - golsPro;
+    const diferencaGols = s.golsContra - s.golsPro;
     let tevePunicaoGoleada = false;
-    let valorPunicao = 0;
+    let valorPunicaoGoleada = 0;
 
-    if (resultado === 'DERROTA' && diferencaGols >= 4) {
-        valorPunicao = receitaBilheteria * fatorPunicaoGoleada;
-        receitaBilheteria = receitaBilheteria - valorPunicao;
+    if (resultadoJogo === 'DERROTA' && diferencaGols >= 4) {
+        valorPunicaoGoleada = receitaBilheteria * eco.fatorPunicaoGoleada;
+        receitaBilheteria = receitaBilheteria - valorPunicaoGoleada;
         tevePunicaoGoleada = true;
     }
 
     let receitaPremiacao = 0;
-    if (resultado === 'VITORIA') receitaPremiacao = premioVitoria;
-    else if (resultado === 'EMPATE') receitaPremiacao = premioEmpate;
+    if (resultadoJogo === 'VITORIA') receitaPremiacao = eco.premioVitoria;
+    else if (resultadoJogo === 'EMPATE') receitaPremiacao = eco.premioEmpate;
 
     let bonusZebra = 0;
-    if (resultado !== 'DERROTA' && estrelasAdversario > minhasEstrelas) {
-        const diferencaEstrelas = estrelasAdversario - minhasEstrelas;
-        bonusZebra = diferencaEstrelas * bonusZebraPorEstrela;
+    if (resultadoJogo !== 'DERROTA' && s.estrelasAdversario > s.minhasEstrelas) {
+        const diferencaEstrelas = s.estrelasAdversario - s.minhasEstrelas;
+        bonusZebra = diferencaEstrelas * eco.bonusZebraPorEstrela;
     }
 
-    const receitaTotalBruta = cotaTvFixa + receitaBilheteria + receitaPremiacao + bonusZebra;
-    const lucroBruto = receitaTotalBruta - custoOperacional;
+    const receitaTotal = eco.cotaTvFixa + receitaBilheteria + receitaPremiacao + bonusZebra;
+    const lucroBruto = receitaTotal - custoOperacional;
+    const pesoEfetivoEco = Math.max(s.pesoCompeticao, eco.percentualMinimoCompeticao) / 100;
+    const lucroLiquido = lucroBruto * pesoEfetivoEco;
 
-    const pesoEfetivo = Math.max(pesoCompeticao, percentualMinimoCompeticao) / 100;
-    const lucroLiquidoFinal = lucroBruto * pesoEfetivo;
+    const pontosGols = Math.min(s.golsPro, coef.tetoGols);
+    
+    let pontosResultado = 0;
+    if (resultadoJogo === 'VITORIA') pontosResultado = coef.pontosVitoria;
+    else if (resultadoJogo === 'EMPATE') pontosResultado = coef.pontosEmpate;
+    
+    const pontosGoleada = (s.golsPro - s.golsContra > 3) ? coef.pontosGoleada : 0;
+    const pontosCleanSheet = (s.golsContra === 0) ? coef.pontosCleanSheet : 0;
+
+    const positivos = pontosGols + pontosResultado + pontosGoleada + pontosCleanSheet;
+
+    const pontosDerrota = (resultadoJogo === 'DERROTA') ? coef.pontosDerrota : 0;
+    
+    const excessoAmarelos = Math.max(0, s.cartoesAmarelos - coef.limiteAmarelosSemPunicao);
+    const punicaoAmarelos = excessoAmarelos * coef.penalidadePorAmarelo;
+    const punicaoVermelhos = s.cartoesVermelhos * coef.penalidadePorVermelho;
+    const punicaoGolsSofridos = s.golsContra * coef.penalidadePorGolSofrido;
+
+    const negativos = pontosDerrota + punicaoAmarelos + punicaoVermelhos + punicaoGolsSofridos;
+
+    const multiplicadorNegativos = 1.0 + (s.minhasEstrelas - 1.0) / coef.divisorNivelTime;
+    const negativosAjustados = negativos * multiplicadorNegativos;
+
+    const pesoTorneio = s.pesoCompeticao / 100.0;
+    
+    let pontosTotais = (positivos + negativosAjustados) * pesoTorneio;
+
+    pontosTotais = Math.max(pontosTotais, coef.pontuacaoMinima);
+    pontosTotais = Math.min(pontosTotais, coef.pontuacaoMaxima);
 
     return {
-        resultado,
-        custoOperacional,
-        receitaBilheteria,
-        receitaPremiacao,
-        bonusZebra,
-        cotaTv: cotaTvFixa,
-        tevePunicaoGoleada,
-        valorPunicao,
-        lucroBruto,
-        pesoEfetivo,
-        lucroLiquidoFinal
+        economia: {
+            lucroLiquido,
+            detalhes: {
+                cotaTv: eco.cotaTvFixa,
+                bilheteria: receitaBilheteria,
+                premiacao: receitaPremiacao,
+                zebra: bonusZebra,
+                custo: custoOperacional,
+                punicao: valorPunicaoGoleada
+            }
+        },
+        coeficiente: {
+            final: pontosTotais,
+            positivos,
+            negativos: negativosAjustados,
+            detalhes: {
+                gols: pontosGols,
+                resultado: pontosResultado,
+                cleanSheet: pontosCleanSheet,
+                bonusGoleada: pontosGoleada
+            }
+        }
     };
-
-  }, [parametros, simulacao]);
+  }, [dados, simulacao]);
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -230,209 +284,213 @@ export function TelaTransparencia() {
             line-height: 1.6;
         }
 
-        .params-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-
-        .param-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 24px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .param-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-md);
-            border-color: var(--primary);
-        }
-
-        .param-header {
+        .section-header {
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin: 40px 0 20px 0;
+            color: var(--text-dark);
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 16px;
+        }
+
+        .table-container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .custom-table th {
+            background: var(--hover-bg);
+            padding: 16px 24px;
+            text-align: left;
+            font-weight: 700;
             color: var(--text-gray);
-            font-size: 0.9rem;
-            font-weight: 600;
             text-transform: uppercase;
-        }
-
-        .param-value {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: var(--text-dark);
-            margin-bottom: 8px;
-        }
-
-        .param-info {
             font-size: 0.85rem;
-            color: var(--text-gray);
-            line-height: 1.4;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .simulator-section {
+        .custom-table td {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-dark);
+            font-size: 0.95rem;
+        }
+
+        .custom-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .custom-table tr:hover td {
+            background: rgba(var(--primary-rgb), 0.02);
+        }
+
+        .val-highlight {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .simulator-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1.5fr 1fr;
             gap: 30px;
             align-items: start;
         }
 
-        .simulator-controls {
+        .sim-input-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 24px;
+            border-radius: 20px;
             padding: 30px;
             box-shadow: var(--shadow-sm);
         }
 
-        .sim-title {
-            font-size: 1.4rem;
-            font-weight: 700;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .control-group {
-            margin-bottom: 24px;
-        }
-
-        .control-label {
-            display: block;
-            margin-bottom: 10px;
-            font-weight: 600;
-            color: var(--text-gray);
-            font-size: 0.9rem;
-        }
-
-        .range-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .range-input {
-            flex: 1;
-            height: 6px;
-            border-radius: 3px;
-            background: var(--border-color);
-            outline: none;
-            -webkit-appearance: none;
-        }
-
-        .range-input::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--primary);
-            cursor: pointer;
-            border: 2px solid var(--bg-card);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .number-display {
-            background: var(--hover-bg);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-weight: 700;
-            min-width: 60px;
-            text-align: center;
-            border: 1px solid var(--border-color);
-        }
-
-        .score-inputs {
+        .teams-comparison {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr auto 1fr;
             gap: 20px;
-            margin-bottom: 24px;
+            align-items: flex-start;
+            margin-top: 20px;
         }
 
-        .score-box {
-            background: var(--hover-bg);
-            padding: 15px;
-            border-radius: 12px;
-            text-align: center;
+        .team-col {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
-        .score-input-field {
-            width: 100%;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            padding: 10px;
-            border-radius: 8px;
+        .vs-divider {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding-top: 40px;
+            font-weight: 900;
+            color: var(--border-color);
             font-size: 1.5rem;
-            font-weight: 800;
+        }
+
+        .input-block {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+        }
+
+        .big-input {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
             text-align: center;
+            background: var(--hover-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
             color: var(--text-dark);
         }
 
-        .receipt-card {
-            background: var(--bg-card);
-            border: 1px dashed var(--border-color);
-            border-radius: 24px;
-            padding: 30px;
-            position: relative;
-        }
-
-        .receipt-header {
+        .score-display {
+            font-size: 3rem;
+            font-weight: 800;
+            background: transparent;
+            border: none;
+            width: 100%;
             text-align: center;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 2px dashed var(--border-color);
+            color: var(--text-dark);
+            border-bottom: 2px solid var(--border-color);
         }
 
-        .receipt-row {
+        .score-display:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--hover-bg);
+            padding: 8px 12px;
+            border-radius: 10px;
+        }
+
+        .slider-val {
+            font-weight: 700;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .results-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: sticky;
+            top: 30px;
+        }
+
+        .res-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .res-card.eco { border-left: 5px solid #10b981; }
+        .res-card.rank { border-left: 5px solid #3b82f6; }
+
+        .res-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .res-main-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+        }
+
+        .breakdown-row {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            font-size: 0.95rem;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: var(--text-gray);
         }
 
-        .receipt-row.total {
-            border-top: 2px dashed var(--border-color);
-            padding-top: 16px;
-            margin-top: 16px;
-            font-weight: 800;
-            font-size: 1.2rem;
-            color: var(--primary);
-        }
-
-        .receipt-row.subtotal {
-            font-weight: 700;
+        .breakdown-val {
+            font-weight: 600;
             color: var(--text-dark);
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid var(--border-color);
         }
 
-        .negative { color: #ef4444; }
         .positive { color: #10b981; }
-        .neutral { color: var(--text-gray); }
-
-        .explanation-box {
-            margin-top: 20px;
-            background: rgba(59, 130, 246, 0.05);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            border-radius: 12px;
-            padding: 15px;
-            font-size: 0.85rem;
-            color: var(--text-dark);
-            display: flex;
-            gap: 10px;
-        }
+        .negative { color: #ef4444; }
 
         @media (max-width: 900px) {
-            .simulator-section { grid-template-columns: 1fr; }
+            .simulator-grid { grid-template-columns: 1fr; }
+            .teams-comparison { grid-template-columns: 1fr; gap: 40px; }
+            .vs-divider { display: none; }
         }
       `}</style>
 
@@ -557,215 +615,271 @@ export function TelaTransparencia() {
                 </button>
 
                 <div className="hero-banner">
-                    <Banknote className="hero-icon-bg" />
-                    <h1 className="page-title">Portal da Transparência Econômica</h1>
+                    <Scale className="hero-icon-bg" />
+                    <h1 className="page-title">Central de Transparência</h1>
                     <p className="page-desc">
-                        Entenda como funciona a economia do Torneios DDO. Todos os valores de partidas são calculados automaticamente baseados nos parâmetros abaixo.
+                        Consulte as tabelas oficiais de regras e utilize nosso simulador integrado para projetar os resultados financeiros e técnicos do seu clube.
                     </p>
                 </div>
 
-                {parametros && (
+                {dados?.economico && dados?.coeficiente && (
                     <>
-                        <div className="params-grid">
-                            <div className="param-card">
-                                <div className="param-header">
-                                    <Coins size={20} className="text-blue" />
-                                    Cota de TV Fixa
-                                </div>
-                                <div className="param-value">{formatCurrency(parametros.cotaTvFixa)}</div>
-                                <div className="param-info">Valor fixo garantido a todos os clubes por partida realizada.</div>
-                            </div>
-
-                            <div className="param-card">
-                                <div className="param-header">
-                                    <Users size={20} className="text-green" />
-                                    Bilheteria (Por Estrela)
-                                </div>
-                                <div className="param-value">{formatCurrency(parametros.valorPorEstrelaBilheteria)}</div>
-                                <div className="param-info">Multiplicado pela soma das estrelas dos dois times em campo.</div>
-                            </div>
-
-                            <div className="param-card">
-                                <div className="param-header">
-                                    <Trophy size={20} className="text-orange" />
-                                    Prêmio Vitória
-                                </div>
-                                <div className="param-value">{formatCurrency(parametros.premioVitoria)}</div>
-                                <div className="param-info">Bônus pago ao vencedor da partida (Empate: {formatCurrency(parametros.premioEmpate)}).</div>
-                            </div>
-
-                            <div className="param-card">
-                                <div className="param-header">
-                                    <AlertTriangle size={20} className="text-red" />
-                                    Custo Operacional Base
-                                </div>
-                                <div className="param-value">{formatCurrency(parametros.custoBaseEstrela)}</div>
-                                <div className="param-info">Custo = (Suas Estrelas)² × {formatCurrency(parametros.custoBaseEstrela)}. Times maiores gastam mais.</div>
-                            </div>
+                        <div className="section-header">
+                            <Info size={24} className="text-primary" /> Parâmetros do Sistema
                         </div>
 
-                        <div className="simulator-section">
-                            <div className="simulator-controls">
-                                <div className="sim-title">
-                                    <Calculator size={24} className="text-primary" />
-                                    Simulador de Partida
-                                </div>
+                        <div className="table-container">
+                            <table className="custom-table">
+                                <thead>
+                                    <tr>
+                                        <th colSpan={3} style={{fontSize: '1rem', borderBottom: '2px solid var(--border-color)'}}>
+                                            <Banknote size={18} style={{display: 'inline', verticalAlign: 'middle', marginRight: '8px'}} />
+                                            Regras Econômicas
+                                        </th>
+                                    </tr>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Valor</th>
+                                        <th>Detalhes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Cota de TV Fixa</td>
+                                        <td className="val-highlight">{formatCurrency(dados.economico.cotaTvFixa)}</td>
+                                        <td>Valor garantido por partida realizada.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Bilheteria</td>
+                                        <td className="val-highlight">{formatCurrency(dados.economico.valorPorEstrelaBilheteria)}</td>
+                                        <td>Multiplicado pela soma das estrelas em campo.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Prêmio Vitória</td>
+                                        <td className="val-highlight">{formatCurrency(dados.economico.premioVitoria)}</td>
+                                        <td>Empate rende {formatCurrency(dados.economico.premioEmpate)}.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Custo Operacional</td>
+                                        <td className="val-highlight negative">{formatCurrency(dados.economico.custoBaseEstrela)}</td>
+                                        <td>Base de custo por estrela ao quadrado.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Bônus Zebra</td>
+                                        <td className="val-highlight">{formatCurrency(dados.economico.bonusZebraPorEstrela)}</td>
+                                        <td>Por diferença de estrela (se vencer/empatar).</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
-                                <div className="score-inputs">
-                                    <div className="score-box">
-                                        <div className="control-label">Seu Time</div>
-                                        <div style={{marginBottom: '10px'}}>
-                                            <label style={{fontSize: '0.8rem', color: 'var(--text-gray)'}}>Gols</label>
-                                            <input 
-                                                type="number" 
-                                                className="score-input-field"
-                                                value={simulacao.golsPro}
-                                                onChange={(e) => setSimulacao({...simulacao, golsPro: Number(e.target.value)})}
-                                                min="0"
-                                            />
-                                        </div>
-                                        <div style={{display:'flex', gap: '10px'}}>
-                                            <div>
-                                                <label style={{fontSize: '0.7rem', color: 'var(--text-gray)'}}>Amarelos</label>
-                                                <input type="number" className="score-input-field" style={{fontSize: '1rem', padding: '5px'}} 
-                                                    value={simulacao.cartoesAmarelos} onChange={(e) => setSimulacao({...simulacao, cartoesAmarelos: Number(e.target.value)})} min="0" />
-                                            </div>
-                                            <div>
-                                                <label style={{fontSize: '0.7rem', color: 'var(--text-gray)'}}>Vermelhos</label>
-                                                <input type="number" className="score-input-field" style={{fontSize: '1rem', padding: '5px'}} 
-                                                    value={simulacao.cartoesVermelhos} onChange={(e) => setSimulacao({...simulacao, cartoesVermelhos: Number(e.target.value)})} min="0" />
-                                            </div>
-                                        </div>
-                                    </div>
+                        <div className="table-container">
+                            <table className="custom-table">
+                                <thead>
+                                    <tr>
+                                        <th colSpan={3} style={{fontSize: '1rem', borderBottom: '2px solid var(--border-color)'}}>
+                                            <Activity size={18} style={{display: 'inline', verticalAlign: 'middle', marginRight: '8px'}} />
+                                            Regras de Ranking (Coeficiente)
+                                        </th>
+                                    </tr>
+                                    <tr>
+                                        <th>Critério</th>
+                                        <th>Pontos</th>
+                                        <th>Regra</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Vitória / Empate</td>
+                                        <td className="val-highlight">+{dados.coeficiente.pontosVitoria} / +{dados.coeficiente.pontosEmpate}</td>
+                                        <td>Resultado base da partida.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Gols Pró</td>
+                                        <td className="val-highlight">Até {dados.coeficiente.tetoGols}</td>
+                                        <td>1 ponto por gol (limitado ao teto).</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Bônus Performance</td>
+                                        <td className="val-highlight">+{dados.coeficiente.pontosGoleada} / +{dados.coeficiente.pontosCleanSheet}</td>
+                                        <td>Para Goleada (dif &gt; 3) e Clean Sheet.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Derrota</td>
+                                        <td className="val-highlight negative">{dados.coeficiente.pontosDerrota}</td>
+                                        <td>Penalidade fixa por derrota.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Punição Cartões</td>
+                                        <td className="val-highlight negative">{dados.coeficiente.penalidadePorVermelho} / {dados.coeficiente.penalidadePorAmarelo}</td>
+                                        <td>Por Vermelho / Por Amarelo (acima de {dados.coeficiente.limiteAmarelosSemPunicao}).</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
-                                    <div className="score-box" style={{opacity: 0.8}}>
-                                        <div className="control-label">Adversário</div>
-                                        <div style={{marginBottom: '10px'}}>
-                                            <label style={{fontSize: '0.8rem', color: 'var(--text-gray)'}}>Gols</label>
-                                            <input 
-                                                type="number" 
-                                                className="score-input-field"
-                                                value={simulacao.golsContra}
-                                                onChange={(e) => setSimulacao({...simulacao, golsContra: Number(e.target.value)})}
-                                                min="0"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
+                        <div className="section-header">
+                            <Calculator size={24} className="text-primary" /> Simulador de Partida
+                        </div>
 
-                                <div className="control-group">
-                                    <div className="control-label">Suas Estrelas: {simulacao.minhasEstrelas.toFixed(1)}</div>
-                                    <div className="range-wrapper">
-                                        <Star size={18} className="text-gray" />
+                        <div className="simulator-grid">
+                            {/* AREA DE INPUTS */}
+                            <div className="sim-input-card">
+                                <div className="input-block">
+                                    <div className="input-label">Peso da Competição</div>
+                                    <div className="slider-container">
+                                        <Percent size={16} />
                                         <input 
-                                            type="range" 
-                                            min="0.5" 
-                                            max="5.0" 
-                                            step="0.5" 
-                                            className="range-input"
-                                            value={simulacao.minhasEstrelas}
-                                            onChange={(e) => setSimulacao({...simulacao, minhasEstrelas: Number(e.target.value)})}
-                                        />
-                                        <div className="number-display">{simulacao.minhasEstrelas.toFixed(1)}</div>
-                                    </div>
-                                </div>
-
-                                <div className="control-group">
-                                    <div className="control-label">Estrelas do Adversário: {simulacao.estrelasAdversario.toFixed(1)}</div>
-                                    <div className="range-wrapper">
-                                        <Star size={18} className="text-gray" />
-                                        <input 
-                                            type="range" 
-                                            min="0.5" 
-                                            max="5.0" 
-                                            step="0.5" 
-                                            className="range-input"
-                                            value={simulacao.estrelasAdversario}
-                                            onChange={(e) => setSimulacao({...simulacao, estrelasAdversario: Number(e.target.value)})}
-                                        />
-                                        <div className="number-display">{simulacao.estrelasAdversario.toFixed(1)}</div>
-                                    </div>
-                                </div>
-
-                                <div className="control-group">
-                                    <div className="control-label">Peso da Competição: {simulacao.pesoCompeticao}%</div>
-                                    <div className="range-wrapper">
-                                        <Percent size={18} className="text-gray" />
-                                        <input 
-                                            type="range" 
-                                            min="0" 
-                                            max="100" 
-                                            step="5" 
-                                            className="range-input"
+                                            type="range" min="0" max="100" step="5" style={{flex: 1}}
                                             value={simulacao.pesoCompeticao}
                                             onChange={(e) => setSimulacao({...simulacao, pesoCompeticao: Number(e.target.value)})}
                                         />
-                                        <div className="number-display">{simulacao.pesoCompeticao}%</div>
+                                        <div className="slider-val">{simulacao.pesoCompeticao}%</div>
+                                    </div>
+                                </div>
+
+                                <div className="teams-comparison">
+                                    {/* COLUNA MEU TIME */}
+                                    <div className="team-col">
+                                        <div className="input-block">
+                                            <div className="input-label">Seu Time</div>
+                                            <input 
+                                                type="text" 
+                                                className="big-input" 
+                                                value={simulacao.nomeMandante}
+                                                onChange={(e) => setSimulacao({...simulacao, nomeMandante: e.target.value})}
+                                            />
+                                        </div>
+
+                                        <div className="input-block">
+                                            <div className="input-label">Placar (Gols)</div>
+                                            <input 
+                                                type="number" min="0"
+                                                className="score-display"
+                                                value={simulacao.golsPro}
+                                                onChange={(e) => setSimulacao({...simulacao, golsPro: Number(e.target.value)})}
+                                            />
+                                        </div>
+
+                                        <div className="input-block">
+                                            <div className="input-label">Suas Estrelas: {simulacao.minhasEstrelas.toFixed(1)}</div>
+                                            <input 
+                                                type="range" min="0.5" max="5" step="0.5"
+                                                value={simulacao.minhasEstrelas}
+                                                onChange={(e) => setSimulacao({...simulacao, minhasEstrelas: Number(e.target.value)})}
+                                            />
+                                        </div>
+
+                                        <div style={{display: 'flex', gap: '10px'}}>
+                                            <div className="input-block" style={{flex: 1}}>
+                                                <div className="input-label" style={{color: '#f59e0b'}}>Amarelos</div>
+                                                <input 
+                                                    type="number" min="0"
+                                                    className="big-input"
+                                                    value={simulacao.cartoesAmarelos}
+                                                    onChange={(e) => setSimulacao({...simulacao, cartoesAmarelos: Math.max(0, Number(e.target.value))})}
+                                                />
+                                            </div>
+                                            <div className="input-block" style={{flex: 1}}>
+                                                <div className="input-label" style={{color: '#ef4444'}}>Vermelhos</div>
+                                                <input 
+                                                    type="number" min="0"
+                                                    className="big-input"
+                                                    value={simulacao.cartoesVermelhos}
+                                                    onChange={(e) => setSimulacao({...simulacao, cartoesVermelhos: Math.max(0, Number(e.target.value))})}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="vs-divider">X</div>
+
+                                    {/* COLUNA ADVERSÁRIO */}
+                                    <div className="team-col">
+                                        <div className="input-block">
+                                            <div className="input-label">Adversário</div>
+                                            <input 
+                                                type="text" 
+                                                className="big-input" 
+                                                value={simulacao.nomeVisitante}
+                                                onChange={(e) => setSimulacao({...simulacao, nomeVisitante: e.target.value})}
+                                            />
+                                        </div>
+
+                                        <div className="input-block">
+                                            <div className="input-label">Placar (Gols)</div>
+                                            <input 
+                                                type="number" min="0"
+                                                className="score-display"
+                                                value={simulacao.golsContra}
+                                                onChange={(e) => setSimulacao({...simulacao, golsContra: Number(e.target.value)})}
+                                            />
+                                        </div>
+
+                                        <div className="input-block">
+                                            <div className="input-label">Estrelas Adv: {simulacao.estrelasAdversario.toFixed(1)}</div>
+                                            <input 
+                                                type="range" min="0.5" max="5" step="0.5"
+                                                value={simulacao.estrelasAdversario}
+                                                onChange={(e) => setSimulacao({...simulacao, estrelasAdversario: Number(e.target.value)})}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="receipt-card">
-                                <div className="receipt-header">
-                                    <h3 style={{fontSize: '1.2rem', fontWeight: 700}}>Extrato Estimado</h3>
-                                    <span style={{color: 'var(--text-gray)', fontSize: '0.9rem'}}>Resultado: {resultadoSimulado?.resultado}</span>
-                                </div>
-
-                                {resultadoSimulado && (
+                            {/* AREA DE RESULTADOS */}
+                            <div className="results-panel">
+                                {resultados && (
                                     <>
-                                        <div className="receipt-row">
-                                            <span className="neutral">Cota TV Fixa</span>
-                                            <span className="positive">+ {formatCurrency(resultadoSimulado.cotaTv)}</span>
-                                        </div>
-                                        <div className="receipt-row">
-                                            <span className="neutral">Bilheteria ({simulacao.minhasEstrelas + simulacao.estrelasAdversario} estrelas)</span>
-                                            <span className="positive">+ {formatCurrency(resultadoSimulado.receitaBilheteria)}</span>
-                                        </div>
-                                        {resultadoSimulado.tevePunicaoGoleada && (
-                                            <div className="receipt-row">
-                                                <span className="negative">Punição Goleada (40%)</span>
-                                                <span className="negative">- {formatCurrency(resultadoSimulado.valorPunicao)}</span>
+                                        <div className="res-card eco">
+                                            <div className="res-header" style={{color: '#10b981'}}>
+                                                <Banknote size={24} /> Financeiro
                                             </div>
-                                        )}
-                                        {resultadoSimulado.receitaPremiacao > 0 && (
-                                            <div className="receipt-row">
-                                                <span className="neutral">Prêmio {resultadoSimulado.resultado}</span>
-                                                <span className="positive">+ {formatCurrency(resultadoSimulado.receitaPremiacao)}</span>
+                                            <div className="res-main-value" style={{color: resultados.economia.lucroLiquido >= 0 ? '#10b981' : '#ef4444'}}>
+                                                {formatCurrency(resultados.economia.lucroLiquido)}
                                             </div>
-                                        )}
-                                        {resultadoSimulado.bonusZebra > 0 && (
-                                            <div className="receipt-row">
-                                                <span className="neutral">Bônus Zebra (Dif. {simulacao.estrelasAdversario - simulacao.minhasEstrelas} est)</span>
-                                                <span className="positive">+ {formatCurrency(resultadoSimulado.bonusZebra)}</span>
+                                            
+                                            <div style={{borderTop: '1px solid var(--border-color)', paddingTop: '15px'}}>
+                                                <div className="breakdown-row">
+                                                    <span>Receita Bruta</span>
+                                                    <span className="breakdown-val positive">
+                                                        +{formatCurrency(resultados.economia.detalhes.cotaTv + resultados.economia.detalhes.bilheteria + resultados.economia.detalhes.premiacao + resultados.economia.detalhes.zebra)}
+                                                    </span>
+                                                </div>
+                                                <div className="breakdown-row">
+                                                    <span>Custo Operacional</span>
+                                                    <span className="breakdown-val negative">-{formatCurrency(resultados.economia.detalhes.custo)}</span>
+                                                </div>
+                                                {resultados.economia.detalhes.punicao > 0 && (
+                                                    <div className="breakdown-row">
+                                                        <span>Punição Goleada</span>
+                                                        <span className="breakdown-val negative">-{formatCurrency(resultados.economia.detalhes.punicao)}</span>
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
-                                        
-                                        <div className="receipt-row">
-                                            <span className="neutral">Custo Operacional ({simulacao.minhasEstrelas}² stars)</span>
-                                            <span className="negative">- {formatCurrency(resultadoSimulado.custoOperacional)}</span>
                                         </div>
 
-                                        <div className="receipt-row subtotal">
-                                            <span>Subtotal</span>
-                                            <span>{formatCurrency(resultadoSimulado.lucroBruto)}</span>
-                                        </div>
+                                        <div className="res-card rank">
+                                            <div className="res-header" style={{color: '#3b82f6'}}>
+                                                <Activity size={24} /> Ranking
+                                            </div>
+                                            <div className="res-main-value" style={{color: resultados.coeficiente.final >= 0 ? '#3b82f6' : '#ef4444'}}>
+                                                {resultados.coeficiente.final.toFixed(2)} <span style={{fontSize: '1rem', fontWeight: 400}}>pts</span>
+                                            </div>
 
-                                        <div className="receipt-row">
-                                            <span className="neutral">Fator Competição</span>
-                                            <span className="neutral">x {(resultadoSimulado.pesoEfetivo * 100).toFixed(0)}%</span>
-                                        </div>
-
-                                        <div className="receipt-row total">
-                                            <span>LUCRO LÍQUIDO</span>
-                                            <span className={resultadoSimulado.lucroLiquidoFinal >= 0 ? 'positive' : 'negative'}>
-                                                {formatCurrency(resultadoSimulado.lucroLiquidoFinal)}
-                                            </span>
-                                        </div>
-
-                                        <div className="explanation-box">
-                                            <Info size={24} className="text-blue" style={{flexShrink: 0}} />
-                                            <div>
-                                                <strong>Nota:</strong> {parametros.explicacaoFatorCompeticao}
+                                            <div style={{borderTop: '1px solid var(--border-color)', paddingTop: '15px'}}>
+                                                <div className="breakdown-row">
+                                                    <span>Pontos Positivos</span>
+                                                    <span className="breakdown-val positive">+{resultados.coeficiente.positivos.toFixed(1)}</span>
+                                                </div>
+                                                <div className="breakdown-row">
+                                                    <span>Penalidades (Ajustadas)</span>
+                                                    <span className="breakdown-val negative">{resultados.coeficiente.negativos.toFixed(1)}</span>
+                                                </div>
+                                                <div style={{fontSize: '0.75rem', marginTop: '10px', color: 'var(--text-gray)', textAlign: 'center'}}>
+                                                    Limites: {dados?.coeficiente.pontuacaoMinima} a {dados?.coeficiente.pontuacaoMaxima}
+                                                </div>
                                             </div>
                                         </div>
                                     </>
