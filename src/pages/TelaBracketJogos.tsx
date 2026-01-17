@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Calendar, MapPin } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Trophy, Moon, Sun, Shield } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import '../styles/TelaBracket.css';
@@ -10,19 +10,9 @@ interface TeamData {
   jogadorNome: string;
   clubeNome: string;
   clubeImagem: string;
-  clubeSigla: string;
 }
 
-type TipoPartidaEnum = 
-  | 'FASE_DE_GRUPOS'
-  | 'PONTOS_CORRIDOS'
-  | 'MATA_MATA_UNICO'
-  | 'MATA_MATA_IDA'
-  | 'MATA_MATA_VOLTA'
-  | 'DISPUTA_TERCEIRO_LUGAR'
-  | 'FINAL_UNICA'
-  | 'FINAL_IDA'
-  | 'FINAL_VOLTA';
+type TipoPartidaEnum = 'FASE_DE_GRUPOS' | 'MATA_MATA_IDA' | 'MATA_MATA_VOLTA' | 'MATA_MATA_UNICO' | 'FINAL_UNICA' | 'FINAL_IDA' | 'FINAL_VOLTA' | 'DISPUTA_TERCEIRO_LUGAR';
 
 interface MatchDetail {
   id: string;
@@ -40,317 +30,238 @@ interface MatchDetail {
 }
 
 const MATCH_ORDER: Record<string, number> = {
-  'MATA_MATA_IDA': 1,
-  'FINAL_IDA': 1,
-  'MATA_MATA_VOLTA': 2,
-  'FINAL_VOLTA': 2,
-  'MATA_MATA_UNICO': 3,
-  'FINAL_UNICA': 3,
+  'MATA_MATA_IDA': 1, 'FINAL_IDA': 1,
+  'MATA_MATA_VOLTA': 2, 'FINAL_VOLTA': 2,
+  'MATA_MATA_UNICO': 3, 'FINAL_UNICA': 3,
   'DISPUTA_TERCEIRO_LUGAR': 4
 };
+
+const SkeletonCard = () => (
+  <div className="tbk-card tbk-skeleton-anim" style={{ padding: '24px', minHeight: '180px' }}>
+    <div className="tbk-card-header">
+      <div className="tbk-sk-badge"></div>
+      <div className="tbk-sk-date"></div>
+    </div>
+    <div className="tbk-card-body">
+      <div className="tbk-team-col">
+        <div className="tbk-sk-logo" style={{ width: '70px', height: '70px' }}></div>
+        <div className="tbk-sk-line width-80"></div>
+        <div className="tbk-sk-line width-50"></div>
+      </div>
+      <div className="tbk-score-col">
+        <div className="tbk-sk-score-box" style={{ width: '100px', height: '50px' }}></div>
+        <div className="tbk-sk-line width-50" style={{ marginTop: '10px' }}></div>
+      </div>
+      <div className="tbk-team-col">
+        <div className="tbk-sk-logo" style={{ width: '70px', height: '70px' }}></div>
+        <div className="tbk-sk-line width-80"></div>
+        <div className="tbk-sk-line width-50"></div>
+      </div>
+    </div>
+  </div>
+);
 
 export function TelaBracketJogos() {
   const { temporadaId, torneioId, faseId, etapa, chaveIndex } = useParams();
   const navigate = useNavigate();
   const [matches, setMatches] = useState<MatchDetail[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  });
+
+  useLayoutEffect(() => {
+    if (isDarkMode) document.body.classList.add('dark-mode');
+    else document.body.classList.remove('dark-mode');
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+  }, [isDarkMode]);
 
   useEffect(() => {
+    let isMounted = true;
     if (faseId && etapa && chaveIndex) {
       const loadMatches = async () => {
         try {
           setLoading(true);
           const response = await API.get(`/api/bracket/${faseId}/chave/${etapa}/${chaveIndex}`);
-          
-          const sortedMatches = (response.data as MatchDetail[]).sort((a, b) => {
-            const orderA = MATCH_ORDER[a.tipoPartida] || 99;
-            const orderB = MATCH_ORDER[b.tipoPartida] || 99;
-            return orderA - orderB;
-          });
-
-          setMatches(sortedMatches);
+          if (isMounted && response.data) {
+            const sorted = (response.data as MatchDetail[]).sort((a, b) => {
+              const orderA = MATCH_ORDER[a.tipoPartida] || 99;
+              const orderB = MATCH_ORDER[b.tipoPartida] || 99;
+              return orderA - orderB;
+            });
+            setMatches(sorted);
+          }
         } catch (error) {
           console.error(error);
         } finally {
-          setLoading(false);
+          if (isMounted) setTimeout(() => setLoading(false), 500);
         }
       };
       loadMatches();
     }
+    return () => { isMounted = false; };
   }, [faseId, etapa, chaveIndex]);
 
-  const handlePartidaClick = (partidaId: string) => {
-    navigate(`/${temporadaId}/torneio/${torneioId}/fase/${faseId}/bracket/${etapa}/${chaveIndex}/partida/${partidaId}`);
+  const handlePartidaClick = (id: string) => {
+    navigate(`/${temporadaId}/torneio/${torneioId}/fase/${faseId}/bracket/${etapa}/${chaveIndex}/partida/${id}`);
   };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Data a definir';
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return new Intl.DateTimeFormat('pt-BR', {
+      weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+    }).format(new Date(dateString));
   };
 
-  const getMatchLabel = (tipo: TipoPartidaEnum) => {
-    switch (tipo) {
-      case 'MATA_MATA_IDA':
-      case 'FINAL_IDA':
-        return 'Jogo de Ida';
-      case 'MATA_MATA_VOLTA':
-      case 'FINAL_VOLTA':
-        return 'Jogo de Volta';
-      case 'FINAL_UNICA':
-        return 'Grande Final';
-      case 'MATA_MATA_UNICO':
-        return 'Jogo Único';
-      case 'DISPUTA_TERCEIRO_LUGAR':
-        return 'Disputa de 3º Lugar';
-      default:
-        return 'Partida';
-    }
+  const getLabel = (tipo: TipoPartidaEnum) => {
+    if (tipo?.includes('IDA')) return 'JOGO DE IDA';
+    if (tipo?.includes('VOLTA')) return 'JOGO DE VOLTA';
+    if (tipo?.includes('TERCEIRO')) return 'DISPUTA DE 3º LUGAR';
+    if (tipo?.includes('FINAL')) return 'GRANDE FINAL';
+    return 'JOGO ÚNICO';
   };
-
-  const renderPenalties = (match: MatchDetail) => {
-    if (!match.houvePenaltis || match.penaltisMandante === null) return null;
-    
-    return (
-      <div style={{ 
-        marginTop: '8px', 
-        fontSize: '0.85rem', 
-        color: 'var(--text-gray)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        backgroundColor: 'rgba(0,0,0,0.05)',
-        padding: '4px 12px',
-        borderRadius: '10px'
-      }}>
-        <span>({match.penaltisMandante})</span>
-        <span style={{ fontSize: '0.7rem' }}>Pênaltis</span>
-        <span>({match.penaltisVisitante})</span>
-      </div>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <Loader2 size={48} className="spinner" />
-      </div>
-    );
-  }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-body)', color: 'var(--text-dark)' }}>
-      <header style={{
-        height: '80px',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 40px',
-        backgroundColor: 'var(--bg-card)',
-        borderBottom: '1px solid var(--border-color)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100
-      }}>
-        <button 
-          onClick={() => navigate(-1)} 
-          className="btn-back-custom"
-          style={{
-            background: 'transparent',
-            border: '1px solid var(--border-color)',
-            color: 'var(--text-dark)',
-            padding: '10px 16px',
-            borderRadius: '12px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontWeight: 600,
-            transition: 'all 0.2s'
-          }}
-        >
+    <div className="tb-screen">
+      <header className="tb-header">
+        <button onClick={() => navigate(-1)} className="tb-btn-icon-back">
           <ArrowLeft size={20} />
-          Voltar
         </button>
-        <div style={{ marginLeft: '24px', display: 'flex', flexDirection: 'column' }}>
-            <h1 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>Detalhes do Confronto</h1>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-gray)' }}>
-              {etapa?.replace(/_/g, ' ')} • Chave #{chaveIndex}
-            </span>
+        
+        <div className="tb-header-center">
+          <div className="tb-road-badge"><Trophy size={10} /> CHAVE #{chaveIndex}</div>
+          <h1 className="tb-stadium-title" style={{ fontSize: '1.2rem' }}>
+            {etapa?.replace(/_/g, ' ')}
+          </h1>
         </div>
+        
+        <button className="tb-btn-icon-back" onClick={() => setIsDarkMode(!isDarkMode)}>
+          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+        </button>
       </header>
 
-      <div style={{ maxWidth: '800px', margin: '40px auto', padding: '0 20px' }}>
-        
-        {matches.length === 0 && (
-            <div className="empty-state">Nenhuma partida encontrada para este confronto.</div>
-        )}
-
-        {matches.map((match) => (
-          <div 
-            key={match.id} 
-            className="details-sectionMatch" 
-            onClick={() => handlePartidaClick(match.id)}
-            style={{ 
-              marginBottom: '30px',
-              backgroundColor: 'var(--bg-card)',
-              borderRadius: '20px',
-              boxShadow: 'var(--shadow-sm)',
-              border: '1px solid var(--border-color)',
-              padding: '24px',
-              position: 'relative',
-              overflow: 'hidden',
-              cursor: 'pointer',
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-            }}
-          >
-            <div style={{
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: '6px',
-                backgroundColor: match.realizada ? 'var(--success)' : 'var(--primary)'
-            }} />
-
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '24px',
-              paddingBottom: '15px',
-              borderBottom: '1px dashed var(--border-color)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ 
-                    fontWeight: 800, 
-                    color: 'var(--primary)', 
-                    textTransform: 'uppercase', 
-                    fontSize: '0.8rem',
-                    letterSpacing: '0.5px',
-                    backgroundColor: 'rgba(78, 62, 255, 0.1)',
-                    padding: '6px 12px',
-                    borderRadius: '8px'
-                }}>
-                    {getMatchLabel(match.tipoPartida)}
-                </span>
-                {match.realizada && (
-                    <span style={{ 
-                        fontSize: '0.75rem', 
-                        color: 'var(--success)', 
-                        fontWeight: 700, 
-                        border: '1px solid var(--success)',
-                        padding: '4px 8px', 
-                        borderRadius: '6px' 
-                    }}>
-                        FINALIZADO
-                    </span>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', gap: '15px', fontSize: '0.85rem', color: 'var(--text-gray)' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Calendar size={14} /> {formatDate(match.dataHora)}
-                </span>
-                {match.estadio && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <MapPin size={14} /> {match.estadio}
-                  </span>
-                )}
-              </div>
+      <div className="tb-scroll-area">
+        <div className="tbk-list-container">
+          
+          {loading ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : matches.length === 0 ? (
+            <div className="tbk-empty">
+              <Shield size={48} />
+              <p>Nenhum confronto definido.</p>
             </div>
-
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr auto 1fr',
-              alignItems: 'center',
-              padding: '10px 0',
-              gap: '20px'
-            }}>
-              
-              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                {match.mandante ? (
-                  <>
-                    <div style={{ position: 'relative' }}>
-                        <img 
-                        src={match.mandante.clubeImagem} 
-                        alt={match.mandante.clubeNome} 
-                        style={{ width: '90px', height: '90px', objectFit: 'contain', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))' }} 
-                        />
-                    </div>
-                    <div style={{ width: '100%' }}>
-                        <div style={{ fontWeight: 800, fontSize: '1.1rem', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={match.mandante.jogadorNome}>{match.mandante.jogadorNome}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-gray)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={match.mandante.clubeNome}>{match.mandante.clubeNome}</div>
-                    </div>
-                  </>
-                ) : (
-                    <span style={{ color: 'var(--text-gray)' }}>Aguardando definição</span>
-                )}
-              </div>
-
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '5px'
-              }}>
-                <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '20px', 
-                    fontSize: '3rem', 
-                    fontWeight: 900,
-                    backgroundColor: 'var(--bg-body)',
-                    padding: '15px 40px',
-                    borderRadius: '24px',
-                    fontVariantNumeric: 'tabular-nums',
-                    letterSpacing: '-2px',
-                    whiteSpace: 'nowrap'
-                }}>
-                    <span style={{ color: match.realizada ? 'var(--text-dark)' : 'var(--text-gray)' }}>
-                        {match.realizada && match.golsMandante !== null ? match.golsMandante : '-'}
+          ) : (
+            matches.map((match, idx) => (
+              <div 
+                key={match.id} 
+                className="tbk-card tbk-animate-enter"
+                style={{ 
+                    animationDelay: `${idx * 100}ms`,
+                    padding: '24px',
+                    minHeight: '180px'
+                }}
+                onClick={() => handlePartidaClick(match.id)}
+              >
+                <div className="tbk-card-header" style={{ marginBottom: '24px' }}>
+                  <div className="tbk-header-left">
+                    <span className="tbk-badge-type" style={{ fontSize: '0.75rem', padding: '6px 10px' }}>
+                        {getLabel(match.tipoPartida)}
                     </span>
-                    <span style={{ color: 'var(--border-color)', fontSize: '2rem', fontWeight: 300 }}>:</span>
-                    <span style={{ color: match.realizada ? 'var(--text-dark)' : 'var(--text-gray)' }}>
-                        {match.realizada && match.golsVisitante !== null ? match.golsVisitante : '-'}
-                    </span>
+                    {match.realizada && (
+                        <span className="tbk-badge-finished" style={{ fontSize: '0.7rem' }}>FINALIZADO</span>
+                    )}
+                  </div>
+                  <div className="tbk-header-date" style={{ fontSize: '0.85rem' }}>
+                    <Calendar size={14} style={{marginRight: 6}}/>
+                    {match.dataHora ? formatDate(match.dataHora) : 'Data a definir'}
+                  </div>
                 </div>
-                {renderPenalties(match)}
-              </div>
 
-              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                {match.visitante ? (
-                  <>
-                      <div style={{ position: 'relative' }}>
+                <div className="tbk-card-body" style={{ gap: '20px' }}>
+                  <div className="tbk-team-col">
+                    {match.mandante ? (
+                      <>
                         <img 
-                        src={match.visitante.clubeImagem} 
-                        alt={match.visitante.clubeNome} 
-                        style={{ width: '90px', height: '90px', objectFit: 'contain', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))' }} 
+                            src={match.mandante.clubeImagem} 
+                            alt="" 
+                            className="tbk-team-logo" 
+                            style={{ width: '72px', height: '72px' }}
                         />
+                        <span className="tbk-player-name" style={{ fontSize: '1rem', marginTop: '8px' }}>
+                            {match.mandante.jogadorNome}
+                        </span>
+                        <span className="tbk-club-name" style={{ fontSize: '0.85rem' }}>
+                            {match.mandante.clubeNome}
+                        </span>
+                      </>
+                    ) : (
+                      <div className="tbk-team-placeholder">A definir</div>
+                    )}
+                  </div>
+
+                  <div className="tbk-score-col">
+                    <div className="tbk-score-display" style={{ padding: '12px 24px', marginBottom: '12px' }}>
+                      <span className={`tbk-score-num ${match.realizada ? 'active' : ''}`} style={{ fontSize: '2rem' }}>
+                        {match.realizada && match.golsMandante !== null ? match.golsMandante : '-'}
+                      </span>
+                      <span className="tbk-score-x" style={{ fontSize: '1.2rem', margin: '0 8px' }}>×</span>
+                      <span className={`tbk-score-num ${match.realizada ? 'active' : ''}`} style={{ fontSize: '2rem' }}>
+                        {match.realizada && match.golsVisitante !== null ? match.golsVisitante : '-'}
+                      </span>
                     </div>
-                    <div style={{ width: '100%' }}>
-                        <div style={{ fontWeight: 800, fontSize: '1.1rem', lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={match.visitante.jogadorNome}>{match.visitante.jogadorNome}</div>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-gray)', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={match.visitante.clubeNome}>{match.visitante.clubeNome}</div>
-                    </div>
-                  </>
-                ) : (
-                    <span style={{ color: 'var(--text-gray)' }}>Aguardando definição</span>
-                )}
+
+                    {match.houvePenaltis && (
+                        <div style={{ 
+                            fontSize: '0.8rem', 
+                            color: 'var(--tb-text-dark)', 
+                            fontWeight: 700,
+                            marginBottom: '8px',
+                            background: 'rgba(0,0,0,0.05)',
+                            padding: '4px 10px',
+                            borderRadius: '10px'
+                        }}>
+                            ({match.penaltisMandante} Pênaltis {match.penaltisVisitante})
+                        </div>
+                    )}
+
+                    {match.estadio && (
+                        <span className="tbk-stadium" style={{ fontSize: '0.8rem' }}>
+                            <MapPin size={12}/> {match.estadio}
+                        </span>
+                    )}
+                  </div>
+
+                  <div className="tbk-team-col">
+                    {match.visitante ? (
+                      <>
+                        <img 
+                            src={match.visitante.clubeImagem} 
+                            alt="" 
+                            className="tbk-team-logo" 
+                            style={{ width: '72px', height: '72px' }}
+                        />
+                        <span className="tbk-player-name" style={{ fontSize: '1rem', marginTop: '8px' }}>
+                            {match.visitante.jogadorNome}
+                        </span>
+                        <span className="tbk-club-name" style={{ fontSize: '0.85rem' }}>
+                            {match.visitante.clubeNome}
+                        </span>
+                      </>
+                    ) : (
+                      <div className="tbk-team-placeholder">A definir</div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
+            ))
+          )}
+
+        </div>
       </div>
     </div>
   );
