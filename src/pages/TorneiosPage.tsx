@@ -109,6 +109,7 @@ export function TorneiosPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [trophyHover, setTrophyHover] = useState(false);
+  const [showReivindicarPopup, setShowReivindicarPopup] = useState(false);
   
   const { data: avatars = [] } = useQuery({
     queryKey: ['avatares'],
@@ -257,8 +258,6 @@ export function TorneiosPage() {
     }
   };
 
-  const [showReivindicarPopup, setShowReivindicarPopup] = useState(false);
-
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       
@@ -351,22 +350,39 @@ export function TorneiosPage() {
                 {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
               </div>
             ) : (
-              <button 
-                className="login-btn-header" 
-                onClick={() => setShowLoginPopup(true)}
-                style={{
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginLeft: '10px'
-                }}
-              >
-                Login
-              </button>
+              <>
+                <button
+                  onClick={() => setShowReivindicarPopup(true)}
+                  style={{
+                    background: 'transparent',
+                    color: 'var(--text-dark)',
+                    border: '1px solid var(--border-color)',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    marginLeft: '10px'
+                  }}
+                >
+                  Reivindicar Conta
+                </button>
+                <button 
+                  className="login-btn-header" 
+                  onClick={() => setShowLoginPopup(true)}
+                  style={{
+                    background: 'var(--primary)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    marginLeft: '10px'
+                  }}
+                >
+                  Login
+                </button>
+              </>
             )}
           </div>
         </header>
