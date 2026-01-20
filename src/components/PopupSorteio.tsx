@@ -1,7 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { API } from '../services/api';
-import { Dices, CheckCircle2, X, Info } from 'lucide-react';
+import { Dices, CheckCircle2, X, Info, Trophy, Users, AlertCircle} from 'lucide-react';
 import './PopupSorteio.css';
+
+interface FaseDetalhes {
+  id: string;
+  nome: string;
+  tipoTorneio: string; 
+}
+
+interface Classificado {
+  posicao: number;
+  idJogadorClube: string;
+  nomeJogador: string;
+  nomeClube: string;
+  fotoUrl?: string;
+}
+
+interface PreviaData {
+  idFaseAnterior: string;
+  nomeFaseAnterior: string;
+  quantidadeClassificados: number;
+  classificados: Classificado[];
+}
 
 interface PopupSorteioProps {
   faseId: string;
@@ -11,93 +32,196 @@ interface PopupSorteioProps {
 
 const PopupSorteio: React.FC<PopupSorteioProps> = ({ faseId, onClose, onSuccess }) => {
   const [fadeout, setFadeout] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  
+  const [loadingInitial, setLoadingInitial] = useState(true);
+  const [loadingGeracao, setLoadingGeracao] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const [faseDetalhes, setFaseDetalhes] = useState<FaseDetalhes | null>(null);
+  const [previa, setPrevia] = useState<PreviaData | null>(null);
+
+  useEffect(() => {
+    carregarDadosIniciais();
+  }, [faseId]);
+
+  const carregarDadosIniciais = async () => {
+    try {
+      setLoadingInitial(true);
+      setError('');
+
+      const respFase = await API.get(`/fase-torneio/${faseId}`);
+      const dadosFase: FaseDetalhes = respFase.data;
+      setFaseDetalhes(dadosFase);
+
+      if (dadosFase.tipoTorneio === 'MATA_MATA') {
+        try {
+            const respPrevia = await API.get(`/fase-torneio/${faseId}/previa-classificados`);
+            setPrevia(respPrevia.data);
+        } catch (err) {
+            console.warn("Não foi possível carregar a prévia, seguindo sem ela.");
+        }
+      }
+
+    } catch (err: any) {
+      console.error(err);
+      setError("Erro ao carregar dados da fase. Verifique sua conexão.");
+    } finally {
+      setLoadingInitial(false);
+    }
+  };
 
   const handleClose = () => {
     setFadeout(true);
-    setTimeout(() => {
-      onClose();
-    }, 300);
+    setTimeout(() => onClose(), 300);
   };
 
-  const handleConfirmSorteio = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleConfirmSorteio = async () => {
     setError('');
-    setLoading(true);
+    setLoadingGeracao(true);
 
     try {
-      await API.post(`/api/fases/${faseId}/gerar`);
+      const isMataMata = faseDetalhes?.tipoTorneio === 'MATA_MATA';
+      
+      let url = `/api/fases/${faseId}/gerar`;
+      let bodyData: any = {};
+
+      if (isMataMata) {
+        url = `/fase-torneio/${faseId}/gerar-mata-mata`;
+        
+        if (previa && previa.classificados?.length > 0) {
+           const idsOrdenados = previa.classificados.map(c => c.idJogadorClube);
+           bodyData = { idJogadoresOrdenados: idsOrdenados };
+        }
+      }
+
+      await API.post(url, bodyData);
+      
       setSuccess(true);
       setTimeout(() => {
         onSuccess();
         handleClose();
       }, 2000);
+
     } catch (err: any) {
-      const msg = err.response?.data?.error || "Erro ao realizar sorteio. Verifique se já existem resultados.";
-      setError(msg);
+      const msg = err.response?.data?.error || err.response?.data || "Erro ao gerar fase.";
+      setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
     } finally {
-      setLoading(false);
+      setLoadingGeracao(false);
     }
   };
 
+  const isMataMata = faseDetalhes?.tipoTorneio === 'MATA_MATA';
+
   return (
     <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
-      <div className="popup-content sorteio-popup-width">
+      <div className={`popup-content ${isMataMata ? 'sorteio-popup-large' : 'sorteio-popup-width'}`}>
         
         <button className="popup-close-btn" onClick={handleClose}>
           <X size={20} />
         </button>
 
+        {/* HEADER */}
         <div className="popup-header-fixed">
             <div className={`icon-badge-wrapper ${success ? 'success-badge-bg' : 'season-badge'}`}>
-               {success ? <CheckCircle2 size={32} /> : <Dices size={32} />}
+               {success ? <CheckCircle2 size={32} /> : (isMataMata ? <Trophy size={32} /> : <Dices size={32} />)}
             </div>
-            <h2 className="popup-title">{success ? 'Sucesso!' : 'Sortear Fase'}</h2>
+            
+            <h2 className="popup-title">
+                {success ? 'Sucesso!' : (faseDetalhes ? faseDetalhes.nome : 'Carregando...')}
+            </h2>
+            
             <p className="popup-subtitle">
-              {success ? 'Os confrontos foram gerados' : 'Gere a estrutura de jogos automaticamente'}
+                {success 
+                   ? 'Estrutura gerada com sucesso.' 
+                   : (loadingInitial 
+                        ? 'Obtendo informações...' 
+                        : (isMataMata && previa 
+                            ? `Classificados vindos de: ${previa.nomeFaseAnterior}` 
+                            : 'Gere os confrontos desta fase'))}
             </p>
         </div>
 
         <div className="popup-body-scroll custom-scrollbar">
             
-            <div className="info-box">
-                <div className="info-icon">
-                    <Info size={20} />
+            {loadingInitial && (
+                <div className="sorteio-status-container">
+                    <div className="popup-spinner-blue"></div>
+                    <span>Analisando estrutura...</span>
                 </div>
-                <p>
-                    {success 
-                      ? 'A fase foi atualizada com as novas partidas e rodadas.' 
-                      : 'Esta ação irá remover sorteios anteriores que não possuam resultados registrados.'}
-                </p>
-            </div>
-
-            {error && <div className="temporada-error-msg">{error}</div>}
-
-            {loading && (
-              <div className="sorteio-status-container">
-                <div className="popup-spinner-blue"></div>
-                <span>Processando algoritmos...</span>
-              </div>
             )}
+
+            {error && !loadingInitial && (
+                <div className="temporada-error-msg">
+                    <AlertCircle size={16} style={{display:'inline', marginBottom:-3, marginRight:5}} />
+                    {error}
+                </div>
+            )}
+
+            {!loadingInitial && !success && isMataMata && previa && (
+                <div className="classificados-wrapper">
+                    <div className="info-box mb-3">
+                        <div className="info-icon"><Info size={20} /></div>
+                        <p>O chaveamento (1º x 16º, 2º x 15º...) será baseado na ordem abaixo:</p>
+                    </div>
+
+                    <ul className="classificados-list">
+                        {previa.classificados.map((item) => (
+                            <li key={item.idJogadorClube} className="classificado-item">
+                                <span className="posicao-badge">{item.posicao}º</span>
+                                
+                                {item.fotoUrl ? (
+                                    <img src={item.fotoUrl} alt="" className="classificado-img" 
+                                         onError={(e) => (e.currentTarget.style.display = 'none')}/> 
+                                ) : (
+                                    <div className="classificado-placeholder"><Users size={14}/></div>
+                                )}
+                                
+                                <div className="classificado-info">
+                                    <span className="c-nome">{item.nomeJogador}</span>
+                                    <span className="c-clube">{item.nomeClube}</span>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            {!loadingInitial && !success && (!isMataMata || !previa) && !error && (
+                <div className="info-box">
+                    <div className="info-icon"><Info size={20} /></div>
+                    <p>Esta ação irá sortear os jogos e configurar as rodadas automaticamente. Dados anteriores não salvos podem ser perdidos.</p>
+                </div>
+            )}
+
+            {loadingGeracao && (
+                <div className="sorteio-status-container overlay-loading">
+                    <div className="popup-spinner-blue"></div>
+                    <span>Processando algoritmos...</span>
+                </div>
+            )}
+
         </div>
 
         <div className="popup-footer-fixed">
-            {!success && (
-              <button 
-                type="button" 
-                onClick={handleConfirmSorteio} 
-                className="submit-season-btn" 
-                disabled={loading}
-              >
-                {loading ? <div className="popup-spinner-small"></div> : 'Confirmar Sorteio'}
-              </button>
+            {!success && !loadingInitial && !loadingGeracao && (
+                <button 
+                    type="button" 
+                    onClick={handleConfirmSorteio} 
+                    className="submit-season-btn"
+                >
+                    {isMataMata ? 'Gerar Mata-Mata' : 'Gerar Jogos'}
+                </button>
             )}
+            
             {success && (
-              <button type="button" className="submit-season-btn success-btn">
-                Concluído
-              </button>
+                <button type="button" className="submit-season-btn success-btn" onClick={handleClose}>
+                    Concluído
+                </button>
+            )}
+
+            {loadingInitial && (
+                 <button className="submit-season-btn" disabled style={{opacity: 0.6}}>Aguarde...</button>
             )}
         </div>
 

@@ -269,3 +269,103 @@ body.dark-mode {
 @keyframes scaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.9); opacity: 0; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* --- ADICIONAR AO FINAL DO ARQUIVO EXISTENTE --- */
+
+/* Largura maior para quando for Mata-Mata com lista */
+.sorteio-popup-large {
+    width: 500px;
+    max-width: 95%;
+}
+
+/* Utilitário de margem */
+.mb-3 { margin-bottom: 1rem; }
+
+/* Wrapper da lista para garantir largura total */
+.classificados-wrapper {
+    width: 100%;
+}
+
+/* Lista sem bolinhas */
+.classificados-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Item individual do jogador */
+.classificado-item {
+    display: flex;
+    align-items: center;
+    background-color: var(--pp-input-bg); /* Usa variáveis do seu tema */
+    border: 1px solid var(--pp-border);
+    padding: 8px 12px;
+    border-radius: 12px;
+    transition: transform 0.1s;
+}
+
+.classificado-item:hover {
+    border-color: var(--pp-input-focus-border);
+}
+
+/* Bolinha da Posição */
+.posicao-badge {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+/* Imagem do time/jogador */
+.classificado-img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    margin-right: 12px;
+}
+
+/* Placeholder se não tiver imagem */
+.classificado-placeholder {
+    width: 36px;
+    height: 36px;
+    background-color: var(--pp-border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    color: var(--pp-text-secondary);
+}
+
+/* Info de texto */
+.classificado-info {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    overflow: hidden;
+}
+
+.c-nome {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--pp-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.c-clube {
+    font-size: 0.75rem;
+    color: var(--pp-text-secondary);
+}
