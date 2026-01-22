@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { API } from '../services/api';
-import { Dices, CheckCircle2, X, Info, Trophy, Users, AlertCircle} from 'lucide-react';
+import { Dices, CheckCircle2, X, Info, Trophy, Users, AlertCircle } from 'lucide-react';
 import './PopupSorteio.css';
 
 interface FaseDetalhes {
   id: string;
   nome: string;
-  tipoTorneio: string; 
+  tipoTorneio: string;
+  faseInicialMataMata?: string;
 }
 
 interface Classificado {
@@ -111,7 +112,21 @@ const PopupSorteio: React.FC<PopupSorteioProps> = ({ faseId, onClose, onSuccess 
     }
   };
 
+  const getLimitByPhase = (phase?: string) => {
+    switch (phase) {
+        case 'FINAL': return 2;
+        case 'SEMIFINAL': return 4;
+        case 'QUARTAS': return 8;
+        case 'OITAVAS': return 16;
+        case 'DEZESSEIS_AVOS': return 32;
+        case 'TRINTA_E_DOIS_AVOS': return 64;
+        case 'SESSENTA_E_QUATRO_AVOS': return 128;
+        default: return 999;
+    }
+  };
+
   const isMataMata = faseDetalhes?.tipoTorneio === 'MATA_MATA';
+  const displayLimit = isMataMata ? getLimitByPhase(faseDetalhes?.faseInicialMataMata) : 999;
 
   return (
     <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
@@ -121,7 +136,6 @@ const PopupSorteio: React.FC<PopupSorteioProps> = ({ faseId, onClose, onSuccess 
           <X size={20} />
         </button>
 
-        {/* HEADER */}
         <div className="popup-header-fixed">
             <div className={`icon-badge-wrapper ${success ? 'success-badge-bg' : 'season-badge'}`}>
                {success ? <CheckCircle2 size={32} /> : (isMataMata ? <Trophy size={32} /> : <Dices size={32} />)}
@@ -162,17 +176,17 @@ const PopupSorteio: React.FC<PopupSorteioProps> = ({ faseId, onClose, onSuccess 
                 <div className="classificados-wrapper">
                     <div className="info-box mb-3">
                         <div className="info-icon"><Info size={20} /></div>
-                        <p>O chaveamento (1º x 16º, 2º x 15º...) será baseado na ordem abaixo:</p>
+                        <p>O chaveamento (1º x {displayLimit}º, 2º x {displayLimit-1}º...) será baseado na ordem abaixo:</p>
                     </div>
 
                     <ul className="classificados-list">
-                        {previa.classificados.map((item) => (
+                        {previa.classificados.slice(0, displayLimit).map((item) => (
                             <li key={item.idJogadorClube} className="classificado-item">
                                 <span className="posicao-badge">{item.posicao}º</span>
                                 
                                 {item.fotoUrl ? (
                                     <img src={item.fotoUrl} alt="" className="classificado-img" 
-                                         onError={(e) => (e.currentTarget.style.display = 'none')}/> 
+                                           onError={(e) => (e.currentTarget.style.display = 'none')}/> 
                                 ) : (
                                     <div className="classificado-placeholder"><Users size={14}/></div>
                                 )}

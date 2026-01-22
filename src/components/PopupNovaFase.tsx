@@ -16,11 +16,12 @@ const TIPO_TORNEIO_OPTIONS = [
 
 const FASE_MATA_MATA_OPTIONS = [
   { value: 'FINAL', label: 'Final (2 times)' },
-  { value: 'SEMI', label: 'Semi-Final (4 times)' },
+  { value: 'SEMIFINAL', label: 'Semi-Final (4 times)' },
   { value: 'QUARTAS', label: 'Quartas de Final (8 times)' },
   { value: 'OITAVAS', label: 'Oitavas de Final (16 times)' },
   { value: 'DEZESSEIS_AVOS', label: '16-avos de Final (32 times)' },
-  { value: 'TRINTA_E_DOIS_AVOS', label: '32-avos de Final (64 times)' }
+  { value: 'TRINTA_E_DOIS_AVOS', label: '32-avos de Final (64 times)' },
+  { value: 'SESSENTA_E_QUATRO_AVOS', label: '64-avos de Final (128 times)' }
 ];
 
 const ALGORITMO_LIGA_OPTIONS = [
