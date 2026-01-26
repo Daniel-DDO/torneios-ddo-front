@@ -37,7 +37,8 @@ const ALGORITMO_MATA_MATA_OPTIONS = [
   { value: 'SORTEIO_TOTAL', label: 'Sorteio Total (Aleatório)' },
   { value: 'SORTEIO_DIRIGIDO', label: 'Sorteio Dirigido (Potes A e B)' },
   { value: 'POTES_MANUAIS', label: 'Potes Manuais (Definido por Grupo)' },
-  { value: 'COPA_REAL_DDO', label: 'Copa Real DDO (Elite/Inter/Resto)' }
+  { value: 'COPA_REAL_DDO', label: 'Copa Real DDO (Elite/Inter/Resto)' },
+  { value: 'COPA_LIGA', label: 'Copa da Liga DDO' }
 ];
 
 export default function PopupNovaFase({ onClose, onSubmit }: PopupNovaFaseProps) {
@@ -68,11 +69,20 @@ export default function PopupNovaFase({ onClose, onSubmit }: PopupNovaFaseProps)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({ ...prev, [name]: checked }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      if (name === 'algoritmoMataMata' && value === 'COPA_LIGA') {
+        setFormData(prev => ({ 
+          ...prev, 
+          [name]: value,
+          faseInicialMataMata: 'OITAVAS'
+        }));
+      } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+      }
     }
   };
 
@@ -224,7 +234,7 @@ export default function PopupNovaFase({ onClose, onSubmit }: PopupNovaFaseProps)
                       name="faseInicialMataMata"
                       value={formData.faseInicialMataMata}
                       onChange={handleChange}
-                      disabled={formData.algoritmoMataMata === 'COPA_REAL_DDO'}
+                      disabled={formData.algoritmoMataMata === 'COPA_REAL_DDO' || formData.algoritmoMataMata === 'COPA_LIGA'}
                     >
                       {FASE_MATA_MATA_OPTIONS.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
