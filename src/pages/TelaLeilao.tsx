@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Menu, 
   LayoutDashboard, 
@@ -15,38 +15,22 @@ import {
   Lightbulb,
   Settings,
   CalendarSync,
-  Plus,
   ArrowLeft,
-  Link,
-  UserCheck,
-  Gavel 
+  Gavel,
+  Clock
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
-import PopupNovoTorneio from '../components/PopupNovoTorneio';
-import PopupJogadorClube from '../components/PopupJogadorClube';
 
-interface Torneio {
+interface Leilao {
   id: string;
-  nome: string;
-  temporadaId: string;
-  temporadaNome: string;
-  competicaoId: string;
-  competicaoNome: string;
-  status?: string; 
-  vagas?: number;
-  dataInicio?: string;
-}
-
-interface Competicao {
-  id: string;
-  nome: string;
-  imagem: string;
-  divisao: string;
-  valor: number;
   descricao: string;
+  temporadaId: string;
+  dataInicio: string;
+  dataFim: string;
+  ativo: boolean;
 }
 
 interface UserData {
@@ -75,20 +59,14 @@ const fetchAvatarsService = async () => {
   return [];
 };
 
-const fetchTorneiosPorTemporadaService = async (temporadaId: string) => {
-  const response = await API.get(`/torneio/temporada/${temporadaId}`);
+const fetchLeiloesPorTemporadaService = async (temporadaId: string) => {
+  const response = await API.get(`/leiloes/temporada/${temporadaId}`);
   return response.data;
 };
 
-const fetchCompeticoesSimplesService = async () => {
-    const response = await API.get('/competicao/lista-simples');
-    return response.data;
-};
-
-export function TelaTorneios() {
+export function TelaLeilao() {
   const navigate = useNavigate();
   const { temporadaId } = useParams();
-  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: avatars = [] } = useQuery<Avatar[]>({
@@ -97,15 +75,10 @@ export function TelaTorneios() {
     staleTime: 1000 * 60 * 60,
   });
 
-  const { data: torneios = [], isLoading: isLoadingTorneios } = useQuery<Torneio[]>({
-    queryKey: ['torneios', temporadaId],
-    queryFn: () => fetchTorneiosPorTemporadaService(temporadaId || ''),
+  const { data: leiloes = [], isLoading } = useQuery<Leilao[]>({
+    queryKey: ['leiloes', temporadaId],
+    queryFn: () => fetchLeiloesPorTemporadaService(temporadaId || ''),
     enabled: !!temporadaId,
-  });
-
-  const { data: competicoes = [], isLoading: isLoadingCompeticoes } = useQuery<Competicao[]>({
-    queryKey: ['competicoes-simples'],
-    queryFn: fetchCompeticoesSimplesService,
   });
 
   const avatarMap = useMemo(() => {
@@ -116,19 +89,9 @@ export function TelaTorneios() {
     return map;
   }, [avatars]);
 
-  const competicaoMap = useMemo(() => {
-    const map: Record<string, Competicao> = {};
-    competicoes.forEach((comp) => {
-        map[comp.id] = comp;
-    });
-    return map;
-  }, [competicoes]);
-
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
-  const [showNovoTorneioPopup, setShowNovoTorneioPopup] = useState(false);
-  const [showJogadorClubePopup, setShowJogadorClubePopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -166,20 +129,11 @@ export function TelaTorneios() {
     }
   };
 
-  const handleNovoTorneioSubmit = () => {
-    queryClient.invalidateQueries({ queryKey: ['torneios', temporadaId] });
-  };
-
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const filteredTorneios = torneios.filter((torneio) => {
+  const filteredLeiloes = leiloes.filter((leilao) => {
     const term = searchTerm.toLowerCase();
-    const nomeTorneio = torneio.nome.toLowerCase();
-    
-    const comp = competicaoMap[torneio.competicaoId];
-    const nomeCompeticao = comp ? comp.nome.toLowerCase() : '';
-
-    return nomeTorneio.includes(term) || nomeCompeticao.includes(term);
+    return leilao.descricao.toLowerCase().includes(term);
   });
 
   const getCurrentUserAvatar = () => {
@@ -187,21 +141,20 @@ export function TelaTorneios() {
     return avatarMap[currentUser.imagem] || currentUser.imagem;
   };
 
-  const handleVerJogadores = () => {
-    if (temporadaId) {
-        navigate(`/${temporadaId}/torneios/jogadores`);
+  const handleLeilaoClick = (leilaoId: string) => {
+    if (temporadaId && leilaoId) {
+      navigate(`/${temporadaId}/leilao/${leilaoId}`);
     }
   };
 
-  const handleTorneioClick = (torneioId: string) => {
-    if (temporadaId && torneioId) {
-      navigate(`/${temporadaId}/${torneioId}/fases`);
-    }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
-
-  const isLoading = isLoadingTorneios || isLoadingCompeticoes;
-
-  const hasAdminPrivileges = currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -267,7 +220,7 @@ export function TelaTorneios() {
           text-transform: uppercase;
         }
 
-        .status-aberto {
+        .status-ativo {
           background-color: rgba(16, 185, 129, 0.15);
           color: #10b981;
         }
@@ -275,11 +228,6 @@ export function TelaTorneios() {
         .status-encerrado {
           background-color: var(--border-color);
           color: var(--text-gray);
-        }
-
-        .status-andamento {
-          background-color: rgba(59, 130, 246, 0.15);
-          color: #3b82f6;
         }
 
         .back-button {
@@ -299,45 +247,16 @@ export function TelaTorneios() {
             color: var(--primary);
         }
 
-        .comp-cell {
+        .leilao-desc-cell {
             display: flex;
             align-items: center;
             gap: 12px;
-        }
-
-        .comp-logo-mini {
-            width: 36px;
-            height: 36px;
-            object-fit: contain;
-            border-radius: 4px;
-        }
-
-        .ver-jogadores-btn {
-            background-color: transparent;
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            margin-right: 10px;
-        }
-
-        .ver-jogadores-btn:hover {
-            background-color: var(--hover-bg);
-            border-color: var(--primary);
-            color: var(--primary);
+            font-weight: 500;
         }
 
         @media (max-width: 768px) {
           .page-content { padding: 1rem; }
           .custom-table th, .custom-table td { padding: 12px; }
-          .ver-jogadores-btn span { display: none; }
         }
       `}</style>
 
@@ -398,7 +317,7 @@ export function TelaTorneios() {
               <Search size={20} />
               <input 
                 type="text" 
-                placeholder="Buscar torneio ou competição..." 
+                placeholder="Buscar leilão..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -406,12 +325,6 @@ export function TelaTorneios() {
           </div>
           
           <div className="header-actions">
-            
-            <button className="ver-jogadores-btn" onClick={handleVerJogadores}>
-                <UserCheck size={18} />
-                <span>Jogadores dessa temporada</span>
-            </button>
-
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
@@ -458,60 +371,14 @@ export function TelaTorneios() {
         </header>
 
         <div className="page-content">
-            <button onClick={() => navigate('/temporadas')} className="back-button">
-                <ArrowLeft size={16} /> Voltar para Temporadas
+            <button onClick={() => navigate(`/${temporadaId}/torneios`)} className="back-button">
+                <ArrowLeft size={16} /> Voltar para Torneios
             </button>
 
             <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Torneios da Temporada</h2>
-                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Gerencie os torneios desta temporada</p>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-                <button 
-                  className="t-btn" 
-                  onClick={() => navigate(`/${temporadaId}/torneios/leilao`)}
-                  style={{
-                      background: 'var(--bg-card)', 
-                      color: 'var(--text-primary)', 
-                      border: '1px solid var(--border-color)', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px',
-                      cursor: 'pointer'
-                  }}
-                >
-                    <Gavel size={18} /> Leilões
-                </button>
-
-                {hasAdminPrivileges && (
-                    <button 
-                      className="t-btn" 
-                      onClick={() => setShowJogadorClubePopup(true)}
-                      style={{
-                          background: 'var(--bg-card)', 
-                          color: 'var(--text-primary)', 
-                          border: '1px solid var(--border-color)', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '8px',
-                          cursor: 'pointer'
-                      }}
-                    >
-                        <Link size={18} /> Vincular Jogadores
-                    </button>
-                )}
-
-                {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
-                    <button 
-                      className="t-btn" 
-                      onClick={() => setShowNovoTorneioPopup(true)}
-                      style={{background: 'var(--primary)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '8px'}}
-                    >
-                        <Plus size={18} /> Novo Torneio
-                    </button>
-                )}
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Leilões da Temporada</h2>
+                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Janelas de transferências e negociações</p>
             </div>
             </div>
 
@@ -522,53 +389,47 @@ export function TelaTorneios() {
                 <table className="custom-table">
                   <thead>
                     <tr>
-                      <th>Competição</th>
-                      <th>Torneio</th>
-                      <th>Temporada</th>
+                      <th>Descrição</th>
+                      <th>Início</th>
+                      <th>Fim</th>
                       <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTorneios.map((torneio) => {
-                      const competicao = competicaoMap[torneio.competicaoId];
-                      return (
+                    {filteredLeiloes.map((leilao) => (
                         <tr 
-                            key={torneio.id}
-                            onClick={() => handleTorneioClick(torneio.id)}
+                            key={leilao.id}
+                            onClick={() => handleLeilaoClick(leilao.id)}
                         >
                           <td>
-                            <div className="comp-cell">
-                                {competicao ? (
-                                    <>
-                                        <img src={competicao.imagem} alt={competicao.nome} className="comp-logo-mini" />
-                                        <span>{competicao.nome}</span>
-                                    </>
-                                ) : (
-                                    <span>{torneio.competicaoNome || 'Competição Desconhecida'}</span>
-                                )}
+                            <div className="leilao-desc-cell">
+                                <Gavel size={20} color="var(--primary)" />
+                                <span>{leilao.descricao}</span>
                             </div>
                           </td>
-                          <td>{torneio.nome}</td>
-                          <td>{torneio.temporadaNome}</td>
                           <td>
-                             {torneio.status ? (
-                                <span className={`status-badge ${
-                                    torneio.status === 'ABERTO' ? 'status-aberto' : 
-                                    torneio.status === 'EM_ANDAMENTO' ? 'status-andamento' : 'status-encerrado'
-                                }`}>
-                                    {torneio.status === 'EM_ANDAMENTO' ? 'Em Andamento' : torneio.status}
-                                </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem' }}>
+                                <Clock size={14} /> {formatDate(leilao.dataInicio)}
+                            </div>
+                          </td>
+                          <td>
+                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem' }}>
+                                <Clock size={14} /> {formatDate(leilao.dataFim)}
+                            </div>
+                          </td>
+                          <td>
+                             {leilao.ativo ? (
+                                <span className="status-badge status-ativo">Aberto</span>
                              ) : (
-                                <span className="status-badge status-aberto">Aberto</span>
+                                <span className="status-badge status-encerrado">Encerrado</span>
                              )}
                           </td>
                         </tr>
-                      );
-                    })}
-                    {filteredTorneios.length === 0 && (
+                      ))}
+                    {filteredLeiloes.length === 0 && (
                       <tr>
                           <td colSpan={4} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
-                              Nenhum torneio encontrado
+                              Nenhum leilão encontrado nesta temporada
                           </td>
                       </tr>
                     )}
@@ -595,19 +456,6 @@ export function TelaTorneios() {
           }}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
-        />
-      )}
-
-      {showNovoTorneioPopup && (
-        <PopupNovoTorneio 
-          onClose={() => setShowNovoTorneioPopup(false)} 
-          onSubmit={handleNovoTorneioSubmit} 
-        />
-      )}
-
-      {showJogadorClubePopup && (
-        <PopupJogadorClube 
-          onClose={() => setShowJogadorClubePopup(false)}
         />
       )}
     </div>
