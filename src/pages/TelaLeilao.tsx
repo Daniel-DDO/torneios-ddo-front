@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Menu, 
   LayoutDashboard, 
@@ -17,12 +17,16 @@ import {
   CalendarSync,
   ArrowLeft,
   Gavel,
-  Clock
+  Clock,
+  Plus,
+  AlertCircle
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import PopupCriarLeilao from '../components/PopupCriarLeilao';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 interface Leilao {
   id: string;
@@ -31,6 +35,31 @@ interface Leilao {
   dataInicio: string;
   dataFim: string;
   ativo: boolean;
+}
+
+interface ClubeDTO {
+  id: string;
+  nome: string;
+  estadio: string;
+  imagem: string;
+  ligaClube: string;
+  sigla: string;
+  corPrimaria: string;
+  corSecundaria: string;
+  ativo: boolean;
+  estrelas: number;
+  titulos: number;
+  valorAvaliado: number;
+  lanceMinimo: number;
+}
+
+interface PageResponse<T> {
+  conteudo: T[];
+  paginaAtual: number;
+  totalPaginas: number;
+  totalElementos: number;
+  tamanhoPagina: number;
+  ultimaPagina: boolean;
 }
 
 interface UserData {
@@ -60,13 +89,15 @@ const fetchAvatarsService = async () => {
 };
 
 const fetchLeiloesPorTemporadaService = async (temporadaId: string) => {
-  const response = await API.get(`/leiloes/temporada/${temporadaId}`);
+  const response = await API.get(`/api/leiloes/temporada/${temporadaId}`);
   return response.data;
 };
 
 export function TelaLeilao() {
   const navigate = useNavigate();
   const { temporadaId } = useParams();
+  const queryClient = useQueryClient();
+  const observerTarget = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: avatars = [] } = useQuery<Avatar[]>({
@@ -75,10 +106,32 @@ export function TelaLeilao() {
     staleTime: 1000 * 60 * 60,
   });
 
-  const { data: leiloes = [], isLoading } = useQuery<Leilao[]>({
+  const { data: leiloes = [], isLoading: isLoadingLeiloes } = useQuery<Leilao[]>({
     queryKey: ['leiloes', temporadaId],
     queryFn: () => fetchLeiloesPorTemporadaService(temporadaId || ''),
     enabled: !!temporadaId,
+  });
+
+  const activeLeilao = useMemo(() => {
+    return leiloes.find(l => l.ativo);
+  }, [leiloes]);
+
+  const {
+    data: clubesData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery<PageResponse<ClubeDTO>>({
+    queryKey: ['clubes-leilao', activeLeilao?.id],
+    queryFn: async ({ pageParam = 0 }) => {
+      const response = await API.get(`/clube/clubes?page=${pageParam}&size=20&sort=valorAvaliado,desc`);
+      return response.data;
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      return lastPage.ultimaPagina ? undefined : lastPage.paginaAtual + 1;
+    },
+    enabled: !!activeLeilao
   });
 
   const avatarMap = useMemo(() => {
@@ -89,9 +142,29 @@ export function TelaLeilao() {
     return map;
   }, [avatars]);
 
+  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+    const [target] = entries;
+    if (target.isIntersecting && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage]);
+
+  useEffect(() => {
+    const element = observerTarget.current;
+    const option = { threshold: 0 };
+    
+    const observer = new IntersectionObserver(handleObserver, option);
+    if (element) observer.observe(element);
+    
+    return () => {
+      if (element) observer.unobserve(element);
+    };
+  }, [handleObserver, activeLeilao]);
+
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
+  const [showCriarLeilaoPopup, setShowCriarLeilaoPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -129,22 +202,15 @@ export function TelaLeilao() {
     }
   };
 
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+  const handleCriarLeilaoSubmit = () => {
+    queryClient.invalidateQueries({ queryKey: ['leiloes', temporadaId] });
+  };
 
-  const filteredLeiloes = leiloes.filter((leilao) => {
-    const term = searchTerm.toLowerCase();
-    return leilao.descricao.toLowerCase().includes(term);
-  });
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   const getCurrentUserAvatar = () => {
     if (!currentUser?.imagem) return null;
     return avatarMap[currentUser.imagem] || currentUser.imagem;
-  };
-
-  const handleLeilaoClick = (leilaoId: string) => {
-    if (temporadaId && leilaoId) {
-      navigate(`/${temporadaId}/leilao/${leilaoId}`);
-    }
   };
 
   const formatDate = (dateString: string) => {
@@ -155,6 +221,12 @@ export function TelaLeilao() {
       minute: '2-digit'
     });
   };
+
+  const formatMoney = (value: number) => {
+    return `D$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+  };
+
+  const isProprietario = currentUser && currentUser.cargo === 'PROPRIETARIO';
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -247,16 +319,66 @@ export function TelaLeilao() {
             color: var(--primary);
         }
 
-        .leilao-desc-cell {
+        .clube-info {
             display: flex;
             align-items: center;
             gap: 12px;
-            font-weight: 500;
+        }
+
+        .clube-img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .star-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #fff8e1;
+            padding: 4px 8px;
+            border-radius: 12px;
+            border: 1px solid #fceeb5;
+            color: #b7791f;
+            font-weight: 700;
+        }
+
+        .price-tag {
+             display: inline-block;
+             background: rgba(78, 62, 255, 0.1); 
+             color: var(--primary); 
+             font-weight: 700; 
+             padding: 6px 12px; 
+             border-radius: 8px;
+             min-width: 100px;
+             text-align: center;
+        }
+
+        .leilao-header {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 5px solid #10b981;
+        }
+
+        .leilao-timer {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-dark);
         }
 
         @media (max-width: 768px) {
           .page-content { padding: 1rem; }
           .custom-table th, .custom-table td { padding: 12px; }
+          .leilao-header { flex-direction: column; gap: 16px; align-items: flex-start; }
         }
       `}</style>
 
@@ -317,7 +439,7 @@ export function TelaLeilao() {
               <Search size={20} />
               <input 
                 type="text" 
-                placeholder="Buscar leilão..." 
+                placeholder={activeLeilao ? "Buscar clube..." : "Buscar leilão..."} 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -376,67 +498,150 @@ export function TelaLeilao() {
             </button>
 
             <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Leilões da Temporada</h2>
-                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Janelas de transferências e negociações</p>
-            </div>
-            </div>
+              <div>
+                  <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Leilão</h2>
+                  <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Dispute os melhores clubes para a temporada</p>
+              </div>
 
-            <div className="table-container">
-              {isLoading ? (
-                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>Carregando dados...</div>
-              ) : (
-                <table className="custom-table">
-                  <thead>
-                    <tr>
-                      <th>Descrição</th>
-                      <th>Início</th>
-                      <th>Fim</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredLeiloes.map((leilao) => (
-                        <tr 
-                            key={leilao.id}
-                            onClick={() => handleLeilaoClick(leilao.id)}
-                        >
-                          <td>
-                            <div className="leilao-desc-cell">
-                                <Gavel size={20} color="var(--primary)" />
-                                <span>{leilao.descricao}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem' }}>
-                                <Clock size={14} /> {formatDate(leilao.dataInicio)}
-                            </div>
-                          </td>
-                          <td>
-                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem' }}>
-                                <Clock size={14} /> {formatDate(leilao.dataFim)}
-                            </div>
-                          </td>
-                          <td>
-                             {leilao.ativo ? (
-                                <span className="status-badge status-ativo">Aberto</span>
-                             ) : (
-                                <span className="status-badge status-encerrado">Encerrado</span>
-                             )}
-                          </td>
-                        </tr>
-                      ))}
-                    {filteredLeiloes.length === 0 && (
-                      <tr>
-                          <td colSpan={4} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
-                              Nenhum leilão encontrado nesta temporada
-                          </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+              {isProprietario && (
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                      className="t-btn" 
+                      onClick={() => setShowCriarLeilaoPopup(true)}
+                      style={{background: 'var(--primary)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '8px'}}
+                    >
+                        <Plus size={18} /> Iniciar Leilão
+                    </button>
+                </div>
               )}
             </div>
+
+            {isLoadingLeiloes ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>Carregando dados...</div>
+            ) : activeLeilao ? (
+                <>
+                    <div className="leilao-header">
+                        <div>
+                            <h3 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0 0 8px 0' }}>
+                                Leilão Aberto: {activeLeilao.descricao}
+                            </h3>
+                            <div className="leilao-timer">
+                                <Clock size={20} color="#10b981" />
+                                <span>Encerra em: {formatDate(activeLeilao.dataFim)}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <span className="status-badge status-ativo" style={{ fontSize: '1rem', padding: '8px 16px' }}>EM ANDAMENTO</span>
+                        </div>
+                    </div>
+
+                    <div className="table-container">
+                        <table className="custom-table">
+                        <thead>
+                            <tr>
+                            <th>Clube</th>
+                            <th style={{ textAlign: 'center' }}>Estrelas</th>
+                            <th style={{ textAlign: 'right' }}>Valor Avaliado</th>
+                            <th style={{ textAlign: 'right' }}>Lance Mínimo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {clubesData?.pages.map((page) => (
+                                page.conteudo
+                                    .filter(clube => clube.nome.toLowerCase().includes(searchTerm.toLowerCase()))
+                                    .map((clube) => (
+                                    <tr key={clube.id}>
+                                        <td>
+                                            <div className="clube-info">
+                                                <img src={clube.imagem} alt={clube.nome} className="clube-img" />
+                                                <div>
+                                                    <div style={{ fontWeight: 600 }}>{clube.nome}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{clube.ligaClube.replace('_', ' ')}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <div className="star-badge" style={{ justifyContent: 'center' }}>
+                                                <span>{clube.estrelas.toFixed(1)}</span>
+                                                <Star size={12} fill="#b7791f" />
+                                            </div>
+                                        </td>
+                                        <td style={{ textAlign: 'right' }}>
+                                            <div style={{ fontWeight: 700, color: 'var(--text-gray)' }}>
+                                                {formatMoney(clube.valorAvaliado)}
+                                            </div>
+                                        </td>
+                                        <td style={{ textAlign: 'right' }}>
+                                            <div className="price-tag">
+                                                {formatMoney(clube.lanceMinimo)}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ))}
+                        </tbody>
+                        </table>
+                        <div ref={observerTarget} style={{ height: '60px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            {isFetchingNextPage && <LoadingSpinner isLoading={true} />}
+                        </div>
+                    </div>
+                </>
+            ) : (
+                <div className="table-container">
+                    <table className="custom-table">
+                      <thead>
+                        <tr>
+                          <th>Histórico de Leilões</th>
+                          <th>Início</th>
+                          <th>Fim</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {leiloes.map((leilao) => (
+                            <tr key={leilao.id}>
+                              <td>
+                                <div className="clube-info">
+                                    <Gavel size={20} color="var(--primary)" />
+                                    <span>{leilao.descricao}</span>
+                                </div>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem' }}>
+                                    <Clock size={14} /> {formatDate(leilao.dataInicio)}
+                                </div>
+                              </td>
+                              <td>
+                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem' }}>
+                                    <Clock size={14} /> {formatDate(leilao.dataFim)}
+                                </div>
+                              </td>
+                              <td>
+                                 {leilao.ativo ? (
+                                    <span className="status-badge status-ativo">Aberto</span>
+                                 ) : (
+                                    <span className="status-badge status-encerrado">Encerrado</span>
+                                 )}
+                              </td>
+                            </tr>
+                          ))}
+                        {leiloes.length === 0 && (
+                          <tr>
+                              <td colSpan={4} style={{textAlign: 'center', padding: '50px', color: 'var(--text-secondary)'}}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                                      <AlertCircle size={48} color="var(--border-color)" />
+                                      <div>
+                                          <h3 style={{ margin: 0, color: 'var(--text-dark)' }}>Nenhum leilão ativo</h3>
+                                          <p style={{ margin: '8px 0 0 0', fontSize: '0.9rem' }}>Aguarde o início da próxima janela de transferências.</p>
+                                      </div>
+                                  </div>
+                              </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                </div>
+            )}
         </div>
 
       </main>
@@ -456,6 +661,13 @@ export function TelaLeilao() {
           }}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
+        />
+      )}
+
+      {showCriarLeilaoPopup && (
+        <PopupCriarLeilao 
+          onClose={() => setShowCriarLeilaoPopup(false)}
+          onSubmit={handleCriarLeilaoSubmit}
         />
       )}
     </div>
