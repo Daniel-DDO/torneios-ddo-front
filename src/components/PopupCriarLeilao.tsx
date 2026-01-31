@@ -8,15 +8,11 @@ interface PopupCriarLeilaoProps {
     onSubmit: () => void;
 }
 
-interface Leilao {
-    id: string;
-    ativo: boolean;
-}
-
 const PopupCriarLeilao: React.FC<PopupCriarLeilaoProps> = ({ onClose, onSubmit }) => {
     const { temporadaId } = useParams();
     const [fadeout, setFadeout] = useState(false);
     const [horasDuracao, setHorasDuracao] = useState<number>(24);
+    const [isSelecao, setIsSelecao] = useState(false);
     const [loading, setLoading] = useState(false);
     const [checking, setChecking] = useState(true);
     const [error, setError] = useState('');
@@ -26,11 +22,9 @@ const PopupCriarLeilao: React.FC<PopupCriarLeilaoProps> = ({ onClose, onSubmit }
         const checkExistingLeilao = async () => {
             if (!temporadaId) return;
             try {
-                const response = await API.get(`/leiloes/temporada/${temporadaId}`);
-                const leiloes: Leilao[] = response.data;
-                const activeLeilao = leiloes.find(l => l.ativo);
+                const response = await API.get(`/api/leiloes/temporada/${temporadaId}/existe`);
                 
-                if (activeLeilao) {
+                if (response.data === true) {
                     setCanCreate(false);
                     setError("Já existe um leilão ativo nesta temporada.");
                 }
@@ -86,7 +80,8 @@ const PopupCriarLeilao: React.FC<PopupCriarLeilaoProps> = ({ onClose, onSubmit }
 
         const payload = {
             temporadaId: temporadaId,
-            horasDuracao: horasDuracao
+            horasDuracao: horasDuracao,
+            isSelecao: isSelecao
         };
 
         try {
@@ -145,6 +140,18 @@ const PopupCriarLeilao: React.FC<PopupCriarLeilaoProps> = ({ onClose, onSubmit }
                                 <p style={{fontSize: '0.8rem', color: '#666', marginTop: '4px'}}>
                                     O leilão será encerrado automaticamente após este período.
                                 </p>
+                            </div>
+
+                            <div className="form-group" style={{marginTop: '15px'}}>
+                                <label style={{display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 500}}>
+                                    <input 
+                                        type="checkbox"
+                                        checked={isSelecao}
+                                        onChange={(e) => setIsSelecao(e.target.checked)}
+                                        style={{width: '18px', height: '18px', accentColor: '#2563eb'}}
+                                    />
+                                    Leilão de Seleções (Copa das Nações)
+                                </label>
                             </div>
 
                             {error && <div className="conceder-error-msg">{error}</div>}

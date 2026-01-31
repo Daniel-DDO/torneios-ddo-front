@@ -15,11 +15,15 @@ import {
   Lightbulb,
   Settings,
   CalendarSync,
-  ArrowLeft,
   Gavel,
   Clock,
   Plus,
-  AlertCircle
+  Activity,
+  TrendingUp,
+  Timer,
+  ArrowRight,
+  AlertCircle,
+  ChevronLeft
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -51,6 +55,31 @@ interface ClubeDTO {
   titulos: number;
   valorAvaliado: number;
   lanceMinimo: number;
+}
+
+interface FeedItemDTO {
+  idJogador: string;
+  nomeJogador: string;
+  idClube: string;
+  nomeClube: string;
+  imagemClube: string;
+  valor: number;
+  dataHora: string;
+}
+
+interface ClubeDisputadoDTO {
+  idClube: string;
+  nomeClube: string;
+  imagemClube: string;
+  totalLances: number;
+  maiorLanceAtual: number;
+}
+
+interface StatusLanceJogadorDTO {
+  prioridade: number;
+  nomeClube: string;
+  valorOfertado: number;
+  status: string;
 }
 
 interface PageResponse<T> {
@@ -93,12 +122,56 @@ const fetchLeiloesPorTemporadaService = async (temporadaId: string) => {
   return response.data;
 };
 
+const fetchLeilaoFeed = async (leilaoId: string) => {
+  const response = await API.get(`/api/leiloes/${leilaoId}/feed`);
+  return response.data;
+};
+
+const fetchMaisDisputados = async (leilaoId: string) => {
+  const response = await API.get(`/api/leiloes/${leilaoId}/mais-disputados`);
+  return response.data;
+};
+
+const fetchMeuStatus = async (leilaoId: string) => {
+  const response = await API.get(`/api/leiloes/${leilaoId}/meu-status`);
+  return response.data;
+};
+
+const formatLeagueName = (liga: string) => {
+  const map: Record<string, string> = {
+    'LALIGA': 'LaLiga EA Sports',
+    'PREMIER_LEAGUE': 'Premier League',
+    'BRASILEIRAO': 'Brasileirão',
+    'SERIEA': 'Série A',
+    'BUNDESLIGA': 'Bundesliga',
+    'LIGUEONE': 'Ligue One',
+    'ARGENTINA': 'Liga Argentina',
+    'SELECAO': 'Seleção',
+    'SAUDI_PRO_LEAGUE': 'Saudi Pro League',
+    'OUTROS': 'Outros'
+  };
+  return map[liga] || liga.replace(/_/g, ' ');
+};
+
 export function TelaLeilao() {
   const navigate = useNavigate();
   const { temporadaId } = useParams();
   const queryClient = useQueryClient();
   const observerTarget = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [timeLeft, setTimeLeft] = useState<string>('');
+  const [isExpired, setIsExpired] = useState(false);
+
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [showUserPopup, setShowUserPopup] = useState(false);
+  const [showCriarLeilaoPopup, setShowCriarLeilaoPopup] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme === 'dark';
+  });
 
   const { data: avatars = [] } = useQuery<Avatar[]>({
     queryKey: ['avatares'],
@@ -113,8 +186,56 @@ export function TelaLeilao() {
   });
 
   const activeLeilao = useMemo(() => {
-    return leiloes.find(l => l.ativo);
+    const listaLeiloes = Array.isArray(leiloes) ? leiloes : [];
+    return listaLeiloes.find(l => l.ativo);
   }, [leiloes]);
+
+  useEffect(() => {
+    if (!activeLeilao) return;
+
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const end = new Date(activeLeilao.dataFim.endsWith('Z') ? activeLeilao.dataFim : `${activeLeilao.dataFim}Z`);
+      const difference = end.getTime() - now.getTime();
+
+      if (difference > 0) {
+        const hours = Math.floor((difference / (1000 * 60 * 60)));
+        const minutes = Math.floor((difference / 1000 / 60) % 60);
+        const seconds = Math.floor((difference / 1000) % 60);
+        setTimeLeft(`${hours.toString().padStart(2, '0')}h ${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`);
+        setIsExpired(false);
+      } else {
+        setTimeLeft('Encerrado');
+        setIsExpired(true);
+      }
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, [activeLeilao]);
+
+  const { data: feedData = [] } = useQuery<FeedItemDTO[]>({
+    queryKey: ['leilao-feed', activeLeilao?.id],
+    queryFn: () => fetchLeilaoFeed(activeLeilao!.id),
+    enabled: !!activeLeilao?.id,
+    refetchInterval: 5000 
+  });
+
+  const { data: maisDisputados = [] } = useQuery<ClubeDisputadoDTO[]>({
+    queryKey: ['leilao-disputados', activeLeilao?.id],
+    queryFn: () => fetchMaisDisputados(activeLeilao!.id),
+    enabled: !!activeLeilao?.id,
+    refetchInterval: 10000
+  });
+
+  const { data: meuStatus = [] } = useQuery<StatusLanceJogadorDTO[]>({
+    queryKey: ['meu-status', activeLeilao?.id],
+    queryFn: () => fetchMeuStatus(activeLeilao!.id),
+    enabled: !!activeLeilao?.id && !!currentUser,
+    refetchInterval: 5000
+  });
 
   const {
     data: clubesData,
@@ -151,26 +272,12 @@ export function TelaLeilao() {
 
   useEffect(() => {
     const element = observerTarget.current;
-    const option = { threshold: 0 };
-    
-    const observer = new IntersectionObserver(handleObserver, option);
+    const observer = new IntersectionObserver(handleObserver, { threshold: 0 });
     if (element) observer.observe(element);
-    
     return () => {
       if (element) observer.unobserve(element);
     };
   }, [handleObserver, activeLeilao]);
-
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [showCriarLeilaoPopup, setShowCriarLeilaoPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
 
   useEffect(() => {
     if (isDarkMode) {
@@ -222,6 +329,19 @@ export function TelaLeilao() {
     });
   };
 
+  const formatDataHoraBrasilia = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString.endsWith('Z') ? dateString : `${dateString}Z`);
+    return new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }).format(date);
+  };
+
   const formatMoney = (value: number) => {
     return `D$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
   };
@@ -232,153 +352,238 @@ export function TelaLeilao() {
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       
       <style>{`
-        .page-content {
-          padding: 2rem 3rem;
-        }
-
-        .table-container {
-          background-color: var(--bg-card);
-          border-radius: var(--radius);
-          border: 1px solid var(--border-color);
-          overflow: hidden;
-          margin-top: 24px;
-          box-shadow: var(--shadow-sm);
-        }
-
-        .custom-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-
-        .custom-table th, .custom-table td {
-          padding: 16px 24px;
-          text-align: left;
-          border-bottom: 1px solid var(--border-color);
-          vertical-align: middle;
-        }
-
-        .custom-table th {
-          background-color: var(--hover-bg);
-          color: var(--text-gray);
-          font-weight: 600;
-          font-size: 0.9rem;
-          text-transform: uppercase;
-        }
-
-        .custom-table td {
-          color: var(--text-dark);
-          font-size: 1rem;
-        }
-
-        .custom-table tbody tr {
-          transition: background-color 0.2s;
-          cursor: pointer;
-        }
-
-        .custom-table tbody tr:hover {
-          background-color: var(--hover-bg);
-        }
-
-        .custom-table tr:last-child td {
-          border-bottom: none;
-        }
-
-        .status-badge {
-          display: inline-block;
-          padding: 4px 12px;
-          border-radius: 12px;
-          font-size: 0.8rem;
-          font-weight: 700;
-          text-transform: uppercase;
-        }
-
-        .status-ativo {
-          background-color: rgba(16, 185, 129, 0.15);
-          color: #10b981;
-        }
-
-        .status-encerrado {
-          background-color: var(--border-color);
-          color: var(--text-gray);
-        }
-
-        .back-button {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--text-gray);
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-            cursor: pointer;
-            border: none;
-            background: none;
-            padding: 0;
-        }
-
-        .back-button:hover {
-            color: var(--primary);
-        }
-
-        .clube-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .clube-img {
-            width: 40px;
-            height: 40px;
-            object-fit: contain;
-        }
-
-        .star-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            background: #fff8e1;
-            padding: 4px 8px;
-            border-radius: 12px;
-            border: 1px solid #fceeb5;
-            color: #b7791f;
-            font-weight: 700;
-        }
-
-        .price-tag {
-             display: inline-block;
-             background: rgba(78, 62, 255, 0.1); 
-             color: var(--primary); 
-             font-weight: 700; 
-             padding: 6px 12px; 
-             border-radius: 8px;
-             min-width: 100px;
-             text-align: center;
-        }
-
-        .leilao-header {
+        .leilao-hero-banner {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: var(--radius);
-            padding: 24px;
+            border-radius: 20px;
+            padding: 24px 32px;
             margin-bottom: 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-left: 5px solid #10b981;
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            overflow: hidden;
         }
 
-        .leilao-timer {
+        .leilao-hero-banner::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 5px;
+            background: var(--primary);
+        }
+
+        .timer-display {
+            font-family: 'Inter', monospace;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1.2;
+            margin: 4px 0;
+        }
+
+        .brasilia-time {
+            font-size: 0.75rem;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .panels-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .panel-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            height: 360px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .panel-header {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 1.1rem;
-            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .panel-title {
+            font-size: 1rem;
+            font-weight: 700;
             color: var(--text-dark);
         }
 
-        @media (max-width: 768px) {
-          .page-content { padding: 1rem; }
-          .custom-table th, .custom-table td { padding: 12px; }
-          .leilao-header { flex-direction: column; gap: 16px; align-items: flex-start; }
+        .scroll-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border-radius: 10px;
+            transition: background 0.2s;
+            margin-bottom: 6px;
+            border: 1px solid transparent;
+        }
+
+        .list-item:hover {
+            background: var(--hover-bg);
+            border-color: var(--border-color);
+        }
+
+        .list-item.clickable {
+            cursor: pointer;
+        }
+
+        .mini-img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        .avatar-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--hover-bg);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .status-tag {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-ganhando { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .status-anulado { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .status-perdendo { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+
+        .table-container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .custom-table th {
+            text-align: left;
+            padding: 14px 20px;
+            background: var(--hover-bg);
+            color: var(--text-gray);
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .custom-table td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-dark);
+            vertical-align: middle;
+        }
+
+        .custom-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .custom-table tr:hover {
+            background: var(--hover-bg);
+        }
+
+        .clube-row-img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            margin-right: 12px;
+        }
+
+        .btn-primary-custom {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary-custom:hover {
+            opacity: 0.9;
+        }
+
+        .btn-primary-custom:disabled {
+            background: var(--text-gray);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .back-btn-custom {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 12px;
+            color: var(--text-gray);
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 24px;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .back-btn-custom:hover {
+            background: var(--hover-bg);
+            color: var(--primary);
+            border-color: var(--primary);
+            transform: translateX(-4px);
+        }
+
+        @media (max-width: 1024px) {
+            .panels-grid { grid-template-columns: 1fr; }
+            .leilao-hero-banner { flex-direction: column; align-items: flex-start; gap: 20px; }
         }
       `}</style>
 
@@ -473,18 +678,9 @@ export function TelaLeilao() {
               </div>
             ) : (
               <button 
-                className="login-btn-header" 
+                className="t-btn"
+                style={{background: 'var(--primary)', color: 'white', border: 'none'}}
                 onClick={() => setShowLoginPopup(true)}
-                style={{
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginLeft: '10px'
-                }}
               >
                 Login
               </button>
@@ -493,46 +689,194 @@ export function TelaLeilao() {
         </header>
 
         <div className="page-content">
-            <button onClick={() => navigate(`/${temporadaId}/torneios`)} className="back-button">
-                <ArrowLeft size={16} /> Voltar para Torneios
+            <button onClick={() => navigate(`/${temporadaId}/torneios`)} className="back-btn-custom">
+                <ChevronLeft size={18} /> Voltar para Torneios
             </button>
 
-            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                  <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Leilão</h2>
-                  <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Dispute os melhores clubes para a temporada</p>
+                  <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0 }}>Leilão</h2>
+                  <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem', margin: '4px 0 0' }}>Dispute os melhores clubes para a temporada</p>
               </div>
 
               {isProprietario && (
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <button 
-                      className="t-btn" 
-                      onClick={() => setShowCriarLeilaoPopup(true)}
-                      style={{background: 'var(--primary)', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '8px'}}
-                    >
-                        <Plus size={18} /> Iniciar Leilão
-                    </button>
-                </div>
+                <button 
+                  className="btn-primary-custom" 
+                  onClick={() => setShowCriarLeilaoPopup(true)}
+                >
+                    <Plus size={18} /> Iniciar Leilão
+                </button>
               )}
             </div>
 
             {isLoadingLeiloes ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>Carregando dados...</div>
+                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-gray)' }}>
+                    <LoadingSpinner isLoading={true} />
+                    <p style={{marginTop: 10}}>Carregando leilão...</p>
+                </div>
             ) : activeLeilao ? (
                 <>
-                    <div className="leilao-header">
+                    <div className="leilao-hero-banner">
                         <div>
-                            <h3 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0 0 8px 0' }}>
-                                Leilão Aberto: {activeLeilao.descricao}
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-gray)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{width: 8, height: 8, background: isExpired ? 'var(--text-gray)' : '#10b981', borderRadius: '50%', boxShadow: isExpired ? 'none' : '0 0 8px #10b981'}}></div>
+                                {isExpired ? 'Leilão Encerrado' : 'Leilão em Andamento'}
                             </h3>
-                            <div className="leilao-timer">
-                                <Clock size={20} color="#10b981" />
-                                <span>Encerra em: {formatDate(activeLeilao.dataFim)}</span>
+                            <div className="timer-display" style={{color: isExpired ? 'var(--text-gray)' : 'var(--primary)'}}>
+                                {timeLeft}
+                            </div>
+                            <div className="brasilia-time">
+                                <Clock size={12} />
+                                Horário de Brasília (UTC-3)
                             </div>
                         </div>
-                        <div>
-                            <span className="status-badge status-ativo" style={{ fontSize: '1rem', padding: '8px 16px' }}>EM ANDAMENTO</span>
+                        <button 
+                            className="btn-primary-custom"
+                            disabled={isExpired}
+                            style={{padding: '12px 24px', fontSize: '1.05rem'}}
+                            onClick={() => !isExpired && navigate(`/${temporadaId}/torneios/leilao/lance`)}
+                        >
+                            {isExpired ? 'Leilão Encerrado' : <><Gavel size={20} /> Dar Lances Agora</>}
+                        </button>
+                    </div>
+
+                    <div className="panels-grid">
+                        
+                        <div className="panel-card">
+                            <div className="panel-header">
+                                <Activity size={18} color="var(--primary)" />
+                                <span className="panel-title">Feed Ao Vivo</span>
+                            </div>
+                            <div className="scroll-list">
+                                {feedData.length > 0 ? (
+                                    feedData.map((item, index) => (
+                                        <div key={`${item.idJogador}-${item.dataHora}-${index}`} className="list-item">
+                                            <div className="avatar-circle">
+                                                {item.nomeJogador.charAt(0)}
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{fontSize: '0.85rem', lineHeight: '1.3'}}>
+                                                    <strong>{item.nomeJogador}</strong> no <strong>{item.nomeClube}</strong>
+                                                </div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-gray)' }}>
+                                                    {formatDataHoraBrasilia(item.dataHora)}
+                                                </div>
+                                            </div>
+                                            <div style={{ fontWeight: 700, color: '#10b981', fontSize: '0.85rem' }}>
+                                                {formatMoney(item.valor)}
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ textAlign: 'center', color: 'var(--text-gray)', marginTop: '40px', fontSize: '0.9rem' }}>
+                                        Nenhuma atividade recente.
+                                    </div>
+                                )}
+                            </div>
                         </div>
+
+                        <div className="panel-card">
+                            <div className="panel-header">
+                                <Timer size={18} color="var(--primary)" />
+                                <span className="panel-title">Meus Lances</span>
+                            </div>
+                            <div className="scroll-list">
+                                {!currentUser ? (
+                                    <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-gray)' }}>
+                                        <AlertCircle size={32} style={{marginBottom: 10, opacity: 0.5}} />
+                                        <p style={{fontSize: '0.9rem'}}>Faça login para ver o status.</p>
+                                        <button 
+                                            className="btn-primary-custom" 
+                                            style={{marginTop: 16, width: '100%', justifyContent: 'center'}}
+                                            onClick={() => setShowLoginPopup(true)}
+                                        >
+                                            Entrar
+                                        </button>
+                                    </div>
+                                ) : meuStatus.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-gray)' }}>
+                                        <Gavel size={32} style={{marginBottom: 10, opacity: 0.5}} />
+                                        <p style={{fontSize: '0.9rem'}}>Você ainda não realizou lances.</p>
+                                        <button 
+                                            className="btn-primary-custom" 
+                                            disabled={isExpired}
+                                            style={{marginTop: 16, width: '100%', justifyContent: 'center'}}
+                                            onClick={() => navigate(`/${temporadaId}/torneios/leilao/lance`)}
+                                        >
+                                            {isExpired ? 'Encerrado' : 'Fazer Lance'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    meuStatus.map((status, index) => (
+                                        <div key={index} className="list-item">
+                                            <div style={{
+                                                width: 24, height: 24, borderRadius: '6px', 
+                                                background: 'var(--primary)', color:'white',
+                                                display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'bold', fontSize: '0.75rem'
+                                            }}>
+                                                {status.prioridade}º
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{fontWeight: 600, fontSize: '0.9rem'}}>{status.nomeClube}</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                                                    {formatMoney(status.valorOfertado)}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                {status.status === 'GANHANDO' && <span className="status-tag status-ganhando">Ganhando</span>}
+                                                {status.status === 'ANULADO' && <span className="status-tag status-anulado">Anulado</span>}
+                                                {status.status !== 'GANHANDO' && status.status !== 'ANULADO' && <span className="status-tag status-perdendo">{status.status}</span>}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="panel-card">
+                            <div className="panel-header">
+                                <TrendingUp size={18} color="#eab308" />
+                                <span className="panel-title">Mais Disputados</span>
+                            </div>
+                            <div className="scroll-list">
+                                {maisDisputados.length > 0 ? (
+                                    maisDisputados.map((item, index) => (
+                                        <div 
+                                            key={item.idClube} 
+                                            className="list-item clickable"
+                                            onClick={() => navigate(`/${temporadaId}/torneios/leilao/${item.idClube}`)}
+                                        >
+                                            <div style={{ 
+                                                width: '24px', height: '24px', 
+                                                background: index < 3 ? 'var(--primary)' : 'var(--border-color)',
+                                                color: index < 3 ? 'white' : 'var(--text-gray)',
+                                                borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: '0.75rem', fontWeight: 'bold'
+                                            }}>
+                                                {index + 1}
+                                            </div>
+                                            <img src={item.imagemClube} alt={item.nomeClube} className="mini-img" />
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{item.nomeClube}</div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-gray)' }}>
+                                                    {item.totalLances} lances
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '0.85rem' }}>
+                                                    {formatMoney(item.maiorLanceAtual)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ textAlign: 'center', color: 'var(--text-gray)', marginTop: '40px', fontSize: '0.9rem' }}>
+                                        Nenhum dado disponível.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                     </div>
 
                     <div className="table-container">
@@ -543,6 +887,7 @@ export function TelaLeilao() {
                             <th style={{ textAlign: 'center' }}>Estrelas</th>
                             <th style={{ textAlign: 'right' }}>Valor Avaliado</th>
                             <th style={{ textAlign: 'right' }}>Lance Mínimo</th>
+                            <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -550,18 +895,22 @@ export function TelaLeilao() {
                                 page.conteudo
                                     .filter(clube => clube.nome.toLowerCase().includes(searchTerm.toLowerCase()))
                                     .map((clube) => (
-                                    <tr key={clube.id}>
+                                    <tr 
+                                        key={clube.id} 
+                                        onClick={() => navigate(`/${temporadaId}/torneios/leilao/${clube.id}`)}
+                                        style={{cursor: 'pointer'}}
+                                    >
                                         <td>
-                                            <div className="clube-info">
-                                                <img src={clube.imagem} alt={clube.nome} className="clube-img" />
+                                            <div style={{display: 'flex', alignItems: 'center'}}>
+                                                <img src={clube.imagem} alt={clube.nome} className="clube-row-img" />
                                                 <div>
                                                     <div style={{ fontWeight: 600 }}>{clube.nome}</div>
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{clube.ligaClube.replace('_', ' ')}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{formatLeagueName(clube.ligaClube)}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td style={{ textAlign: 'center' }}>
-                                            <div className="star-badge" style={{ justifyContent: 'center' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fff8e1', padding: '4px 8px', borderRadius: 8, border: '1px solid #fceeb5', color: '#b7791f', fontWeight: 700, fontSize: '0.85rem' }}>
                                                 <span>{clube.estrelas.toFixed(1)}</span>
                                                 <Star size={12} fill="#b7791f" />
                                             </div>
@@ -572,9 +921,12 @@ export function TelaLeilao() {
                                             </div>
                                         </td>
                                         <td style={{ textAlign: 'right' }}>
-                                            <div className="price-tag">
+                                            <div style={{ display: 'inline-block', background: 'rgba(78, 62, 255, 0.1)', color: 'var(--primary)', fontWeight: 700, padding: '6px 12px', borderRadius: 8, minWidth: 90, textAlign: 'center' }}>
                                                 {formatMoney(clube.lanceMinimo)}
                                             </div>
+                                        </td>
+                                        <td style={{textAlign: 'right'}}>
+                                            <ArrowRight size={18} color="var(--text-gray)" />
                                         </td>
                                     </tr>
                                 ))
@@ -598,12 +950,12 @@ export function TelaLeilao() {
                         </tr>
                       </thead>
                       <tbody>
-                        {leiloes.map((leilao) => (
+                        {Array.isArray(leiloes) && leiloes.map((leilao) => (
                             <tr key={leilao.id}>
                               <td>
-                                <div className="clube-info">
+                                <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
                                     <Gavel size={20} color="var(--primary)" />
-                                    <span>{leilao.descricao}</span>
+                                    <span style={{fontWeight: 600}}>{leilao.descricao}</span>
                                 </div>
                               </td>
                               <td>
@@ -625,7 +977,7 @@ export function TelaLeilao() {
                               </td>
                             </tr>
                           ))}
-                        {leiloes.length === 0 && (
+                        {Array.isArray(leiloes) && leiloes.length === 0 && (
                           <tr>
                               <td colSpan={4} style={{textAlign: 'center', padding: '50px', color: 'var(--text-secondary)'}}>
                                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
