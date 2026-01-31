@@ -17,16 +17,22 @@ const PopupCriarLeilao: React.FC<PopupCriarLeilaoProps> = ({ onClose, onSubmit }
     const [checking, setChecking] = useState(true);
     const [error, setError] = useState('');
     const [canCreate, setCanCreate] = useState(true);
+    const [leilaoAtivoId, setLeilaoAtivoId] = useState<string | null>(null);
 
     useEffect(() => {
         const checkExistingLeilao = async () => {
             if (!temporadaId) return;
             try {
-                const response = await API.get(`/api/leiloes/temporada/${temporadaId}/existe`);
+                const response = await API.get(`/api/leiloes/temporada/${temporadaId}`);
+                const leilaoAtivo = response.data.find((l: any) => l.ativo);
                 
-                if (response.data === true) {
+                if (leilaoAtivo) {
                     setCanCreate(false);
-                    setError("Já existe um leilão ativo nesta temporada.");
+                    setLeilaoAtivoId(leilaoAtivo.id);
+                    setError(""); 
+                } else {
+                    setCanCreate(true);
+                    setLeilaoAtivoId(null);
                 }
             } catch (err) {
                 console.error("Erro ao verificar leilões:", err);
@@ -96,6 +102,29 @@ const PopupCriarLeilao: React.FC<PopupCriarLeilaoProps> = ({ onClose, onSubmit }
         }
     };
 
+    const handleFinalize = async () => {
+        if (!leilaoAtivoId) return;
+        
+        if (!window.confirm("Tem certeza que deseja encerrar o leilão agora? Os vencedores serão definidos imediatamente.")) {
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+
+        try {
+            await API.post(`/api/leiloes/admin/${leilaoAtivoId}/finalizar`);
+            alert("Leilão encerrado com sucesso!");
+            handleClose();
+            onSubmit();
+        } catch (err: any) {
+            const msg = err.response?.data?.erro || err.response?.data?.message || "Erro ao finalizar leilão.";
+            setError(msg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
             <div className="popup-content criar-leilao-popup-width">
@@ -112,8 +141,12 @@ const PopupCriarLeilao: React.FC<PopupCriarLeilaoProps> = ({ onClose, onSubmit }
                              <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
                         </svg>
                     </div>
-                    <h2 className="popup-title">Iniciar Leilão</h2>
-                    <p className="popup-subtitle">Configure a janela de transferências</p>
+                    <h2 className="popup-title">
+                        {leilaoAtivoId ? 'Gerenciar Leilão' : 'Iniciar Leilão'}
+                    </h2>
+                    <p className="popup-subtitle">
+                        {leilaoAtivoId ? 'Encerre o leilão atual manualmente' : 'Configure a janela de transferências'}
+                    </p>
                 </div>
 
                 <div className="popup-body-scroll custom-scrollbar">
@@ -121,6 +154,16 @@ const PopupCriarLeilao: React.FC<PopupCriarLeilaoProps> = ({ onClose, onSubmit }
                         <div style={{ textAlign: 'center', padding: '40px' }}>
                             <div className="popup-spinner-small" style={{ borderColor: '#2563eb', borderTopColor: 'transparent', margin: '0 auto' }}></div>
                             <p style={{ marginTop: '10px', color: '#666' }}>Verificando permissões...</p>
+                        </div>
+                    ) : leilaoAtivoId ? (
+                        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                            <div className="conceder-error-msg" style={{ marginBottom: '20px' }}>
+                                Já existe um leilão ativo nesta temporada.
+                            </div>
+                            <p style={{ color: '#666', marginBottom: '20px' }}>
+                                Deseja encerrar o leilão antecipadamente? Isso processará todos os lances e definirá os vencedores.
+                            </p>
+                            {error && <div className="conceder-error-msg" style={{ marginBottom: '15px' }}>{error}</div>}
                         </div>
                     ) : !canCreate ? (
                         <div className="conceder-error-msg" style={{textAlign: 'center', marginTop: '20px'}}>
@@ -160,14 +203,26 @@ const PopupCriarLeilao: React.FC<PopupCriarLeilaoProps> = ({ onClose, onSubmit }
                 </div>
 
                 <div className="popup-footer-fixed">
-                    <button 
-                        type="button" 
-                        className="conceder-btn" 
-                        onClick={handleCreate} 
-                        disabled={loading || checking || !canCreate}
-                    >
-                        {loading ? <div className="popup-spinner-small"></div> : 'Iniciar Leilão'}
-                    </button>
+                    {leilaoAtivoId ? (
+                        <button 
+                            type="button" 
+                            className="conceder-btn"
+                            style={{ background: '#ef4444' }}
+                            onClick={handleFinalize} 
+                            disabled={loading}
+                        >
+                            {loading ? <div className="popup-spinner-small"></div> : 'Encerrar Leilão Agora'}
+                        </button>
+                    ) : (
+                        <button 
+                            type="button" 
+                            className="conceder-btn" 
+                            onClick={handleCreate} 
+                            disabled={loading || checking || !canCreate}
+                        >
+                            {loading ? <div className="popup-spinner-small"></div> : 'Iniciar Leilão'}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

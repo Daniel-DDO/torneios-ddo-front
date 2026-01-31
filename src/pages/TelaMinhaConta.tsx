@@ -114,8 +114,11 @@ export function TelaMinhaConta() {
 
       try {
         const parsedUser = JSON.parse(storedUser);
+        
+        // Primeiro renderiza com o que tem no cache para ser rápido
         setCurrentUser(parsedUser);
 
+        // Depois busca os dados atualizados no servidor
         try {
           const response = await API.get(`/jogadores/${parsedUser.id}`);
           const freshData = response.data || response;
@@ -125,7 +128,7 @@ export function TelaMinhaConta() {
             localStorage.setItem('user_data', JSON.stringify(freshData));
           }
         } catch (apiError) {
-          console.error(apiError);
+          console.error("Erro ao atualizar dados do usuário:", apiError);
         }
       } catch (e) {
         navigate('/');

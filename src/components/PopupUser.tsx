@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { API } from '../services/api';
 import './PopupUser.css';
 
 interface JogadorData {
@@ -22,6 +23,23 @@ interface PopupUserProps {
 
 const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
   const [fadeout, setFadeout] = useState(false);
+  const [userData, setUserData] = useState<JogadorData>(user);
+
+  useEffect(() => {
+    const fetchLatestUserData = async () => {
+      try {
+        const response = await API.get(`/jogadores/${user.id}`);
+        if (response.data) {
+          setUserData(response.data);
+          localStorage.setItem('user_data', JSON.stringify(response.data));
+        }
+      } catch (error) {
+        console.error("Erro ao atualizar dados do usuário", error);
+      }
+    };
+
+    fetchLatestUserData();
+  }, [user.id]);
 
   const handleClose = () => {
     setFadeout(true);
@@ -52,7 +70,7 @@ const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
     return '#00d09c'; 
   };
 
-  const roleColor = getRoleColor(user.cargo || '');
+  const roleColor = getRoleColor(userData.cargo || '');
 
   return (
     <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
@@ -70,8 +88,8 @@ const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
 
         <div className="popup-header-fixed">
             <div className="popup-user-image-wrapper">
-                {user.imagem ? (
-                    <img src={user.imagem} alt={user.nome} className="popup-user-img" />
+                {userData.imagem ? (
+                    <img src={userData.imagem} alt={userData.nome} className="popup-user-img" />
                 ) : (
                     <div className="popup-user-placeholder">
                         <svg viewBox="0 0 24 24" fill="currentColor" width="40" height="40">
@@ -80,24 +98,24 @@ const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
                     </div>
                 )}
             </div>
-            <h2 className="popup-user-name">{user.nome}</h2>
+            <h2 className="popup-user-name">{userData.nome}</h2>
             <span className="popup-role-badge">
-                {user.cargo}
+                {userData.cargo}
             </span>
         </div>
 
         <div className="popup-body-scroll custom-scrollbar">
             <div className="user-stats-grid">
                 <div className="stat-item">
-                    <span className="stat-value">{user.partidasJogadas}</span>
+                    <span className="stat-value">{userData.partidasJogadas}</span>
                     <span className="stat-label">Partidas</span>
                 </div>
                 <div className="stat-item">
-                    <span className="stat-value">{user.golsMarcados}</span>
+                    <span className="stat-value">{userData.golsMarcados}</span>
                     <span className="stat-label">Gols</span>
                 </div>
                 <div className="stat-item">
-                    <span className="stat-value">{user.titulos}</span>
+                    <span className="stat-value">{userData.titulos}</span>
                     <span className="stat-label">Títulos</span>
                 </div>
             </div>
@@ -109,7 +127,7 @@ const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
                     </div>
                     <div className="detail-info">
                         <label>Saldo Virtual</label>
-                        <span className="money-value">{formatCurrency(user.saldoVirtual)}</span>
+                        <span className="money-value">{formatCurrency(userData.saldoVirtual)}</span>
                     </div>
                 </div>
 
@@ -119,7 +137,7 @@ const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
                     </div>
                     <div className="detail-info">
                         <label>Discord</label>
-                        <span>{user.discord || 'Não vinculado'}</span>
+                        <span>{userData.discord || 'Não vinculado'}</span>
                     </div>
                 </div>
             </div>
