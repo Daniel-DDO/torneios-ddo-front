@@ -2,28 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Menu, 
-  LayoutDashboard, 
-  Users, 
-  Trophy, 
-  Shield, 
-  Wallet, 
-  Search, 
-  Bell, 
-  Gamepad2, 
-  Star,
-  Lightbulb,
-  Settings,
-  CalendarSync,
-  DollarSign,
-  Clock,
-  Award,
-  ChevronLeft
+  Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, 
+  Search, Bell, Gamepad2, Star, Lightbulb, Settings, 
+  CalendarSync, DollarSign, Clock, Award, ChevronLeft
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
 
 interface Leilao {
   id: string;
@@ -46,22 +30,13 @@ interface DisputaClubeDTO {
 }
 
 interface UserData {
-  id: string;
   nome: string;
-  discord: string;
   imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-  finais: number;
-  titulos: number;
-  golsMarcados: number;
-  partidasJogadas: number;
 }
 
 interface Avatar {
   id: string;
   url: string;
-  nome?: string;
 }
 
 const fetchAvatarsService = async () => {
@@ -85,22 +60,13 @@ export function TelaLeilaoClube() {
   const navigate = useNavigate();
   const { temporadaId, clubeId } = useParams();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [currentUser, setCurrentUser] = useState<UserData | null>(() => {
+  const [currentUser] = useState<UserData | null>(() => {
     const storedUser = localStorage.getItem('user_data');
     if (storedUser) {
       try {
-        const parsed = JSON.parse(storedUser);
-        return {
-          finais: 0,
-          titulos: 0,
-          golsMarcados: 0,
-          partidasJogadas: 0,
-          ...parsed
-        };
+        return JSON.parse(storedUser);
       } catch (e) {
         return null;
       }
@@ -155,15 +121,6 @@ export function TelaLeilaoClube() {
     }
   }, [isDarkMode]);
 
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        setCurrentUser(null);
-        setShowUserPopup(false);
-    }
-  };
-
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   const getCurrentUserAvatar = () => {
@@ -177,20 +134,24 @@ export function TelaLeilaoClube() {
 
   const formatDataHoraBrasilia = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString.endsWith('Z') ? dateString : `${dateString}Z`);
-    return new Intl.DateTimeFormat('pt-BR', {
-      timeZone: 'America/Sao_Paulo',
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }).format(date);
+    const safeDateString = dateString.endsWith('Z') ? dateString : `${dateString}Z`;
+    try {
+      const date = new Date(safeDateString);
+      return new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }).format(date);
+    } catch {
+      return dateString;
+    }
   };
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
-      
       <style>{`
         .clube-header-card {
             background: var(--bg-card);
@@ -207,13 +168,11 @@ export function TelaLeilaoClube() {
             overflow: hidden;
             animation: fadeInUp 0.6s ease-out forwards;
         }
-
         .clube-header-card:hover {
             box-shadow: var(--shadow-md);
             border-color: var(--primary);
             transform: translateY(-2px);
         }
-
         .clube-header-card::before {
             content: '';
             position: absolute;
@@ -223,7 +182,6 @@ export function TelaLeilaoClube() {
             height: 100%;
             background: var(--primary);
         }
-
         .clube-big-img {
             width: 90px;
             height: 90px;
@@ -231,11 +189,9 @@ export function TelaLeilaoClube() {
             filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
             transition: transform 0.3s;
         }
-
         .clube-header-card:hover .clube-big-img {
             transform: scale(1.05);
         }
-
         .clube-title h2 {
             font-size: 2rem;
             font-weight: 800;
@@ -243,7 +199,6 @@ export function TelaLeilaoClube() {
             color: var(--text-dark);
             letter-spacing: -0.5px;
         }
-
         .stat-badge {
             background: rgba(16, 185, 129, 0.1);
             color: #10b981;
@@ -256,7 +211,6 @@ export function TelaLeilaoClube() {
             gap: 8px;
             border: 1px solid rgba(16, 185, 129, 0.2);
         }
-
         .ranking-table-container {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
@@ -265,7 +219,6 @@ export function TelaLeilaoClube() {
             box-shadow: var(--shadow-sm);
             animation: fadeInUp 0.8s ease-out forwards;
         }
-
         .ranking-row {
             display: grid;
             grid-template-columns: 80px 2fr 1fr 1.5fr 1.5fr;
@@ -274,15 +227,12 @@ export function TelaLeilaoClube() {
             border-bottom: 1px solid var(--border-color);
             transition: all 0.2s;
         }
-
         .ranking-row:last-child {
             border-bottom: none;
         }
-
         .ranking-row:hover {
             background: var(--hover-bg);
         }
-
         .ranking-header {
             background: var(--bg-body);
             font-weight: 700;
@@ -291,7 +241,6 @@ export function TelaLeilaoClube() {
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-
         .pos-badge {
             width: 36px;
             height: 36px;
@@ -305,11 +254,9 @@ export function TelaLeilaoClube() {
             border: 1px solid var(--border-color);
             box-shadow: var(--shadow-sm);
         }
-
         .pos-1 { background: #FFD700; color: #fff; border-color: #eab308; box-shadow: 0 4px 10px rgba(234, 179, 8, 0.3); }
         .pos-2 { background: #C0C0C0; color: #fff; border-color: #9ca3af; }
         .pos-3 { background: #CD7F32; color: #fff; border-color: #fdba74; }
-
         .priority-tag {
             background: var(--primary);
             color: white;
@@ -319,14 +266,12 @@ export function TelaLeilaoClube() {
             font-weight: 700;
             box-shadow: 0 2px 6px rgba(78, 62, 255, 0.2);
         }
-
         .value-highlight {
             font-weight: 800;
             color: #10b981;
             font-size: 1.1rem;
             font-family: 'Inter', monospace;
         }
-
         .back-btn-custom {
             display: inline-flex;
             align-items: center;
@@ -342,14 +287,12 @@ export function TelaLeilaoClube() {
             transition: all 0.2s ease;
             box-shadow: var(--shadow-sm);
         }
-
         .back-btn-custom:hover {
             background: var(--hover-bg);
             color: var(--primary);
             border-color: var(--primary);
             transform: translateX(-4px);
         }
-
         @media (max-width: 768px) {
             .ranking-row {
                 grid-template-columns: 50px 1fr 1fr;
@@ -446,7 +389,6 @@ export function TelaLeilaoClube() {
             {currentUser ? (
               <div 
                 className="user-avatar-mini" 
-                onClick={() => setShowUserPopup(true)}
                 style={{
                   backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
                   backgroundSize: 'cover',
@@ -457,7 +399,6 @@ export function TelaLeilaoClube() {
                   justifyContent: 'center',
                   color: 'white',
                   fontWeight: 'bold',
-                  cursor: 'pointer'
                 }}
               >
                 {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
@@ -466,7 +407,7 @@ export function TelaLeilaoClube() {
               <button 
                 className="t-btn"
                 style={{background: 'var(--primary)', color: 'white', border: 'none'}}
-                onClick={() => setShowLoginPopup(true)}
+                onClick={() => navigate('/login')}
               >
                 Login
               </button>
@@ -488,7 +429,7 @@ export function TelaLeilaoClube() {
                     <p>Carregando detalhes...</p>
                 </div>
             ) : !disputa ? (
-                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-gray)' }}>Disputa não encontrada.</div>
+                <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-gray)' }}>Disputa não encontrada ou leilão inativo.</div>
             ) : (
                 <>
                     <div className="clube-header-card">
@@ -547,35 +488,7 @@ export function TelaLeilaoClube() {
                 </>
             )}
         </div>
-
       </main>
-
-      {showLoginPopup && (
-        <PopupLogin 
-          onClose={() => setShowLoginPopup(false)} 
-          onLoginSuccess={(u) => {
-            setCurrentUser({
-                finais: 0,
-                titulos: 0,
-                golsMarcados: 0,
-                partidasJogadas: 0,
-                ...u
-            });
-            setShowLoginPopup(false);
-          }} 
-        />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser 
-          user={{
-            ...currentUser,
-            imagem: getCurrentUserAvatar()
-          }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
     </div>
   );
 }
