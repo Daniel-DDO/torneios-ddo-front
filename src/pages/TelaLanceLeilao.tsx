@@ -350,14 +350,12 @@ export function TelaLanceLeilao() {
                 height: calc(100vh - 80px);
                 overflow: hidden;
             }
-
             .market-column {
                 display: flex;
                 flex-direction: column;
                 height: 100%;
                 overflow: hidden;
             }
-
             .market-grid {
                 display: grid;
                 grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -367,7 +365,6 @@ export function TelaLanceLeilao() {
                 padding-bottom: 40px;
                 flex: 1;
             }
-
             .clube-card {
                 background: var(--bg-card);
                 border: 1px solid var(--border-color);
@@ -381,18 +378,15 @@ export function TelaLanceLeilao() {
                 position: relative;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             }
-
             .clube-card:hover {
                 transform: translateY(-2px);
                 border-color: var(--primary);
                 box-shadow: 0 8px 16px rgba(0,0,0,0.08);
             }
-
             .clube-card.selected {
                 border: 2px solid #10b981;
                 background: rgba(16, 185, 129, 0.05);
             }
-
             .clube-img {
                 width: 60px;
                 height: 60px;
@@ -400,7 +394,6 @@ export function TelaLanceLeilao() {
                 margin-bottom: 4px;
                 filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
             }
-
             .back-btn-custom {
                 background: transparent;
                 border: none;
@@ -414,13 +407,11 @@ export function TelaLanceLeilao() {
                 border-radius: 12px;
                 transition: all 0.2s ease;
             }
-
             .back-btn-custom:hover {
                 background: var(--hover-bg);
                 color: var(--primary);
                 transform: translateX(-4px);
             }
-
             .cart-column {
                 background: var(--bg-card);
                 border: 1px solid var(--border-color);
@@ -431,13 +422,11 @@ export function TelaLanceLeilao() {
                 overflow: hidden;
                 box-shadow: 0 4px 20px rgba(0,0,0,0.05);
             }
-
             .cart-header {
                 padding: 20px;
                 border-bottom: 1px solid var(--border-color);
                 background: var(--bg-body);
             }
-
             .cart-items {
                 flex: 1;
                 overflow-y: auto;
@@ -446,7 +435,6 @@ export function TelaLanceLeilao() {
                 flex-direction: column;
                 gap: 12px;
             }
-
             .cart-item {
                 background: var(--bg-card);
                 border: 1px solid var(--border-color);
@@ -458,21 +446,17 @@ export function TelaLanceLeilao() {
                 transition: 0.2s;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             }
-            
             .cart-item:hover {
                 border-color: var(--primary);
             }
-
             .cart-item-info {
                 flex: 1;
                 width: 100%;
             }
-
             .cart-input-wrapper {
                 position: relative;
                 margin-top: 8px;
             }
-
             .cart-input {
                 width: 100%;
                 padding: 8px 8px 8px 32px;
@@ -485,24 +469,20 @@ export function TelaLanceLeilao() {
                 outline: none;
                 transition: 0.2s;
             }
-
             .cart-input:focus {
                 border-color: var(--primary);
                 box-shadow: 0 0 0 3px rgba(78, 62, 255, 0.1);
             }
-
             .cart-input.error {
                 border-color: #ef4444;
                 color: #ef4444;
                 background: rgba(239, 68, 68, 0.05);
             }
-
             .cart-footer {
                 padding: 20px;
                 border-top: 1px solid var(--border-color);
                 background: var(--bg-body);
             }
-
             .priority-badge {
                 width: 26px;
                 height: 26px;
@@ -516,7 +496,6 @@ export function TelaLanceLeilao() {
                 font-weight: 700;
                 flex-shrink: 0;
             }
-
             .order-controls {
                 display: flex;
                 flex-direction: column;
@@ -524,7 +503,6 @@ export function TelaLanceLeilao() {
                 gap: 2px;
                 margin-right: 4px;
             }
-
             .order-btn {
                 border: none;
                 background: transparent;
@@ -532,12 +510,10 @@ export function TelaLanceLeilao() {
                 display: flex;
                 transition: color 0.2s;
             }
-            
             .order-btn:disabled {
                 color: var(--border-color);
                 cursor: default;
             }
-
             .cart-empty {
                 display: flex;
                 flex-direction: column;
@@ -549,7 +525,6 @@ export function TelaLanceLeilao() {
                 padding: 20px;
                 opacity: 0.7;
             }
-
             @media (max-width: 1024px) {
                 .lance-layout {
                     grid-template-columns: 1fr;
@@ -743,7 +718,6 @@ export function TelaLanceLeilao() {
                                             className="order-btn" 
                                             onClick={() => handleMoveClube(index, -1)} 
                                             disabled={index === 0}
-                                            style={{cursor: index === 0 ? 'default' : 'pointer', color: index === 0 ? 'var(--border-color)' : 'var(--text-gray)'}}
                                         >
                                             <ChevronUp size={16} />
                                         </button>
@@ -752,7 +726,6 @@ export function TelaLanceLeilao() {
                                             className="order-btn" 
                                             onClick={() => handleMoveClube(index, 1)} 
                                             disabled={index === meusLances.length - 1}
-                                            style={{cursor: index === meusLances.length - 1 ? 'default' : 'pointer', color: index === meusLances.length - 1 ? 'var(--border-color)' : 'var(--text-gray)'}}
                                         >
                                             <ChevronDown size={16} />
                                         </button>
