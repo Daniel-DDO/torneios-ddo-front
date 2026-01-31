@@ -21,7 +21,9 @@ import {
   DollarSign,
   Info,
   StarHalf,
-  ChevronLeft
+  ChevronLeft,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -158,7 +160,7 @@ export function TelaLanceLeilao() {
                 setMeusLances(lancesMapeados);
             }
         } catch (error) {
-            console.error("Erro ao buscar lances existentes", error);
+            console.error(error);
         }
     };
     fetchMeusLances();
@@ -231,6 +233,22 @@ export function TelaLanceLeilao() {
     setMeusLances(novosLances);
   };
 
+  const handleMoveClube = (index: number, direction: number) => {
+    const newLances = [...meusLances];
+    const targetIndex = index + direction;
+
+    if (targetIndex < 0 || targetIndex >= newLances.length) return;
+
+    [newLances[index], newLances[targetIndex]] = [newLances[targetIndex], newLances[index]];
+
+    const lancesReordenados = newLances.map((lance, idx) => ({
+      ...lance,
+      prioridade: idx + 1
+    }));
+
+    setMeusLances(lancesReordenados);
+  };
+
   const handleUpdateValor = (clubeId: string, novoValor: number) => {
     setMeusLances(prev => prev.map(l => 
         l.clube.id === clubeId ? { ...l, valor: novoValor } : l
@@ -254,9 +272,9 @@ export function TelaLanceLeilao() {
         return;
     }
 
-    const invalidBid = meusLances.find(l => l.valor > currentUser.saldoVirtual);
-    if (invalidBid) {
-        alert(`O lance para o ${invalidBid.clube.nome} excede seu saldo disponível.`);
+    const maxBid = meusLances.reduce((max, l) => l.valor > max ? l.valor : max, 0);
+    if (maxBid > currentUser.saldoVirtual) {
+        alert("Seu maior lance excede seu saldo disponível.");
         return;
     }
     
@@ -287,7 +305,7 @@ export function TelaLanceLeilao() {
         }, 2000);
     } catch (error: any) {
         console.error(error);
-        alert("Erro ao enviar lances. Tente novamente.");
+        alert(error.response?.data?.message || "Erro ao enviar lances. Tente novamente.");
     } finally {
         setSubmitting(false);
     }
@@ -499,6 +517,27 @@ export function TelaLanceLeilao() {
                 flex-shrink: 0;
             }
 
+            .order-controls {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
+                margin-right: 4px;
+            }
+
+            .order-btn {
+                border: none;
+                background: transparent;
+                padding: 0;
+                display: flex;
+                transition: color 0.2s;
+            }
+            
+            .order-btn:disabled {
+                color: var(--border-color);
+                cursor: default;
+            }
+
             .cart-empty {
                 display: flex;
                 flex-direction: column;
@@ -695,11 +734,30 @@ export function TelaLanceLeilao() {
                             <p style={{fontSize: '0.85rem'}}>Selecione times no mercado ao lado para começar suas negociações.</p>
                         </div>
                     ) : (
-                        meusLances.map((lance) => {
+                        meusLances.map((lance, index) => {
                             const isError = lance.valor > saldoDisponivel;
                             return (
                                 <div key={lance.clube.id} className="cart-item">
-                                    <div className="priority-badge">{lance.prioridade}º</div>
+                                    <div className="order-controls">
+                                        <button 
+                                            className="order-btn" 
+                                            onClick={() => handleMoveClube(index, -1)} 
+                                            disabled={index === 0}
+                                            style={{cursor: index === 0 ? 'default' : 'pointer', color: index === 0 ? 'var(--border-color)' : 'var(--text-gray)'}}
+                                        >
+                                            <ChevronUp size={16} />
+                                        </button>
+                                        <div className="priority-badge">{lance.prioridade}º</div>
+                                        <button 
+                                            className="order-btn" 
+                                            onClick={() => handleMoveClube(index, 1)} 
+                                            disabled={index === meusLances.length - 1}
+                                            style={{cursor: index === meusLances.length - 1 ? 'default' : 'pointer', color: index === meusLances.length - 1 ? 'var(--border-color)' : 'var(--text-gray)'}}
+                                        >
+                                            <ChevronDown size={16} />
+                                        </button>
+                                    </div>
+
                                     <div className="cart-item-info">
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                                             <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
