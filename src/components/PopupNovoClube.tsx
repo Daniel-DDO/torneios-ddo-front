@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Image as ImageIcon, } from 'lucide-react';
+import { Shield, Image as ImageIcon, X } from 'lucide-react';
 import { API } from '../services/api';
 import './PopupNovoClube.css';
 
@@ -108,19 +108,16 @@ const PopupNovoClube: React.FC<PopupNovoClubeProps> = ({ onClose, onSuccess }) =
   };
 
   return (
-    <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
-      <div className="popup-content popup-novo-clube">
+    <div className={`crcl-popup-overlay ${fadeout ? 'crcl-fade-out' : ''}`}>
+      <div className="crcl-popup-content crcl-popup-novo-clube">
         
-        <button className="popup-close-btn" onClick={handleClose}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+        <button className="crcl-popup-close-btn" onClick={handleClose} type="button">
+          <X size={20} />
         </button>
 
-        <div className="popup-header-fixed">
+        <div className="crcl-popup-header-fixed">
             <div 
-              className="icon-badge-wrapper"
+              className="crcl-icon-badge-wrapper"
               style={{
                 background: `linear-gradient(135deg, ${formData.corPrimaria} 0%, ${formData.corSecundaria} 100%)`,
                 boxShadow: `0 8px 20px ${formData.corPrimaria}40`
@@ -128,19 +125,18 @@ const PopupNovoClube: React.FC<PopupNovoClubeProps> = ({ onClose, onSuccess }) =
             >
                <Shield size={28} color="#fff" />
             </div>
-            <h2 className="popup-title">Novo Clube</h2>
-            <p className="popup-subtitle">Cadastre um novo time no sistema</p>
+            <h2 className="crcl-popup-title">Novo Clube</h2>
+            <p className="crcl-popup-subtitle">Cadastre um novo time no sistema</p>
         </div>
 
-        <div className="popup-body-scroll custom-scrollbar">
+        <div className="crcl-popup-body-scroll crcl-custom-scrollbar">
             
-            <div className="form-row-split">
-                {/* Coluna Esquerda: Dados Básicos */}
-                <div className="form-column">
-                    <div className="form-group">
-                        <label>Nome do Clube <span className="required-star">*</span></label>
+            <div className="crcl-form-row-split">
+                <div className="crcl-form-column">
+                    <div className="crcl-form-group">
+                        <label>Nome do Clube <span className="crcl-required-star">*</span></label>
                         <input 
-                            className="pnc-input" 
+                            className="crcl-input" 
                             type="text" 
                             name="nome" 
                             placeholder="Ex: Real Madrid"
@@ -150,11 +146,11 @@ const PopupNovoClube: React.FC<PopupNovoClubeProps> = ({ onClose, onSuccess }) =
                         />
                     </div>
 
-                    <div className="form-row-mini">
-                        <div className="form-group" style={{ flex: 1 }}>
-                            <label>Sigla <span className="required-star">*</span></label>
+                    <div className="crcl-form-row-mini">
+                        <div className="crcl-form-group" style={{ flex: 1 }}>
+                            <label>Sigla <span className="crcl-required-star">*</span></label>
                             <input 
-                                className="pnc-input" 
+                                className="crcl-input" 
                                 type="text" 
                                 name="sigla" 
                                 placeholder="RMA"
@@ -163,10 +159,10 @@ const PopupNovoClube: React.FC<PopupNovoClubeProps> = ({ onClose, onSuccess }) =
                                 maxLength={3}
                             />
                         </div>
-                        <div className="form-group" style={{ flex: 1 }}>
+                        <div className="crcl-form-group" style={{ flex: 1 }}>
                             <label>Estrelas (0.5 - 5.0)</label>
                             <input 
-                                className="pnc-input" 
+                                className="crcl-input" 
                                 type="number" 
                                 name="estrelas" 
                                 step="0.5"
@@ -178,10 +174,10 @@ const PopupNovoClube: React.FC<PopupNovoClubeProps> = ({ onClose, onSuccess }) =
                         </div>
                     </div>
 
-                    <div className="form-group">
-                        <label>Estádio <span className="required-star">*</span></label>
+                    <div className="crcl-form-group">
+                        <label>Estádio <span className="crcl-required-star">*</span></label>
                         <input 
-                            className="pnc-input" 
+                            className="crcl-input" 
                             type="text" 
                             name="estadio" 
                             placeholder="Ex: Santiago Bernabéu"
@@ -190,11 +186,11 @@ const PopupNovoClube: React.FC<PopupNovoClubeProps> = ({ onClose, onSuccess }) =
                         />
                     </div>
 
-                    <div className="form-group">
-                        <label>Liga <span className="required-star">*</span></label>
-                        <div className="select-wrapper">
+                    <div className="crcl-form-group">
+                        <label>Liga <span className="crcl-required-star">*</span></label>
+                        <div className="crcl-select-wrapper">
                             <select 
-                                className="pnc-select"
+                                className="crcl-select"
                                 name="ligaClube"
                                 value={formData.ligaClube}
                                 onChange={handleChange}
@@ -208,13 +204,12 @@ const PopupNovoClube: React.FC<PopupNovoClubeProps> = ({ onClose, onSuccess }) =
                     </div>
                 </div>
 
-                {/* Coluna Direita: Visual */}
-                <div className="form-column">
-                    <div className="form-group">
+                <div className="crcl-form-column">
+                    <div className="crcl-form-group">
                         <label>Link da Imagem (Logo)</label>
-                        <div className="image-input-group">
+                        <div className="crcl-image-input-group">
                             <input 
-                                className="pnc-input" 
+                                className="crcl-input" 
                                 type="text" 
                                 name="imagem" 
                                 placeholder="https://..."
@@ -222,23 +217,23 @@ const PopupNovoClube: React.FC<PopupNovoClubeProps> = ({ onClose, onSuccess }) =
                                 onChange={handleChange}
                                 onBlur={handleImageBlur}
                             />
-                            <div className="image-preview-box" style={{ borderColor: formData.corPrimaria }}>
+                            <div className="crcl-image-preview-box" style={{ borderColor: formData.corPrimaria }}>
                                 {imagePreview ? (
                                     <img src={imagePreview} alt="Preview" onError={() => setImagePreview(null)} />
                                 ) : (
-                                    <ImageIcon size={24} color="var(--pnc-text-secondary)" />
+                                    <ImageIcon size={24} color="var(--crcl-text-secondary)" />
                                 )}
                             </div>
                         </div>
-                        <span className="helper-text">Cole o link direto da imagem (PNG/JPG/SVG)</span>
+                        <span className="crcl-helper-text">Cole o link direto da imagem (PNG/JPG/SVG)</span>
                     </div>
 
-                    <div className="form-group">
+                    <div className="crcl-form-group">
                         <label>Cores do Clube</label>
-                        <div className="color-picker-row">
-                            <div className="color-input-wrapper">
-                                <span className="color-label">Primária</span>
-                                <div className="color-field">
+                        <div className="crcl-color-picker-row">
+                            <div className="crcl-color-input-wrapper">
+                                <span className="crcl-color-label">Primária</span>
+                                <div className="crcl-color-field">
                                     <input 
                                         type="color" 
                                         name="corPrimaria"
@@ -247,7 +242,7 @@ const PopupNovoClube: React.FC<PopupNovoClubeProps> = ({ onClose, onSuccess }) =
                                     />
                                     <input 
                                         type="text" 
-                                        className="hex-input"
+                                        className="crcl-hex-input"
                                         name="corPrimaria"
                                         value={formData.corPrimaria}
                                         onChange={handleChange}
@@ -256,9 +251,9 @@ const PopupNovoClube: React.FC<PopupNovoClubeProps> = ({ onClose, onSuccess }) =
                                 </div>
                             </div>
 
-                            <div className="color-input-wrapper">
-                                <span className="color-label">Secundária</span>
-                                <div className="color-field">
+                            <div className="crcl-color-input-wrapper">
+                                <span className="crcl-color-label">Secundária</span>
+                                <div className="crcl-color-field">
                                     <input 
                                         type="color" 
                                         name="corSecundaria"
@@ -267,7 +262,7 @@ const PopupNovoClube: React.FC<PopupNovoClubeProps> = ({ onClose, onSuccess }) =
                                     />
                                     <input 
                                         type="text" 
-                                        className="hex-input"
+                                        className="crcl-hex-input"
                                         name="corSecundaria"
                                         value={formData.corSecundaria}
                                         onChange={handleChange}
@@ -280,19 +275,19 @@ const PopupNovoClube: React.FC<PopupNovoClubeProps> = ({ onClose, onSuccess }) =
                 </div>
             </div>
 
-            {error && <div className="pnc-error-msg">{error}</div>}
-            {success && <div className="pnc-success-msg">{success}</div>}
+            {error && <div className="crcl-error-msg">{error}</div>}
+            {success && <div className="crcl-success-msg">{success}</div>}
 
         </div>
 
-        <div className="popup-footer-fixed">
+        <div className="crcl-popup-footer-fixed">
             <button 
-                className="btn-base btn-primary" 
+                className="crcl-btn-base crcl-btn-primary" 
                 onClick={handleSubmit} 
                 disabled={loading || !!success}
                 style={{ background: `linear-gradient(90deg, ${formData.corPrimaria}, ${formData.corSecundaria})` }}
             >
-                {loading ? <div className="btn-spinner"></div> : 'Cadastrar Clube'}
+                {loading ? <div className="crcl-btn-spinner"></div> : 'Cadastrar Clube'}
             </button>
         </div>
 

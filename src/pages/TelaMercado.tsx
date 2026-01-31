@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
   Menu,
   LayoutDashboard,
@@ -18,7 +18,9 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Globe
+  Globe,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -32,6 +34,16 @@ interface MercadoDTO {
   tendencia: string;
   mensagem: string;
   corIndicativa: string;
+}
+
+interface ConquistaDTO {
+  id: string;
+  titulo: {
+    id: string;
+    nome: string;
+    imagem: string;
+  };
+  nomeEdicao: string;
 }
 
 interface ClubeDTO {
@@ -48,6 +60,8 @@ interface ClubeDTO {
   titulos: number;
   valorAvaliado: number;
   lanceMinimo: number;
+  conquistas: ConquistaDTO[];
+  nomeExtenso?: string;
 }
 
 interface PageResponse<T> {
@@ -75,7 +89,11 @@ interface UserData {
 interface Avatar {
   id: string;
   url: string;
-  nome?: string;
+}
+
+interface SortConfig {
+  key: keyof ClubeDTO | null;
+  direction: 'asc' | 'desc' | null;
 }
 
 const fetchMercadoStatus = async (): Promise<MercadoDTO> => {
@@ -90,19 +108,37 @@ const fetchAvatarsService = async () => {
   return [];
 };
 
+const formatLeagueName = (liga: string) => {
+  const map: Record<string, string> = {
+    'LALIGA': 'LaLiga EA Sports',
+    'PREMIER_LEAGUE': 'Premier League',
+    'BRASILEIRAO': 'Brasileirão',
+    'SERIEA': 'Série A',
+    'BUNDESLIGA': 'Bundesliga',
+    'LIGUEONE': 'Ligue One',
+    'ARGENTINA': 'Liga Argentina',
+    'SELECAO': 'Seleção',
+    'SAUDI_PRO_LEAGUE': 'Saudi Pro League',
+    'OUTROS': 'Outros'
+  };
+  return map[liga] || liga.replace(/_/g, ' ');
+};
+
 export function TelaMercado() {
   const navigate = useNavigate();
   const observerTarget = useRef<HTMLDivElement>(null);
+  
   const [tipoVisualizacao, setTipoVisualizacao] = useState<'clubes' | 'selecoes'>('clubes');
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
+  const [searchTerm, setSearchTerm] = useState('');
   
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
+    return localStorage.getItem('theme') === 'dark';
   });
 
   const { data: mercado } = useQuery<MercadoDTO>({
@@ -124,10 +160,17 @@ export function TelaMercado() {
     isFetchingNextPage,
     isLoading: loadingClubes
   } = useInfiniteQuery<PageResponse<ClubeDTO>>({
-    queryKey: ['lista-mercado', tipoVisualizacao],
+    queryKey: ['lista-mercado', tipoVisualizacao, sortConfig.key, sortConfig.direction],
     queryFn: async ({ pageParam = 0 }) => {
       const endpoint = tipoVisualizacao === 'clubes' ? '/clube/clubes' : '/clube/selecoes';
-      const response = await API.get(`${endpoint}?page=${pageParam}&size=20&sort=valorAvaliado,desc`);
+      
+      let url = `${endpoint}?page=${pageParam}&size=20`;
+      
+      if (sortConfig.key && sortConfig.direction) {
+        url += `&sort=${sortConfig.key},${sortConfig.direction}`;
+      }
+
+      const response = await API.get(url);
       return response.data;
     },
     initialPageParam: 0,
@@ -135,6 +178,39 @@ export function TelaMercado() {
       return lastPage.ultimaPagina ? undefined : lastPage.paginaAtual + 1;
     }
   });
+
+  const flattenedAndSortedData = useMemo(() => {
+    if (!clubesData) return [];
+    
+    const allItems = clubesData.pages.flatMap(page => page.conteudo);
+
+    if (!sortConfig.key || !sortConfig.direction) {
+      return allItems;
+    }
+
+    return [...allItems].sort((a, b) => {
+      const key = sortConfig.key as keyof ClubeDTO;
+      const aValue = a[key];
+      const bValue = b[key];
+
+      if (aValue === bValue) return 0;
+      
+      if (sortConfig.direction === 'asc') {
+        return aValue! < bValue! ? -1 : 1;
+      } else {
+        return aValue! > bValue! ? -1 : 1;
+      }
+    });
+  }, [clubesData, sortConfig]);
+
+  const filteredData = useMemo(() => {
+    if (!searchTerm) return flattenedAndSortedData;
+    const lowerTerm = searchTerm.toLowerCase();
+    return flattenedAndSortedData.filter(clube => 
+      clube.nome.toLowerCase().includes(lowerTerm) || 
+      (clube.nomeExtenso && clube.nomeExtenso.toLowerCase().includes(lowerTerm))
+    );
+  }, [flattenedAndSortedData, searchTerm]);
 
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -221,6 +297,24 @@ export function TelaMercado() {
     }
   };
 
+  const handleSort = (key: keyof ClubeDTO) => {
+    setSortConfig(current => {
+      if (current.key === key) {
+        if (current.direction === 'desc') return { key, direction: 'asc' };
+        if (current.direction === 'asc') return { key: null, direction: null };
+        return { key, direction: 'desc' };
+      }
+      return { key, direction: 'desc' };
+    });
+  };
+
+  const renderSortIcon = (key: string) => {
+    if (sortConfig.key !== key) return <Minus size={14} style={{ opacity: 0.3 }} />;
+    if (sortConfig.direction === 'asc') return <ChevronUp size={16} />;
+    if (sortConfig.direction === 'desc') return <ChevronDown size={16} />;
+    return <Minus size={14} style={{ opacity: 0.3 }} />;
+  };
+
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
 
@@ -288,6 +382,14 @@ export function TelaMercado() {
             font-size: 0.85rem;
             border-bottom: 1px solid var(--border-color);
             background: var(--hover-bg);
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+        
+        .market-table th:hover {
+            background: var(--border-color);
+            color: var(--text-dark);
         }
 
         .market-table td {
@@ -329,6 +431,12 @@ export function TelaMercado() {
              border-radius: 8px;
              min-width: 100px;
              text-align: center;
+        }
+        
+        .th-content {
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         @media (max-width: 768px) {
@@ -493,14 +601,20 @@ export function TelaMercado() {
             <div className="market-tabs">
                 <button 
                     className={`tab-btn ${tipoVisualizacao === 'clubes' ? 'active' : ''}`}
-                    onClick={() => setTipoVisualizacao('clubes')}
+                    onClick={() => {
+                        setTipoVisualizacao('clubes');
+                        setSortConfig({ key: null, direction: null });
+                    }}
                 >
                     <Shield size={18} />
                     Clubes
                 </button>
                 <button 
                     className={`tab-btn ${tipoVisualizacao === 'selecoes' ? 'active' : ''}`}
-                    onClick={() => setTipoVisualizacao('selecoes')}
+                    onClick={() => {
+                        setTipoVisualizacao('selecoes');
+                        setSortConfig({ key: null, direction: null });
+                    }}
                 >
                     <Globe size={18} />
                     Seleções
@@ -511,44 +625,67 @@ export function TelaMercado() {
                 <table className="market-table">
                     <thead>
                         <tr>
-                            <th>CLUBE</th>
-                            <th style={{ textAlign: 'center' }}>ESTRELAS</th>
-                            <th style={{ textAlign: 'right' }}>VALOR DE MERCADO</th>
-                            <th style={{ textAlign: 'right' }}>LANCE MÍNIMO</th>
+                            <th onClick={() => handleSort('nome')}>
+                                <div className="th-content">
+                                    CLUBE {renderSortIcon('nome')}
+                                </div>
+                            </th>
+                            <th onClick={() => handleSort('estrelas')} style={{ textAlign: 'center' }}>
+                                <div className="th-content" style={{ justifyContent: 'center' }}>
+                                    ESTRELAS {renderSortIcon('estrelas')}
+                                </div>
+                            </th>
+                            <th onClick={() => handleSort('valorAvaliado')} style={{ textAlign: 'right' }}>
+                                <div className="th-content" style={{ justifyContent: 'flex-end' }}>
+                                    VALOR DE MERCADO {renderSortIcon('valorAvaliado')}
+                                </div>
+                            </th>
+                            <th onClick={() => handleSort('lanceMinimo')} style={{ textAlign: 'right' }}>
+                                <div className="th-content" style={{ justifyContent: 'flex-end' }}>
+                                    LANCE MÍNIMO {renderSortIcon('lanceMinimo')}
+                                </div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
-                        {clubesData?.pages.map((page) => (
-                            page.conteudo.map((clube) => (
-                                <tr key={clube.id}>
-                                    <td>
-                                        <div className="clube-info">
-                                            <img src={clube.imagem} alt={clube.nome} className="clube-img" />
-                                            <div>
-                                                <div style={{ fontWeight: 600 }}>{clube.nome}</div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{clube.ligaClube.replace('_', ' ')}</div>
+                        {filteredData.map((clube) => (
+                            <tr key={clube.id}>
+                                <td>
+                                    <div className="clube-info">
+                                        <img src={clube.imagem} alt={clube.nome} className="clube-img" />
+                                        <div>
+                                            <div style={{ fontWeight: 600 }}>{clube.nome}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                                                {formatLeagueName(clube.ligaClube)}
                                             </div>
                                         </div>
-                                    </td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        <div className="star-badge">
-                                            <span>{clube.estrelas.toFixed(1)}</span>
-                                            <Star size={12} fill="#b7791f" />
-                                        </div>
-                                    </td>
-                                    <td style={{ textAlign: 'right' }}>
-                                        <div style={{ fontWeight: 700 }}>
-                                            {formatMoney(clube.valorAvaliado)}
-                                        </div>
-                                    </td>
-                                    <td style={{ textAlign: 'right' }}>
-                                        <div className="price-tag">
-                                            {formatMoney(clube.lanceMinimo)}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
+                                    </div>
+                                </td>
+                                <td style={{ textAlign: 'center' }}>
+                                    <div className="star-badge">
+                                        <span>{clube.estrelas.toFixed(1)}</span>
+                                        <Star size={12} fill="#b7791f" />
+                                    </div>
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                    <div style={{ fontWeight: 700 }}>
+                                        {formatMoney(clube.valorAvaliado)}
+                                    </div>
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                    <div className="price-tag">
+                                        {formatMoney(clube.lanceMinimo)}
+                                    </div>
+                                </td>
+                            </tr>
                         ))}
+                        {filteredData.length === 0 && !loadingClubes && (
+                             <tr>
+                                <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-gray)' }}>
+                                    Nenhum clube encontrado
+                                </td>
+                             </tr>
+                        )}
                     </tbody>
                 </table>
                 

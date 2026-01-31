@@ -45,7 +45,6 @@ interface DisputaClubeDTO {
   ranking: ItemRankingDTO[];
 }
 
-// Interface completa para evitar erros de tipagem no PopupUser
 interface UserData {
   id: string;
   nome: string;
@@ -142,7 +141,6 @@ export function TelaLeilaoClube() {
     const storedUser = localStorage.getItem('user_data');
     if (storedUser) {
       const parsed = JSON.parse(storedUser);
-      // Garante que todos os campos obrigatórios existam
       setCurrentUser({
         finais: 0,
         titulos: 0,
