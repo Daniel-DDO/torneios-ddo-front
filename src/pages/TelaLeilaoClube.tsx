@@ -85,10 +85,28 @@ export function TelaLeilaoClube() {
   const navigate = useNavigate();
   const { temporadaId, clubeId } = useParams();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const [currentUser, setCurrentUser] = useState<UserData | null>(() => {
+    const storedUser = localStorage.getItem('user_data');
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        return {
+          finais: 0,
+          titulos: 0,
+          golsMarcados: 0,
+          partidasJogadas: 0,
+          ...parsed
+        };
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -137,20 +155,6 @@ export function TelaLeilaoClube() {
     }
   }, [isDarkMode]);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      const parsed = JSON.parse(storedUser);
-      setCurrentUser({
-        finais: 0,
-        titulos: 0,
-        golsMarcados: 0,
-        partidasJogadas: 0,
-        ...parsed
-      });
-    }
-  }, []);
-
   const handleLogout = () => {
     if (window.confirm("Deseja realmente sair?")) {
         localStorage.removeItem('token');
@@ -187,7 +191,6 @@ export function TelaLeilaoClube() {
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       
-      {/* Estilos locais refinados para complementar o CSS global */}
       <style>{`
         .clube-header-card {
             background: var(--bg-card);
@@ -346,6 +349,28 @@ export function TelaLeilaoClube() {
             border-color: var(--primary);
             transform: translateX(-4px);
         }
+
+        @media (max-width: 768px) {
+            .ranking-row {
+                grid-template-columns: 50px 1fr 1fr;
+                gap: 10px;
+                padding: 15px;
+            }
+            .ranking-header {
+                display: none;
+            }
+            .ranking-row > div:nth-child(3) {
+                display: none; 
+            }
+            .ranking-row > div:nth-child(4) {
+                display: none;
+            }
+            .clube-header-card {
+                flex-direction: column;
+                text-align: center;
+                padding: 20px;
+            }
+        }
       `}</style>
 
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
@@ -449,7 +474,6 @@ export function TelaLeilaoClube() {
           </div>
         </header>
 
-        {/* Usando .page-content do CSS global para consistência */}
         <div className="page-content">
             <button 
                 onClick={() => navigate(`/${temporadaId}/torneios/leilao`)} 
@@ -487,7 +511,7 @@ export function TelaLeilaoClube() {
                             <div style={{textAlign: 'right'}}>Valor</div>
                         </div>
 
-                        {disputa.ranking.length === 0 ? (
+                        {disputa.ranking && disputa.ranking.length === 0 ? (
                             <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-gray)' }}>
                                 <div style={{background: 'var(--hover-bg)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px'}}>
                                     <DollarSign size={24} color="var(--text-gray)" />
@@ -495,7 +519,7 @@ export function TelaLeilaoClube() {
                                 Nenhum lance registrado para este clube ainda.
                             </div>
                         ) : (
-                            disputa.ranking.map((item, index) => (
+                            disputa.ranking?.map((item, index) => (
                                 <div key={index} className="ranking-row">
                                     <div>
                                         <div className={`pos-badge pos-${index + 1}`}>
