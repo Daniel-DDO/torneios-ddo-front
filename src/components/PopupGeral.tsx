@@ -62,32 +62,32 @@ const PopupGeral: React.FC<PopupGeralProps> = ({
     };
 
     return (
-        <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
-            <div className="popup-content popup-geral-width">
-                <button className="popup-close-btn" onClick={handleClose}>
+        <div className={`pger-overlay ${fadeout ? 'pger-fade-out' : ''}`}>
+            <div className="pger-content pger-width">
+                <button className="pger-close-btn" onClick={handleClose}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
                 </button>
 
-                <div className="popup-header-fixed">
-                    <div className={`icon-badge-status is-${type}`}>
+                <div className="pger-header-fixed">
+                    <div className={`pger-icon-badge pger-is-${type}`}>
                         {getIcon()}
                     </div>
-                    <h2 className="popup-title">{title}</h2>
+                    <h2 className="pger-title">{title}</h2>
                 </div>
 
-                <div className="popup-body-scroll custom-scrollbar">
-                    <div className="popup-message-container">
-                        <p className="popup-message-text">{message}</p>
+                <div className="pger-body-scroll pger-scrollbar">
+                    <div className="pger-message-container">
+                        <p className="pger-message-text">{message}</p>
                     </div>
                 </div>
 
-                <div className="popup-footer-fixed">
+                <div className="pger-footer-fixed">
                     <button 
                         type="button" 
-                        className={`conceder-btn btn-${type}`} 
+                        className={`pger-confirm-btn pger-btn-${type}`} 
                         onClick={handleClose}
                     >
                         {buttonText}
