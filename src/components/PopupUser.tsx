@@ -28,10 +28,11 @@ const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
   useEffect(() => {
     const fetchLatestUserData = async () => {
       try {
-        const response = await API.get(`/jogadores/${user.id}`);
-        if (response.data) {
-          setUserData(response.data);
-          localStorage.setItem('user_data', JSON.stringify(response.data));
+        const response = await API.get(`/jogador/${user.id}`);
+        const freshData = response.data || response;
+        if (freshData) {
+          setUserData(freshData);
+          localStorage.setItem('user_data', JSON.stringify(freshData));
         }
       } catch (error) {
         console.error("Erro ao atualizar dados do usuário", error);
@@ -59,8 +60,9 @@ const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
     }, 300);
   };
 
-  const formatCurrency = (value: number) => {
-    return `D$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatCurrency = (value: number | null) => {
+    const val = value ?? 0;
+    return `D$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const getRoleColor = (role: string) => {
@@ -89,33 +91,33 @@ const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
         <div className="popup-header-fixed">
             <div className="popup-user-image-wrapper">
                 {userData.imagem ? (
-                    <img src={userData.imagem} alt={userData.nome} className="popup-user-img" />
+                    <img src={userData.imagem} alt={userData.nome || 'Jogador'} className="popup-user-img" />
                 ) : (
                     <div className="popup-user-placeholder">
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="40" height="40">
-                            <path d="M7.5 6.5C7.5 8.981 9.519 11 12 11s4.5-2.019 4.5-4.5S14.481 2 12 2 7.5 4.019 7.5 6.5zM20 21h1v-1c0-3.859-3.141-7-7-7h-4c-3.86 0-7 3.141-7 7v1h17z"/>
-                        </svg>
+                        <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white' }}>
+                          {userData.nome ? userData.nome.charAt(0).toUpperCase() : '0'}
+                        </span>
                     </div>
                 )}
             </div>
-            <h2 className="popup-user-name">{userData.nome}</h2>
+            <h2 className="popup-user-name">{userData.nome || '0'}</h2>
             <span className="popup-role-badge">
-                {userData.cargo}
+                {(userData.cargo || '0').replace('_', ' ')}
             </span>
         </div>
 
         <div className="popup-body-scroll custom-scrollbar">
             <div className="user-stats-grid">
                 <div className="stat-item">
-                    <span className="stat-value">{userData.partidasJogadas}</span>
+                    <span className="stat-value">{userData.partidasJogadas ?? 0}</span>
                     <span className="stat-label">Partidas</span>
                 </div>
                 <div className="stat-item">
-                    <span className="stat-value">{userData.golsMarcados}</span>
+                    <span className="stat-value">{userData.golsMarcados ?? 0}</span>
                     <span className="stat-label">Gols</span>
                 </div>
                 <div className="stat-item">
-                    <span className="stat-value">{userData.titulos}</span>
+                    <span className="stat-value">{userData.titulos ?? 0}</span>
                     <span className="stat-label">Títulos</span>
                 </div>
             </div>
@@ -137,7 +139,7 @@ const PopupUser: React.FC<PopupUserProps> = ({ user, onClose, onLogout }) => {
                     </div>
                     <div className="detail-info">
                         <label>Discord</label>
-                        <span>{userData.discord || 'Não vinculado'}</span>
+                        <span>{userData.discord || '0'}</span>
                     </div>
                 </div>
             </div>

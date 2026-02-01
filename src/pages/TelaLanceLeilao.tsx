@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Menu, 
   LayoutDashboard, 
@@ -29,6 +29,7 @@ import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import PopupGeral from '../components/PopupGeral';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 interface ClubeDTO {
@@ -80,22 +81,44 @@ interface Leilao {
     ativo: boolean;
 }
 
+interface PopupState {
+    open: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+}
+
 export function TelaLanceLeilao() {
   const navigate = useNavigate();
   const { temporadaId } = useParams();
+  const queryClient = useQueryClient();
   const observerTarget = useRef<HTMLDivElement>(null);
   
   const [leilaoId, setLeilaoId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [meusLances, setMeusLances] = useState<ItemLanceLocal[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [feedbackMsg, setFeedbackMsg] = useState('');
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+
+  const [popup, setPopup] = useState<PopupState>({
+    open: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
+
+  const showPopup = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    setPopup({ open: true, title, message, type });
+  };
+
+  const closePopup = () => {
+    setPopup(prev => ({ ...prev, open: false }));
+  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user_data');
@@ -120,8 +143,8 @@ export function TelaLanceLeilao() {
             if (active) {
                 setLeilaoId(active.id);
             } else {
-                alert("Não há leilão ativo nesta temporada.");
-                navigate(`/${temporadaId}/torneios/leilao`);
+                showPopup("Atenção", "Não há leilão ativo nesta temporada.", "warning");
+                setTimeout(() => navigate(`/${temporadaId}/torneios/leilao`), 2000);
             }
         } catch (error) {
             console.error(error);
@@ -207,7 +230,7 @@ export function TelaLanceLeilao() {
 
   const handleAddClube = (clube: ClubeDTO) => {
     if (meusLances.length >= 5) {
-        alert("Você só pode selecionar no máximo 5 clubes.");
+        showPopup("Limite Atingido", "Você só pode selecionar no máximo 5 clubes.", "warning");
         return;
     }
     if (meusLances.some(l => l.clube.id === clube.id)) {
@@ -264,29 +287,28 @@ export function TelaLanceLeilao() {
   const handleSubmitLances = async () => {
     if (!currentUser) return;
     if (!leilaoId) {
-        alert("Erro: ID do leilão não encontrado.");
+        showPopup("Erro", "ID do leilão não encontrado.", "error");
         return;
     }
     if (meusLances.length === 0) {
-        alert("Selecione pelo menos 1 clube.");
+        showPopup("Atenção", "Selecione pelo menos 1 clube para dar lance.", "warning");
         return;
     }
 
     const maxBid = meusLances.reduce((max, l) => l.valor > max ? l.valor : max, 0);
     if (maxBid > currentUser.saldoVirtual) {
-        alert("Seu maior lance excede seu saldo disponível.");
+        showPopup("Saldo Insuficiente", "Seu maior lance excede seu saldo disponível.", "error");
         return;
     }
     
     const belowMinBid = meusLances.find(l => l.valor < l.clube.lanceMinimo);
     if (belowMinBid) {
-         alert(`O lance para o ${belowMinBid.clube.nome} está abaixo do mínimo permitido.`);
+         showPopup("Valor Inválido", `O lance para o ${belowMinBid.clube.nome} está abaixo do mínimo permitido de ${formatMoney(belowMinBid.clube.lanceMinimo)}.`, "error");
          handleUpdateValor(belowMinBid.clube.id, belowMinBid.clube.lanceMinimo);
          return;
     }
 
     setSubmitting(true);
-    setFeedbackMsg('');
 
     const payload = {
         leilaoId: leilaoId,
@@ -299,13 +321,23 @@ export function TelaLanceLeilao() {
 
     try {
         await API.post('/api/leiloes/lance', payload);
-        setFeedbackMsg('Lances atualizados com sucesso!');
+        showPopup("Sucesso", "Seus lances foram registrados com sucesso!", "success");
         setTimeout(() => {
             navigate(`/${temporadaId}/torneios/leilao`);
         }, 2000);
     } catch (error: any) {
-        console.error(error);
-        alert(error.response?.data?.message || "Erro ao enviar lances. Tente novamente.");
+        let msg = "Erro ao enviar lances.";
+        
+        if (error.response) {
+            if (error.response.data && error.response.data.message) {
+                msg = error.response.data.message;
+            } else if (typeof error.response.data === 'string') {
+                msg = error.response.data;
+            }
+        }
+        
+        showPopup("Não foi possível realizar o lance", msg, "error");
+        queryClient.invalidateQueries({ queryKey: ['clubes-mercado'] });
     } finally {
         setSubmitting(false);
     }
@@ -773,26 +805,6 @@ export function TelaLanceLeilao() {
                 </div>
 
                 <div className="cart-footer">
-                    {feedbackMsg && (
-                        <div style={{ 
-                            background: 'rgba(16, 185, 129, 0.1)', 
-                            color: '#10b981', 
-                            padding: '12px', 
-                            borderRadius: '8px', 
-                            marginBottom: '16px',
-                            textAlign: 'center',
-                            fontSize: '0.9rem',
-                            fontWeight: 600,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px'
-                        }}>
-                            <CheckCircle2 size={18} />
-                            {feedbackMsg}
-                        </div>
-                    )}
-                    
                     <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '0.9rem', color: 'var(--text-gray)'}}>
                         <span>Total de Lances:</span>
                         <span style={{fontWeight: 700, color: 'var(--text-dark)'}}>{meusLances.length}</span>
@@ -838,6 +850,15 @@ export function TelaLanceLeilao() {
             setShowUserPopup(false);
             navigate('/');
           }}
+        />
+      )}
+
+      {popup.open && (
+        <PopupGeral 
+            onClose={closePopup}
+            title={popup.title}
+            message={popup.message}
+            type={popup.type}
         />
       )}
     </div>

@@ -114,13 +114,10 @@ export function TelaMinhaConta() {
 
       try {
         const parsedUser = JSON.parse(storedUser);
-        
-        // Primeiro renderiza com o que tem no cache para ser rápido
         setCurrentUser(parsedUser);
 
-        // Depois busca os dados atualizados no servidor
         try {
-          const response = await API.get(`/jogadores/${parsedUser.id}`);
+          const response = await API.get(`/jogador/${parsedUser.id}`);
           const freshData = response.data || response;
           
           if (freshData && freshData.id) {
@@ -175,8 +172,9 @@ export function TelaMinhaConta() {
     });
   };
 
-  const formatCurrency = (value: number) => {
-    return 'D$ ' + value.toLocaleString('pt-BR', { 
+  const formatCurrency = (value: number | null) => {
+    const val = value ?? 0;
+    return 'D$ ' + val.toLocaleString('pt-BR', { 
       minimumFractionDigits: 2, 
       maximumFractionDigits: 2 
     });
@@ -524,17 +522,17 @@ export function TelaMinhaConta() {
                         backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none'
                     }}
                 >
-                    {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
+                    {!getCurrentUserAvatar() && (currentUser.nome?.charAt(0) || '0')}
                     <div className="profile-badge"></div>
                 </div>
 
                 <div className="profile-info">
-                    <h1 className="profile-name">{currentUser.nome}</h1>
+                    <h1 className="profile-name">{currentUser.nome || '0'}</h1>
                     <div className="profile-discord">
-                          <span style={{opacity: 0.7}}>#</span> {currentUser.discord}
+                          <span style={{opacity: 0.7}}>#</span> {currentUser.discord || '0'}
                     </div>
                     <span className="profile-role-tag">
-                        {currentUser.cargo.replace('_', ' ')}
+                        {(currentUser.cargo || '0').replace('_', ' ')}
                     </span>
                 </div>
 
@@ -545,22 +543,22 @@ export function TelaMinhaConta() {
                     </div>
 
                     <div className="stat-box">
-                        <div className="stat-value">{currentUser.partidasJogadas}</div>
+                        <div className="stat-value">{currentUser.partidasJogadas ?? 0}</div>
                         <div className="stat-label">Partidas</div>
                     </div>
 
                     <div className="stat-box">
-                        <div className="stat-value">{currentUser.titulos}</div>
+                        <div className="stat-value">{currentUser.titulos ?? 0}</div>
                         <div className="stat-label">Títulos</div>
                     </div>
 
                     <div className="stat-box">
-                        <div className="stat-value">{currentUser.golsMarcados}</div>
+                        <div className="stat-value">{currentUser.golsMarcados ?? 0}</div>
                         <div className="stat-label">Gols Marcados</div>
                     </div>
 
                     <div className="stat-box">
-                        <div className="stat-value">{currentUser.golsSofridos}</div>
+                        <div className="stat-value">{currentUser.golsSofridos ?? 0}</div>
                         <div className="stat-label">Gols Sofridos</div>
                     </div>
 
@@ -577,7 +575,7 @@ export function TelaMinhaConta() {
                 <div className="profile-details-list">
                     <div className="detail-item">
                         <label>ID do Jogador</label>
-                        <span style={{fontFamily: 'monospace', fontSize: '0.9rem'}}>{currentUser.id}</span>
+                        <span style={{fontFamily: 'monospace', fontSize: '0.9rem'}}>{currentUser.id || '0'}</span>
                     </div>
                     <div className="detail-item">
                         <label>Membro desde</label>
