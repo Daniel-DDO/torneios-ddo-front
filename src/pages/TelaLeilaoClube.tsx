@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
+import PopupLogin from '../components/PopupLogin';
+import PopupUser from '../components/PopupUser';
 
 interface Leilao {
   id: string;
@@ -30,8 +32,16 @@ interface DisputaClubeDTO {
 }
 
 interface UserData {
+  id: string;
   nome: string;
+  discord: string;
   imagem: string | null;
+  cargo: string;
+  saldoVirtual: number;
+  titulos: number;
+  finais: number;
+  partidasJogadas: number;
+  golsMarcados: number;
 }
 
 interface Avatar {
@@ -61,8 +71,10 @@ export function TelaLeilaoClube() {
   const { temporadaId, clubeId } = useParams();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [showUserPopup, setShowUserPopup] = useState(false);
 
-  const [currentUser] = useState<UserData | null>(() => {
+  const [currentUser, setCurrentUser] = useState<UserData | null>(() => {
     const storedUser = localStorage.getItem('user_data');
     if (storedUser) {
       try {
@@ -99,15 +111,17 @@ export function TelaLeilaoClube() {
     enabled: !!temporadaId,
   });
 
-  const activeLeilao = useMemo(() => {
-    const listaLeiloes = Array.isArray(leiloes) ? leiloes : [];
-    return listaLeiloes.find(l => l.ativo);
+  const leilaoId = useMemo(() => {
+    if (Array.isArray(leiloes) && leiloes.length > 0) {
+        return leiloes[0].id;
+    }
+    return null;
   }, [leiloes]);
 
   const { data: disputa, isLoading } = useQuery<DisputaClubeDTO>({
-    queryKey: ['disputa-clube', activeLeilao?.id, clubeId],
-    queryFn: () => fetchDisputaClube(activeLeilao!.id, clubeId || ''),
-    enabled: !!activeLeilao?.id && !!clubeId,
+    queryKey: ['disputa-clube', leilaoId, clubeId],
+    queryFn: () => fetchDisputaClube(leilaoId!, clubeId || ''),
+    enabled: !!leilaoId && !!clubeId,
     refetchInterval: 5000 
   });
 
@@ -126,6 +140,19 @@ export function TelaLeilaoClube() {
   const getCurrentUserAvatar = () => {
     if (!currentUser?.imagem) return null;
     return avatarMap[currentUser.imagem] || currentUser.imagem;
+  };
+
+  const handleLoginSuccess = (userData: UserData) => {
+    setCurrentUser(userData);
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("Deseja realmente sair?")) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user_data');
+        setCurrentUser(null);
+        setShowUserPopup(false);
+    }
   };
 
   const formatMoney = (value: number) => {
@@ -389,6 +416,7 @@ export function TelaLeilaoClube() {
             {currentUser ? (
               <div 
                 className="user-avatar-mini" 
+                onClick={() => setShowUserPopup(true)}
                 style={{
                   backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
                   backgroundSize: 'cover',
@@ -399,6 +427,7 @@ export function TelaLeilaoClube() {
                   justifyContent: 'center',
                   color: 'white',
                   fontWeight: 'bold',
+                  cursor: 'pointer'
                 }}
               >
                 {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
@@ -407,7 +436,7 @@ export function TelaLeilaoClube() {
               <button 
                 className="t-btn"
                 style={{background: 'var(--primary)', color: 'white', border: 'none'}}
-                onClick={() => navigate('/login')}
+                onClick={() => setShowLoginPopup(true)}
               >
                 Login
               </button>
@@ -489,6 +518,24 @@ export function TelaLeilaoClube() {
             )}
         </div>
       </main>
+
+      {showLoginPopup && (
+        <PopupLogin 
+          onClose={() => setShowLoginPopup(false)} 
+          onLoginSuccess={handleLoginSuccess} 
+        />
+      )}
+
+      {showUserPopup && currentUser && (
+        <PopupUser 
+          user={{
+            ...currentUser,
+            imagem: getCurrentUserAvatar()
+          }}
+          onClose={() => setShowUserPopup(false)}
+          onLogout={handleLogout}
+        />
+      )}
     </div>
   );
 }

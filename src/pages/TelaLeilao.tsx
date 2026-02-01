@@ -730,14 +730,29 @@ export function TelaLeilao() {
                                 Horário de Brasília (UTC-3)
                             </div>
                         </div>
-                        <button 
-                            className="btn-primary-custom"
-                            disabled={isExpired}
-                            style={{padding: '12px 24px', fontSize: '1.05rem'}}
-                            onClick={() => !isExpired && navigate(`/${temporadaId}/torneios/leilao/lance`)}
-                        >
-                            {isExpired ? 'Leilão Encerrado' : <><Gavel size={20} /> Dar Lances Agora</>}
-                        </button>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button 
+                                className="btn-primary-custom"
+                                style={{
+                                    padding: '12px 24px', 
+                                    fontSize: '1.05rem', 
+                                    background: 'transparent', 
+                                    border: '1px solid var(--primary)', 
+                                    color: 'var(--primary)'
+                                }}
+                                onClick={() => navigate(`/${temporadaId}/torneios/leilao/parciais`)}
+                            >
+                                <TrendingUp size={20} /> Resultados Parciais
+                            </button>
+                            <button 
+                                className="btn-primary-custom"
+                                disabled={isExpired}
+                                style={{padding: '12px 24px', fontSize: '1.05rem'}}
+                                onClick={() => !isExpired && navigate(`/${temporadaId}/torneios/leilao/lance`)}
+                            >
+                                {isExpired ? 'Leilão Encerrado' : <><Gavel size={20} /> Dar Lances Agora</>}
+                            </button>
+                        </div>
                     </div>
 
                     <div className="panels-grid">
