@@ -37,6 +37,7 @@ import PopupAdicionarJFase from '../components/PopupAdicionarJFase';
 import PopupColorirPos from '../components/PopupColorirPos';
 import PopupSorteio from '../components/PopupSorteio';
 import PopupCopaReal from '../components/PopupCopaReal';
+import PopupCopaLiga from '../components/PopupCopaLiga';
 import { PdfRelatorioFase } from '../components/RelatorioFase';
 
 interface FaseTorneioDTO {
@@ -107,6 +108,7 @@ export function TelaFase() {
   const [showColorirPopup, setShowColorirPopup] = useState(false);
   const [showSorteioPopup, setShowSorteioPopup] = useState(false);
   const [showCopaRealPopup, setShowCopaRealPopup] = useState(false);
+  const [showCopaLigaPopup, setShowCopaLigaPopup] = useState(false);
 
   const { data: avatars = [] } = useQuery<Avatar[]>({
     queryKey: ['avatares'],
@@ -900,6 +902,9 @@ export function TelaFase() {
                       <button className="btn-action btn-utility" onClick={() => setShowSorteioPopup(true)}>
                         <Dices size={18} /> Sorteio Elim.
                       </button>
+                      <button className="btn-action btn-utility" onClick={() => setShowCopaLigaPopup(true)}>
+                        <Trophy size={18} color="#8b5cf6" /> Sorteio Copa Liga
+                      </button>
                     </>
                   ) : (
                     <>
@@ -1111,6 +1116,16 @@ export function TelaFase() {
         }}
       />
     )}
+
+      {showCopaLigaPopup && (
+        <PopupCopaLiga
+          onClose={() => setShowCopaLigaPopup(false)}
+          onSubmit={() => {
+            queryClient.invalidateQueries({ queryKey: ['participantes-fase', faseId] });
+            queryClient.invalidateQueries({ queryKey: ['fase-detalhe', faseId] });
+          }}
+        />
+      )}
     </div>
   );
 }
