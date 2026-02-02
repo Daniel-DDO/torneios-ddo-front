@@ -109,15 +109,20 @@ export default function TelaBracket() {
 
     return STAGE_ORDER.filter(key => data[key] && data[key].length > 0)
       .map(key => {
-        const matchesRaw = data[key];
+        const matchesRaw = [...data[key]].sort((a, b) => {
+          const priorityA = a.tipoPartida.includes('IDA') || a.tipoPartida.includes('UNICA') ? 0 : 1;
+          const priorityB = b.tipoPartida.includes('IDA') || b.tipoPartida.includes('UNICA') ? 0 : 1;
+          return priorityA - priorityB;
+        });
+
         const matchesByChave: Record<number, ProcessedMatch> = {};
 
         matchesRaw.forEach(match => {
           if (!matchesByChave[match.chaveIndex]) {
             matchesByChave[match.chaveIndex] = {
               chaveIndex: match.chaveIndex,
-              mandante: match.mandante,
-              visitante: match.visitante,
+              mandante: null,
+              visitante: null,
               placarMandanteTotal: null,
               placarVisitanteTotal: null,
               realizada: false,
@@ -126,7 +131,16 @@ export default function TelaBracket() {
           }
 
           const current = matchesByChave[match.chaveIndex];
-          
+          const isVoltaMatch = match.tipoPartida === 'MATA_MATA_VOLTA' || match.tipoPartida === 'FINAL_VOLTA';
+
+          if (isVoltaMatch) {
+            if (!current.mandante && match.visitante) current.mandante = match.visitante;
+            if (!current.visitante && match.mandante) current.visitante = match.mandante;
+          } else {
+            if (!current.mandante && match.mandante) current.mandante = match.mandante;
+            if (!current.visitante && match.visitante) current.visitante = match.visitante;
+          }
+
           const isIda = match.tipoPartida === 'MATA_MATA_IDA' || match.tipoPartida === 'FINAL_IDA';
           const isVolta = match.tipoPartida === 'MATA_MATA_VOLTA' || match.tipoPartida === 'FINAL_VOLTA';
           const isUnica = match.tipoPartida === 'MATA_MATA_UNICA' || match.tipoPartida === 'FINAL_UNICA';
@@ -137,7 +151,8 @@ export default function TelaBracket() {
             
             const gm = match.golsMandante;
             const gv = match.golsVisitante;
-            const isInverted = current.mandante?.id !== match.mandante?.id;
+            
+            const isInverted = current.mandante?.id && match.mandante?.id && current.mandante.id !== match.mandante.id;
 
             if (isIda) {
               if (isInverted) {
@@ -160,19 +175,19 @@ export default function TelaBracket() {
 
             if (isVolta || isUnica) {
               if (isInverted) {
-                  current.placarMandanteTotal = match.placarAgregadoVisitante;
-                  current.placarVisitanteTotal = match.placarAgregadoMandante;
-                  if (match.houvePenaltis) {
-                    current.penaltisMandante = match.penaltisVisitante;
-                    current.penaltisVisitante = match.penaltisMandante;
-                  }
+                 current.placarMandanteTotal = match.placarAgregadoVisitante;
+                 current.placarVisitanteTotal = match.placarAgregadoMandante;
+                 if (match.houvePenaltis) {
+                   current.penaltisMandante = match.penaltisVisitante;
+                   current.penaltisVisitante = match.penaltisMandante;
+                 }
               } else {
-                  current.placarMandanteTotal = match.placarAgregadoMandante;
-                  current.placarVisitanteTotal = match.placarAgregadoVisitante;
-                  if (match.houvePenaltis) {
-                    current.penaltisMandante = match.penaltisMandante;
-                    current.penaltisVisitante = match.penaltisVisitante;
-                  }
+                 current.placarMandanteTotal = match.placarAgregadoMandante;
+                 current.placarVisitanteTotal = match.placarAgregadoVisitante;
+                 if (match.houvePenaltis) {
+                   current.penaltisMandante = match.penaltisMandante;
+                   current.penaltisVisitante = match.penaltisVisitante;
+                 }
               }
             } 
             else if (isIda && current.placarMandanteTotal === null) {
