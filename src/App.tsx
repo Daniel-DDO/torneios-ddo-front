@@ -27,6 +27,7 @@ import { TelaLeilao } from './pages/TelaLeilao';
 import { TelaLeilaoClube } from './pages/TelaLeilaoClube';
 import { TelaLanceLeilao } from './pages/TelaLanceLeilao';
 import { TelaLeilaoParciais } from './pages/TelaLeilaoParciais';
+import { TelaLeilaoFinal } from './pages/TelaLeilaoFinal';
 
 import './App.css';
 
@@ -57,6 +58,7 @@ function App() {
           <Route path="/:temporadaId/torneios/leilao/:clubeId" element={<TelaLeilaoClube />} />
           <Route path="/:temporadaId/torneios/leilao/lance" element={<TelaLanceLeilao />} />
           <Route path="/:temporadaId/torneios/leilao/parciais" element={<TelaLeilaoParciais />} />
+          <Route path="/:temporadaId/torneios/leilao/final" element={<TelaLeilaoFinal />} />
           <Route path="/:temporadaId/torneios/jogadores" element={<TelaTorneiosJogadores />} />
           <Route path="/:temporadaId/:torneioId/fases" element={<TelaTorneiosFases />} />
           <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId" element={<TelaFase />} />

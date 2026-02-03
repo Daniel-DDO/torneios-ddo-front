@@ -321,25 +321,37 @@ export function TelaLeilao() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!dateString) return '-';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '-';
+        
+        return date.toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch {
+        return '-';
+    }
   };
 
   const formatDataHoraBrasilia = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString.endsWith('Z') ? dateString : `${dateString}Z`);
-    return new Intl.DateTimeFormat('pt-BR', {
-      timeZone: 'America/Sao_Paulo',
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }).format(date);
+    try {
+        const date = new Date(dateString.endsWith('Z') ? dateString : `${dateString}Z`);
+        return new Intl.DateTimeFormat('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        }).format(date);
+    } catch {
+        return '';
+    }
   };
 
   const formatMoney = (value: number) => {
@@ -966,7 +978,11 @@ export function TelaLeilao() {
                       </thead>
                       <tbody>
                         {Array.isArray(leiloes) && leiloes.map((leilao) => (
-                            <tr key={leilao.id}>
+                            <tr 
+                                key={leilao.id} 
+                                onClick={() => !leilao.ativo && navigate(`/${temporadaId}/torneios/leilao/final`)}
+                                style={{cursor: !leilao.ativo ? 'pointer' : 'default'}}
+                            >
                               <td>
                                 <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
                                     <Gavel size={20} color="var(--primary)" />
