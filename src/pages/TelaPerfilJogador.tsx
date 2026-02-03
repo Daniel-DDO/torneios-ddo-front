@@ -5,7 +5,7 @@ import {
   Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search, 
   Bell, ArrowLeft, Gamepad2, Lightbulb, Settings, 
   CheckCircle, Clock, Award, BarChart3, Target, CalendarSync,
-  Flag, Ban, TrendingUp, Info, FileText, Star
+  Flag, Ban, TrendingUp, Info, FileText, Star, Swords
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { API } from '../services/api';
@@ -104,6 +104,21 @@ interface HistoryData {
   pontosCoeficiente: number;
 }
 
+interface VictimData {
+  adversarioId: string;
+  adversarioNome: string;
+  adversarioDiscord: string;
+  adversarioImagem: string | null;
+  partidasJogadas: number;
+  minhasVitorias: number;
+  meusEmpates: number;
+  minhasDerrotas: number;
+  golsFeitos: number;
+  golsSofridos: number;
+  saldoGols: number;
+  aproveitamento: string;
+}
+
 const fetchAvatarsService = async () => {
   const response = await API.get('/api/avatares');
   if (Array.isArray(response)) return response;
@@ -121,6 +136,15 @@ const fetchInsigniasService = async () => {
 const fetchPlayerAchievementsService = async (playerId: string) => {
     try {
         const response = await API.get(`/conquistas/jogador/${playerId}`);
+        return response.data;
+    } catch (error) {
+        return [];
+    }
+};
+
+const fetchPlayerVictimsService = async (playerId: string) => {
+    try {
+        const response = await API.get(`/jogador/${playerId}/patos`);
         return response.data;
     } catch (error) {
         return [];
@@ -156,6 +180,12 @@ export function TelaPerfilJogador() {
   const { data: achievements = [], isLoading: isLoadingAchievements } = useQuery<Achievement[]>({
     queryKey: ['playerAchievements', id],
     queryFn: () => fetchPlayerAchievementsService(id!),
+    enabled: !!id,
+  });
+
+  const { data: victims = [], isLoading: isLoadingVictims } = useQuery<VictimData[]>({
+    queryKey: ['playerVictims', id],
+    queryFn: () => fetchPlayerVictimsService(id!),
     enabled: !!id,
   });
 
@@ -244,6 +274,12 @@ export function TelaPerfilJogador() {
   const getPlayerAvatar = () => {
     if (!player?.imagem) return null;
     return avatarMap[player.imagem] || player.imagem;
+  };
+
+  const getVictimAvatar = (victim: VictimData) => {
+      if (!victim.adversarioImagem) return null;
+      if (victim.adversarioImagem.startsWith('http')) return victim.adversarioImagem;
+      return avatarMap[victim.adversarioImagem] || victim.adversarioImagem;
   };
 
   const formatDate = (dateString: string | null) => {
@@ -926,6 +962,127 @@ export function TelaPerfilJogador() {
             border-radius: 6px;
         }
 
+        .victims-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            margin-top: 16px;
+        }
+
+        .victim-card {
+            background: var(--hover-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .victim-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+        }
+
+        .victim-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .victim-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            object-fit: cover;
+            font-weight: 800;
+            color: var(--primary);
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .victim-identity {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .victim-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-dark);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .victim-discord {
+            font-size: 0.8rem;
+            color: var(--text-gray);
+        }
+
+        .victim-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: var(--bg-card);
+            padding: 12px;
+            border-radius: 12px;
+        }
+
+        .v-stat-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .v-stat-val {
+            font-weight: 800;
+            font-size: 1.2rem;
+            color: var(--text-dark);
+        }
+
+        .v-stat-lbl {
+            font-size: 0.7rem;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .win-rate-visual {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .win-rate-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .win-rate-track {
+            height: 8px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .win-rate-fill {
+            height: 100%;
+            background: #10b981;
+            border-radius: 4px;
+        }
+
         @media (max-width: 768px) {
             .profile-hero { padding: 24px; }
             .hero-body { flex-direction: column; text-align: center; gap: 20px; }
@@ -934,6 +1091,7 @@ export function TelaPerfilJogador() {
             .stats-overview-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
             .content-grid { grid-template-columns: 1fr; }
             .achievements-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+            .victims-grid { grid-template-columns: 1fr; }
         }
       `}</style>
 
@@ -1279,6 +1437,70 @@ export function TelaPerfilJogador() {
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div className="card-box" style={{ marginTop: '24px' }}>
+                        <div className="card-header">
+                            <div className="card-title"><Swords size={20} className="text-red" style={{color: '#ef4444'}} /> Maiores Vítimas</div>
+                        </div>
+                        
+                        {isLoadingVictims ? (
+                             <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-gray)' }}>Carregando dados...</div>
+                        ) : victims.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-gray)' }}>
+                                Nenhum histórico de dominância encontrado.
+                            </div>
+                        ) : (
+                            <div className="victims-grid">
+                                {victims.map((victim) => (
+                                    <div key={victim.adversarioId} className="victim-card">
+                                        <div className="victim-header">
+                                            {getVictimAvatar(victim) ? (
+                                                 <img src={getVictimAvatar(victim)!} alt={victim.adversarioNome} className="victim-avatar" />
+                                            ) : (
+                                                <div className="victim-avatar">{victim.adversarioNome.charAt(0)}</div>
+                                            )}
+                                            <div className="victim-identity">
+                                                <span className="victim-name">{victim.adversarioNome}</span>
+                                                <span className="victim-discord">{victim.adversarioDiscord}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="victim-stats">
+                                            <div className="v-stat-box">
+                                                <span className="v-stat-val" style={{color: '#10b981'}}>{victim.minhasVitorias}</span>
+                                                <span className="v-stat-lbl">Vitórias</span>
+                                            </div>
+                                            <div className="v-stat-box">
+                                                <span className="v-stat-val">{victim.partidasJogadas}</span>
+                                                <span className="v-stat-lbl">Jogos</span>
+                                            </div>
+                                            <div className="v-stat-box">
+                                                <span className="v-stat-val">{victim.golsFeitos}</span>
+                                                <span className="v-stat-lbl">GP</span>
+                                            </div>
+                                            <div className="v-stat-box">
+                                                <span className="v-stat-val">{victim.saldoGols > 0 ? `+${victim.saldoGols}` : victim.saldoGols}</span>
+                                                <span className="v-stat-lbl">Saldo</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="win-rate-visual">
+                                            <div className="win-rate-header">
+                                                <span>Aproveitamento</span>
+                                                <span>{victim.aproveitamento}</span>
+                                            </div>
+                                            <div className="win-rate-track">
+                                                <div 
+                                                    className="win-rate-fill" 
+                                                    style={{ width: victim.aproveitamento }}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="card-box" style={{ marginTop: '24px' }}>
