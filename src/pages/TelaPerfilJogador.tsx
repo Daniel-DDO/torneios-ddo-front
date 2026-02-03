@@ -5,7 +5,7 @@ import {
   Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search, 
   Bell, ArrowLeft, Gamepad2, Lightbulb, Settings, 
   CheckCircle, Clock, Award, BarChart3, Target, CalendarSync,
-  Flag, Ban, TrendingUp, Info, FileText, Star, Swords
+  Flag, Ban, TrendingUp, Info, FileText, Star, Swords, Activity
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { API } from '../services/api';
@@ -151,6 +151,15 @@ const fetchPlayerVictimsService = async (playerId: string) => {
     }
 };
 
+const fetchPlayerMomentoService = async (playerId: string) => {
+    try {
+        const response = await API.get(`/jogador/${playerId}/momento`);
+        return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+        return [];
+    }
+};
+
 export function TelaPerfilJogador() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -186,6 +195,12 @@ export function TelaPerfilJogador() {
   const { data: victims = [], isLoading: isLoadingVictims } = useQuery<VictimData[]>({
     queryKey: ['playerVictims', id],
     queryFn: () => fetchPlayerVictimsService(id!),
+    enabled: !!id,
+  });
+
+  const { data: momento = [] } = useQuery<string[]>({
+    queryKey: ['playerMomento', id],
+    queryFn: () => fetchPlayerMomentoService(id!),
     enabled: !!id,
   });
 
@@ -736,36 +751,98 @@ export function TelaPerfilJogador() {
         .stats-row {
             display: flex;
             justify-content: space-between;
-            padding: 16px 0;
+            padding: 12px 0;
             border-bottom: 1px dashed var(--border-color);
         }
         .stats-row:last-child { border-bottom: none; }
-        .stat-k { color: var(--text-gray); font-weight: 500; }
+        .stat-k { color: var(--text-gray); font-weight: 500; font-size: 0.95rem; }
         .stat-v { color: var(--text-dark); font-weight: 700; }
 
-        .discipline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .discipline-card {
-            background: var(--hover-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 16px;
+        .momento-section {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px dashed var(--border-color);
+        }
+        .momento-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 16px;
+            justify-content: space-between;
         }
-        .card-visual {
-            width: 36px;
-            height: 48px;
+        .momento-row {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-start;
+            align-items: center;
+        }
+        .momento-pill {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.8rem;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 2px solid var(--bg-card);
+        }
+        .res-V { background-color: #10b981; }
+        .res-E { background-color: #94a3b8; }
+        .res-D { background-color: #ef4444; }
+
+        .merged-discipline {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px dashed var(--border-color);
+        }
+        
+        .merged-discipline-header {
+             font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .discipline-compact {
+            display: flex;
+            gap: 20px;
+        }
+
+        .disc-item-compact {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--hover-bg);
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .card-icon {
+            width: 20px;
+            height: 28px;
             border-radius: 4px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
-        .card-yellow { background: #facc15; }
-        .card-red { background: #ef4444; }
-        .disc-info h4 { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); line-height: 1; }
-        .disc-info span { font-size: 0.7rem; text-transform: uppercase; color: var(--text-gray); font-weight: 700; }
+        .icon-yellow { background: #facc15; }
+        .icon-red { background: #ef4444; }
+        
+        .disc-count {
+            font-weight: 800;
+            color: var(--text-dark);
+            font-size: 1.1rem;
+        }
         
         .suspension-alert {
-            margin-top: 16px;
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.2);
             color: #ef4444;
@@ -776,6 +853,7 @@ export function TelaPerfilJogador() {
             display: flex;
             align-items: center;
             gap: 10px;
+            margin-top: 12px;
         }
 
         .badges-grid {
@@ -1340,34 +1418,49 @@ export function TelaPerfilJogador() {
                                         </span>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="card-box">
-                                <div className="card-header">
-                                    <div className="card-title"><Flag size={20} className="text-orange" /> Disciplina</div>
-                                </div>
-                                <div className="discipline-grid">
-                                    <div className="discipline-card">
-                                        <div className="card-visual card-yellow"></div>
-                                        <div className="disc-info">
-                                            <h4>{player.cartoesAmarelos}</h4>
-                                            <span>Amarelos</span>
+                                {momento.length > 0 && (
+                                    <div className="momento-section">
+                                        <div className="momento-label">
+                                            <span>Últimas partidas: O jogo mais recente é exibido primeiro, à esquerda.</span>
+                                            <Activity size={16} />
                                         </div>
-                                    </div>
-                                    <div className="discipline-card">
-                                        <div className="card-visual card-red"></div>
-                                        <div className="disc-info">
-                                            <h4>{player.cartoesVermelhos}</h4>
-                                            <span>Vermelhos</span>
+                                        <div className="momento-row">
+                                            {[...momento].reverse().map((resultado, idx) => (
+                                                <div 
+                                                    key={idx} 
+                                                    className={`momento-pill res-${resultado}`} 
+                                                    title={resultado === 'V' ? 'Vitória' : resultado === 'E' ? 'Empate' : 'Derrota'}
+                                                >
+                                                    {resultado}
+                                                </div>
+                                            ))}
                                         </div>
-                                    </div>
-                                </div>
-                                {isSuspended && (
-                                    <div className="suspension-alert">
-                                        <Ban size={18} />
-                                        <span>Suspenso até {formatDate(player.suspensoAte)}</span>
                                     </div>
                                 )}
+
+                                <div className="merged-discipline">
+                                     <div className="merged-discipline-header">
+                                        <Flag size={16} />
+                                        <span>Disciplina</span>
+                                     </div>
+                                     <div className="discipline-compact">
+                                         <div className="disc-item-compact">
+                                             <div className="card-icon icon-yellow"></div>
+                                             <span className="disc-count">{player.cartoesAmarelos} amarelos</span>
+                                         </div>
+                                         <div className="disc-item-compact">
+                                             <div className="card-icon icon-red"></div>
+                                             <span className="disc-count">{player.cartoesVermelhos} vermelhos</span>
+                                         </div>
+                                     </div>
+                                     {isSuspended && (
+                                        <div className="suspension-alert">
+                                            <Ban size={18} />
+                                            <span>Suspenso até {formatDate(player.suspensoAte)}</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
