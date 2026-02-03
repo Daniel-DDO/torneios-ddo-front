@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API } from '../services/api';
-import { Loader2, User, ShieldAlert, Copy, Check, Search } from 'lucide-react';
 import './PopupRecSenhaAdm.css';
 
 interface UserData {
@@ -62,7 +61,6 @@ const PopupRecSenhaAdm: React.FC<PopupRecSenhaAdmProps> = ({ currentUser, onClos
           });
           setSearchResults(response.data || []);
         } catch (err) {
-          console.error(err);
           setSearchResults([]);
         } finally {
           setSearchLoading(false);
@@ -78,6 +76,14 @@ const PopupRecSenhaAdm: React.FC<PopupRecSenhaAdmProps> = ({ currentUser, onClos
     setDiscordTerm(player.discord);
     setSelectedPlayer(player);
     setShowSuggestions(false);
+    setError('');
+  };
+
+  const clearSelection = () => {
+    setSelectedPlayer(null);
+    setDiscordTerm('');
+    setSearchResults([]);
+    setRetrievedPin(null);
     setError('');
   };
 
@@ -108,7 +114,6 @@ const PopupRecSenhaAdm: React.FC<PopupRecSenhaAdmProps> = ({ currentUser, onClos
       
       setRetrievedPin(response.data);
     } catch (err: any) {
-      console.error(err);
       const msg = err.response?.data?.message || "Erro ao consultar PIN.";
       setError(msg);
     } finally {
@@ -132,104 +137,127 @@ const PopupRecSenhaAdm: React.FC<PopupRecSenhaAdmProps> = ({ currentUser, onClos
   };
 
   return (
-    <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
-      <div className="popup-content admin-popup-width">
-        <button className="popup-close-btn" onClick={handleClose}>
+    <div className={`precsenadm-overlay ${fadeout ? 'precsenadm-fade-out' : ''}`}>
+      <div className="precsenadm-content">
+        <button className="precsenadm-close-btn" onClick={handleClose}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
         </button>
 
-        <div className={`popup-body-animate ${fadeout ? 'fade-out-content' : ''}`}>
-          
-          <div className="popup-header-clean">
-            <div className="icon-badge-wrapper admin-badge">
-               <ShieldAlert size={28} />
+        <div className="precsenadm-header">
+            <div className="precsenadm-icon-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="36" height="36">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
             </div>
-            <h2 className="popup-title">Área Administrativa</h2>
-            <p className="popup-subtitle">Consulta de PIN de Segurança</p>
-          </div>
+            <h2 className="precsenadm-title">Área Administrativa</h2>
+            <p className="precsenadm-subtitle">Consulta de PIN de Segurança</p>
+        </div>
 
-          <div className="popup-scrollable-area custom-scrollbar form-layout">
+        <div className="precsenadm-body precsenadm-scrollbar">
             
             {!retrievedPin ? (
-              <>
-                <div className="form-section relative-section">
-                    <label className="form-label">Buscar Jogador</label>
-                    <div className="input-icon-wrapper">
-                      <Search size={18} className="input-icon" />
+              <div className="precsenadm-search-container">
+                
+                <div className="precsenadm-form-group">
+                    <label>Buscar Jogador</label>
+                    <div className="precsenadm-input-wrap">
                       <input 
                           type="text" 
-                          className="form-input with-icon"
+                          className="precsenadm-input"
                           placeholder="Nome ou Discord..."
                           value={discordTerm}
                           onChange={(e) => {
                             setDiscordTerm(e.target.value);
-                            if (selectedPlayer) setSelectedPlayer(null);
+                            if (selectedPlayer && e.target.value !== selectedPlayer.discord) {
+                                setSelectedPlayer(null);
+                            }
                           }}
                           disabled={!hasPermission}
                           autoFocus
                       />
-                      {searchLoading && <Loader2 className="input-loader animate-spin" size={16} />}
+                      <div className="precsenadm-search-icon">
+                        {searchLoading ? <div className="precsenadm-spinner-blue"></div> : (
+                            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        )}
+                      </div>
                     </div>
                     
                     {showSuggestions && (
-                      <div className="suggestions-list custom-scrollbar">
+                      <div className="precsenadm-suggestions-list precsenadm-scrollbar">
                         {searchResults.length > 0 ? (
                           searchResults.map((player) => (
                             <div 
                               key={player.id} 
-                              className="suggestion-item"
+                              className="precsenadm-suggestion-item"
                               onMouseDown={() => handleSelectPlayer(player)}
                             >
-                              <div className="sugg-avatar">
-                                <User size={16} />
+                              <div className="precsenadm-sug-avatar">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
                               </div>
-                              <div className="sugg-info">
-                                <span className="sugg-name">{player.nome}</span>
-                                <span className="sugg-discord">@{player.discord}</span>
+                              <div className="precsenadm-sug-info">
+                                <span className="precsenadm-sug-name">{player.nome}</span>
+                                <span className="precsenadm-sug-discord">@{player.discord}</span>
                               </div>
                             </div>
                           ))
                         ) : (
-                          <div className="suggestion-empty">Nenhum jogador encontrado</div>
+                          <div className="precsenadm-empty">Nenhum jogador encontrado</div>
                         )}
                       </div>
                     )}
                 </div>
 
-                {error && <div className="reivindicar-error-msg">{error}</div>}
-              </>
+                {selectedPlayer && (
+                    <div className="precsenadm-selected-card">
+                        <div className="precsenadm-sp-content">
+                            <span className="precsenadm-sp-label">Selecionado:</span>
+                            <span className="precsenadm-sp-value">{selectedPlayer.nome}</span>
+                        </div>
+                        <button className="precsenadm-sp-remove" onClick={clearSelection}>Trocar</button>
+                    </div>
+                )}
+
+                {error && <div className="precsenadm-error-msg">{error}</div>}
+              </div>
             ) : (
-              <div className="pin-result-container">
-                <div className="pin-display-card">
-                  <span className="pin-label">PIN DO JOGADOR</span>
-                  <div className="pin-value-row">
-                    <span className="pin-value">{retrievedPin}</span>
-                    <button className="copy-btn" onClick={handleCopyPin} title="Copiar PIN">
-                      {copied ? <Check size={20} color="#10b981" /> : <Copy size={20} />}
+              <div className="precsenadm-pin-result">
+                <div className="precsenadm-pin-box">
+                  <span className="precsenadm-pin-label">PIN DO JOGADOR</span>
+                  <div className="precsenadm-pin-row">
+                    <span className="precsenadm-pin-value">{retrievedPin}</span>
+                    <button className="precsenadm-copy-btn" onClick={handleCopyPin} title="Copiar PIN">
+                      {copied ? (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      ) : (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      )}
                     </button>
                   </div>
                 </div>
 
-                <div className="admin-warning-box">
+                <div className="precsenadm-warning-box">
                   <strong>Atenção!</strong>
                   <p>
-                    Olá administrador <span>{currentUser.nome}</span>, envie esse PIN apenas para o 
-                    <span className="highlight-discord"> @{selectedPlayer?.discord}</span>.
+                    Olá {currentUser.nome}, envie esse PIN apenas para o 
+                    <span className="precsenadm-highlight"> @{selectedPlayer?.discord}</span>.
                   </p>
                 </div>
               </div>
             )}
-          </div>
+        </div>
 
-          <div className="actions-footer">
+        <div className="precsenadm-footer">
             {!retrievedPin ? (
               <>
                 <button 
                     type="button"
-                    className="btn-base btn-secondary" 
+                    className="precsenadm-btn secondary" 
                     onClick={handleClose}
                     disabled={loading}
                 >
@@ -238,34 +266,33 @@ const PopupRecSenhaAdm: React.FC<PopupRecSenhaAdmProps> = ({ currentUser, onClos
                 
                 <button 
                     type="button"
-                    className="btn-base btn-primary" 
+                    className="precsenadm-btn" 
                     onClick={handleConsultar}
                     disabled={loading || !selectedPlayer || !hasPermission}
                 >
-                    {loading ? <div className="btn-spinner"></div> : 'Consultar PIN'}
+                    {loading ? <div className="precsenadm-spinner"></div> : 'Consultar PIN'}
                 </button>
               </>
             ) : (
               <>
                  <button 
                     type="button"
-                    className="btn-base btn-secondary" 
+                    className="precsenadm-btn secondary" 
                     onClick={handleReset}
                 >
                     Nova Consulta
                 </button>
                 <button 
                     type="button"
-                    className="btn-base btn-primary" 
+                    className="precsenadm-btn" 
                     onClick={handleClose}
                 >
                     Fechar
                 </button>
               </>
             )}
-          </div>
-
         </div>
+
       </div>
     </div>
   );

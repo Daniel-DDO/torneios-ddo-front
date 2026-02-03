@@ -7,7 +7,6 @@ import {
   Users,
   Trophy,
   Shield,
-  Calendar,
   Wallet,
   Settings,
   Search,
@@ -20,7 +19,9 @@ import {
   Star,
   Lightbulb,
   Megaphone,
-  CalendarSync
+  CalendarSync,
+  Banknote,
+  ShieldPlus
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -30,6 +31,8 @@ import PopupUser from '../components/PopupUser';
 import PopupAutorizar from '../components/PopupAutorizar';
 import PopupCadastrarJogador from '../components/PopupCadastrarJogador';
 import PopupRecSenhaAdm from '../components/PopupRecSenhaAdm';
+import PopupSaldoConta from '../components/PopupSaldoConta';
+import PopupNovoClube from '../components/PopupNovoClube';
 
 interface UserData {
   id: string;
@@ -66,6 +69,8 @@ export function TelaAdmin() {
   const [showAuthPopup, setShowAuthPopup] = useState(false);
   const [showCadastrarJogadorPopup, setShowCadastrarJogadorPopup] = useState(false);
   const [showRecSenhaAdmPopup, setShowRecSenhaAdmPopup] = useState(false);
+  const [showSaldoPopup, setShowSaldoPopup] = useState(false);
+  const [showNovoClubePopup, setShowNovoClubePopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -324,28 +329,22 @@ export function TelaAdmin() {
                 <p className="action-desc">Cadastre os novos jogadores aqui</p>
             </div>
 
+            <div className="action-card" onClick={() => setShowNovoClubePopup(true)}>
+                <div className="action-icon"><ShieldPlus size={40} /></div>
+                <h4 className="action-title">Cadastrar clube</h4>
+                <p className="action-desc">Cadastre novos clubes e times no sistema</p>
+            </div>
+
+            <div className="action-card" onClick={() => setShowSaldoPopup(true)}>
+                <div className="action-icon"><Banknote size={40} /></div>
+                <h4 className="action-title">Realizar Transação</h4>
+                <p className="action-desc">Adicionar ou remover saldo de um jogador</p>
+            </div>
+
             <div className="action-card" onClick={() => console.log('Atualizar jogador')}>
                 <div className="action-icon"><UserCheck size={40} /></div>
                 <h4 className="action-title">Atualizar jogador</h4>
                 <p className="action-desc">Aposentou? Voltou? Atualize o status dos jogadores aqui</p>
-            </div>
-
-            <div className="action-card" onClick={() => console.log('Gerenciar temporadas')}>
-                <div className="action-icon"><Calendar size={40} /></div>
-                <h4 className="action-title">Gerenciar temporadas</h4>
-                <p className="action-desc">Visualize, crie e edite as temporadas</p>
-            </div>
-
-            <div className="action-card" onClick={() => console.log('Gerenciar torneios')}>
-                <div className="action-icon"><Trophy size={40} /></div>
-                <h4 className="action-title">Gerenciar torneios</h4>
-                <p className="action-desc">Visualize, crie e edite os torneios</p>
-            </div>
-
-            <div className="action-card" onClick={() => console.log('Gerenciar clubes')}>
-                <div className="action-icon"><Shield size={40} /></div>
-                <h4 className="action-title">Cadastrar clubes</h4>
-                <p className="action-desc">Visualize e crie os clubes</p>
             </div>
 
             <div className="action-card" onClick={() => console.log('Criar anúncio')}>
@@ -393,6 +392,20 @@ export function TelaAdmin() {
         <PopupRecSenhaAdm 
           currentUser={currentUser}
           onClose={() => setShowRecSenhaAdmPopup(false)}
+        />
+      )}
+
+      {showSaldoPopup && (
+        <PopupSaldoConta
+            jogadorId=""
+            onClose={() => setShowSaldoPopup(false)}
+            onSuccess={() => {}}
+        />
+      )}
+
+      {showNovoClubePopup && (
+        <PopupNovoClube
+            onClose={() => setShowNovoClubePopup(false)}
         />
       )}
     </div>

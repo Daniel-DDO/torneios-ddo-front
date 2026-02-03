@@ -139,37 +139,37 @@ const PopupAutorizar: React.FC<PopupAutorizarProps> = ({ adminId, onClose }) => 
   };
 
   return (
-    <div className={`popup-overlay ${fadeout ? 'fade-out' : ''}`}>
-      <div className="popup-content autorizar-popup-width">
+    <div className={`poaut-overlay ${fadeout ? 'poaut-fade-out' : ''}`}>
+      <div className="poaut-content">
         
-        <button className="popup-close-btn" onClick={handleClose}>
+        <button className="poaut-close-btn" onClick={handleClose}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
         </button>
 
-        <div className="popup-header-fixed">
-            <div className="icon-badge-wrapper-auth">
-               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="32" height="32">
+        <div className="poaut-header">
+            <div className="poaut-icon-badge">
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="36" height="36">
                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                </svg>
             </div>
-            <h2 className="popup-title">Gerar Acesso</h2>
-            <p className="popup-subtitle">Autorize um jogador a reivindicar sua conta</p>
+            <h2 className="poaut-title">Gerar Acesso</h2>
+            <p className="poaut-subtitle">Autorize um jogador a reivindicar sua conta</p>
         </div>
 
-        <div className="popup-body-scroll custom-scrollbar">
+        <div className="poaut-body poaut-scrollbar">
             {!generatedCode ? (
-                <div className="auth-search-container">
-                    <div className="form-group relative-container">
+                <div className="poaut-search-container">
+                    <div className="poaut-form-group">
                         <label>Buscar Jogador</label>
-                        <div className="input-icon-wrap">
+                        <div className="poaut-input-wrap">
                             <input 
                                 type="text" 
-                                className="autorizar-input"
-                                placeholder="Nome ou Discord (ex: ronaldo...)"
+                                className="poaut-input"
+                                placeholder="Nome ou Discord..."
                                 value={searchTerm}
                                 onChange={(e) => {
                                     setSearchTerm(e.target.value);
@@ -179,27 +179,27 @@ const PopupAutorizar: React.FC<PopupAutorizarProps> = ({ adminId, onClose }) => 
                                 }}
                                 disabled={isLoading}
                             />
-                             <div className="search-icon-right">
-                                {isSearching ? <div className="spinner-mini"></div> : (
-                                    <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                             <div className="poaut-search-icon">
+                                {isSearching ? <div className="poaut-spinner-blue"></div> : (
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                                 )}
                             </div>
                         </div>
 
                         {suggestions.length > 0 && !selectedPlayer && (
-                            <div className="suggestions-list">
+                            <div className="poaut-suggestions-list poaut-scrollbar">
                                 {suggestions.map((player) => (
                                     <div 
                                         key={player.id} 
-                                        className="suggestion-item"
+                                        className="poaut-suggestion-item"
                                         onClick={() => handleSelectPlayer(player)}
                                     >
-                                        <div className="sug-avatar">
+                                        <div className="poaut-sug-avatar">
                                             <SmartAvatar src={player.imagem} alt={player.nome} />
                                         </div>
-                                        <div className="sug-info">
-                                            <span className="sug-discord">{player.discord}</span>
-                                            <span className="sug-name">{player.nome}</span>
+                                        <div className="poaut-sug-info">
+                                            <span className="poaut-sug-discord">{player.discord}</span>
+                                            <span className="poaut-sug-name">{player.nome}</span>
                                         </div>
                                     </div>
                                 ))}
@@ -208,51 +208,56 @@ const PopupAutorizar: React.FC<PopupAutorizarProps> = ({ adminId, onClose }) => 
                     </div>
 
                     {selectedPlayer && (
-                        <div className="selected-player-card">
-                            <div className="sp-content">
-                                <span className="sp-label">Selecionado:</span>
-                                <span className="sp-value">{selectedPlayer.nome} <small>({selectedPlayer.discord})</small></span>
+                        <div className="poaut-selected-card">
+                            <div className="poaut-sp-content">
+                                <span className="poaut-sp-label">Selecionado:</span>
+                                <span className="poaut-sp-value">{selectedPlayer.nome} <small>({selectedPlayer.discord})</small></span>
                             </div>
-                            <button className="sp-remove" onClick={clearSelection}>Trocar</button>
+                            <button className="poaut-sp-remove" onClick={clearSelection}>Trocar</button>
                         </div>
                     )}
 
-                    {errorMsg && <div className="auth-error-msg">{errorMsg}</div>}
+                    {errorMsg && <div className="poaut-error-msg">{errorMsg}</div>}
                 </div>
             ) : (
-                <div className="code-result-container">
-                    <div className="success-icon-anim">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                <div className="poaut-code-result">
+                    <div className="poaut-success-anim">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="36" height="36"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                     </div>
                     <h3>Código Gerado!</h3>
                     <p>Envie este código para <strong>{selectedPlayer?.discord}</strong></p>
 
-                    <div className="code-display-box" onClick={copyToClipboard}>
-                        <span className="the-code">{generatedCode}</span>
-                        <button className="copy-btn" title="Copiar">
+                    <div className="poaut-code-box" onClick={copyToClipboard}>
+                        <span className="poaut-the-code">{generatedCode}</span>
+                        <button className="poaut-copy-btn" title="Copiar">
                             {copySuccess ? (
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
                             ) : (
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             )}
                         </button>
                     </div>
-                    {copySuccess && <span className="copy-feedback">Copiado!</span>}
+                    {copySuccess && (
+                        <span className="poaut-copy-feedback">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Copiado com sucesso!
+                        </span>
+                    )}
                 </div>
             )}
         </div>
 
-        <div className="popup-footer-fixed">
+        <div className="poaut-footer">
             {!generatedCode ? (
                 <button 
-                    className="submit-auth-btn"
+                    className="poaut-btn"
                     disabled={!selectedPlayer || isLoading}
                     onClick={handleGerarCodigo}
                 >
-                    {isLoading ? <div className="spinner-small-white"></div> : 'Gerar Código de Segurança'}
+                    {isLoading ? <div className="poaut-spinner"></div> : 'Gerar Código de Segurança'}
                 </button>
             ) : (
-                <button className="reset-auth-btn" onClick={clearSelection}>
+                <button className="poaut-btn secondary" onClick={clearSelection}>
                     Autorizar Outro Jogador
                 </button>
             )}
