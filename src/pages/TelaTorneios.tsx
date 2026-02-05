@@ -19,7 +19,8 @@ import {
   ArrowLeft,
   Link,
   UserCheck,
-  Gavel 
+  Gavel,
+  RefreshCw
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -27,6 +28,7 @@ import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupNovoTorneio from '../components/PopupNovoTorneio';
 import PopupJogadorClube from '../components/PopupJogadorClube';
+import PopupTrocarJogador from '../components/PopupTrocarJogador';
 
 interface Torneio {
   id: string;
@@ -129,6 +131,7 @@ export function TelaTorneios() {
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [showNovoTorneioPopup, setShowNovoTorneioPopup] = useState(false);
   const [showJogadorClubePopup, setShowJogadorClubePopup] = useState(false);
+  const [showTrocarJogadorPopup, setShowTrocarJogadorPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -170,6 +173,10 @@ export function TelaTorneios() {
     queryClient.invalidateQueries({ queryKey: ['torneios', temporadaId] });
   };
 
+  const handleTrocarJogadorSuccess = () => {
+    
+  };
+
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   const filteredTorneios = torneios.filter((torneio) => {
@@ -202,6 +209,7 @@ export function TelaTorneios() {
   const isLoading = isLoadingTorneios || isLoadingCompeticoes;
 
   const hasAdminPrivileges = currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
+  const canSwapPlayers = currentUser && ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -576,6 +584,26 @@ export function TelaTorneios() {
                 </table>
               )}
             </div>
+
+            {canSwapPlayers && (
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button 
+                        className="t-btn" 
+                        onClick={() => setShowTrocarJogadorPopup(true)}
+                        style={{
+                            background: 'var(--bg-card)', 
+                            color: 'var(--text-primary)', 
+                            border: '1px solid var(--border-color)', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <RefreshCw size={18} /> Substituir Jogador
+                    </button>
+                </div>
+            )}
         </div>
 
       </main>
@@ -608,6 +636,14 @@ export function TelaTorneios() {
       {showJogadorClubePopup && (
         <PopupJogadorClube 
           onClose={() => setShowJogadorClubePopup(false)}
+        />
+      )}
+
+      {showTrocarJogadorPopup && temporadaId && (
+        <PopupTrocarJogador
+          temporadaId={temporadaId}
+          onClose={() => setShowTrocarJogadorPopup(false)}
+          onSuccess={handleTrocarJogadorSuccess}
         />
       )}
     </div>
