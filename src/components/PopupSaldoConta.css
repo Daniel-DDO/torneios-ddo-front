@@ -16,6 +16,10 @@
 
   --psc-scrollbar-track: #f1f1f1;
   --psc-scrollbar-thumb: #c1c1c1;
+
+  --psc-hover-bg: #f3f4f6;
+  --psc-selected-bg: #eff6ff;
+  --psc-selected-border: #bfdbfe;
 }
 
 body.dark-mode {
@@ -34,6 +38,10 @@ body.dark-mode {
 
   --psc-scrollbar-track: #2d2d2d;
   --psc-scrollbar-thumb: #555555;
+
+  --psc-hover-bg: #333333;
+  --psc-selected-bg: #1e3a8a;
+  --psc-selected-border: #1e40af;
 }
 
 .psc-overlay {
@@ -133,12 +141,6 @@ body.dark-mode {
    color: var(--psc-text-primary); 
 }
 
-.psc-subtitle {
-   font-size: 0.95rem;
-   color: var(--psc-text-secondary); 
-   margin: 4px 0 0 0;
-}
-
 .psc-body {
     flex: 1;
     overflow-y: auto;
@@ -148,10 +150,157 @@ body.dark-mode {
     gap: 20px;
 }
 
+.psc-search-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    min-height: 250px;
+}
+
+.psc-search-section label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--psc-text-primary);
+}
+
+.psc-input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.psc-spinner-small {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--psc-input-border);
+    border-top-color: var(--psc-input-focus-border);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.psc-suggestions-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--psc-border);
+    border-radius: 12px;
+    background-color: var(--psc-bg-card);
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.psc-suggestions-list li {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--psc-border);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.psc-suggestions-list li:last-child {
+    border-bottom: none;
+}
+
+.psc-suggestions-list li:hover {
+    background-color: var(--psc-hover-bg);
+}
+
+.psc-suggestion-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.psc-suggestion-name {
+    font-weight: 600;
+    color: var(--psc-text-primary);
+}
+
+.psc-suggestion-discord {
+    font-size: 0.8rem;
+    color: var(--psc-text-secondary);
+}
+
+.psc-selected-player {
+    background-color: var(--psc-selected-bg);
+    border: 1px solid var(--psc-selected-border);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.psc-player-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.psc-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--psc-text-secondary);
+    font-weight: 600;
+}
+
+.psc-player-details {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.psc-player-name {
+    font-size: 1.1rem;
+    color: var(--psc-text-primary);
+}
+
+.psc-discord-tag {
+    font-size: 0.85rem;
+    color: var(--psc-text-secondary);
+    background-color: rgba(0,0,0,0.05);
+    padding: 2px 6px;
+    border-radius: 6px;
+}
+
+.psc-current-balance {
+    font-size: 0.9rem;
+    color: var(--psc-text-primary);
+    margin-top: 4px;
+}
+
+.text-success { color: #10b981; font-weight: 700; }
+.text-danger { color: #ef4444; font-weight: 700; }
+
+.psc-btn-link {
+    background: none;
+    border: none;
+    color: #2563eb;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.psc-btn-link:hover {
+    background-color: rgba(37, 99, 235, 0.1);
+}
+
 .psc-form {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    animation: pscSlideUp 0.3s ease forwards;
 }
 
 .psc-form-group {
@@ -254,8 +403,14 @@ body.dark-mode {
    font-weight: 500;
    text-align: center;
    border: 1px solid rgba(214, 48, 49, 0.2);
-   animation: slideUp 0.2s ease;
+   animation: pscSlideUp 0.2s ease;
    margin-top: 10px;
+}
+
+.psc-confirmation-wrapper {
+    text-align: center;
+    padding: 10px 0;
+    animation: pscSlideUp 0.3s ease;
 }
 
 .psc-warning-box {
@@ -267,6 +422,11 @@ body.dark-mode {
     text-align: center;
     font-size: 0.95rem;
     margin-bottom: 10px;
+}
+
+.psc-confirm-text {
+    color: var(--psc-text-secondary);
+    font-size: 0.9rem;
 }
 
 .psc-spinner {
