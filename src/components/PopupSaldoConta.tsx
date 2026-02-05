@@ -116,7 +116,7 @@ const PopupSaldoConta: React.FC<PopupSaldoContaProps> = ({ jogadorId, onClose, o
         };
 
         try {
-            const response = await API.patch(`/api/jogadores/${jogadorSelecionado.id}/saldo`, payload);
+            const response = await API.patch(`/jogador/${jogadorSelecionado.id}/saldo`, payload);
             setFadeout(true);
             setTimeout(() => {
                 onSuccess(response.data);
