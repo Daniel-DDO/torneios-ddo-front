@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search, 
-  Bell, ArrowLeft, Gamepad2, Lightbulb, Settings, 
+  ArrowLeft, Gamepad2, Lightbulb, Settings, 
   CheckCircle, Clock, Award, BarChart3, Target, CalendarSync,
   Flag, Ban, TrendingUp, Info, FileText, Star, Swords, Activity
 } from 'lucide-react';
@@ -13,6 +13,7 @@ import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface InsigniaDefinition {
   id: string;
@@ -1242,7 +1243,7 @@ export function TelaPerfilJogador() {
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
             
             {currentUser ? (
               <div 

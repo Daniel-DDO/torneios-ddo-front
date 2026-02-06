@@ -10,7 +10,6 @@ import {
   Wallet, 
   Settings, 
   Search, 
-  Bell, 
   Gamepad2, 
   Star,
   Lightbulb,
@@ -21,6 +20,7 @@ import {
 } from 'lucide-react';
 import { API } from '../services/api';
 import PopupUser from '../components/PopupUser';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface Insignia {
   id: string;
@@ -281,7 +281,7 @@ export function TelaInsignia() {
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme}>
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
             
             {currentUser && (
               <div 

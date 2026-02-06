@@ -29,6 +29,7 @@ import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupReivindicar from '../components/PopupReivindicar';
 import PopupRecuperarSenha from '../components/PopupRecuperarSenha';
+import PopupNotificacao from '../components/PopupNotificacao';
 
 interface Conquista {
   idConquista: string;
@@ -83,6 +84,16 @@ interface Avatar {
   nome?: string;
 }
 
+interface Notificacao {
+  id: string;
+  titulo: string;
+  mensagem: string;
+  link: string;
+  tipo: string;
+  lida: boolean;
+  dataCriacao: string;
+}
+
 const fetchAvatarsService = async () => {
   const response = await API.get('/api/avatares');
   if (Array.isArray(response)) return response;
@@ -100,6 +111,11 @@ const fetchConquistasRecentesService = async () => {
   return response.data || [];
 };
 
+const fetchMinhasNotificacoesService = async () => {
+  const response = await API.get('/api/notificacoes/minhas');
+  return response.data || [];
+};
+
 export function TorneiosPage() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
@@ -110,6 +126,8 @@ export function TorneiosPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [trophyHover, setTrophyHover] = useState(false);
   const [showReivindicarPopup, setShowReivindicarPopup] = useState(false);
+  const [showNotificacaoPopup, setShowNotificacaoPopup] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   
   const { data: avatars = [] } = useQuery({
     queryKey: ['avatares'],
@@ -128,6 +146,18 @@ export function TorneiosPage() {
     queryFn: fetchConquistasRecentesService,
     staleTime: 1000 * 60 * 2,
   });
+
+  const { data: notificacoes = [] } = useQuery<Notificacao[]>({
+    queryKey: ['notificacoesMinhas'],
+    queryFn: fetchMinhasNotificacoesService,
+    enabled: !!currentUser,
+    staleTime: 1000 * 60,
+    refetchInterval: 1000 * 60 * 5 
+  });
+
+  const temNotificacaoNaoLida = useMemo(() => {
+    return notificacoes.some(n => !n.lida);
+  }, [notificacoes]);
 
   const destaque = useMemo(() => {
     if (!conquistas || conquistas.length === 0) return null;
@@ -172,6 +202,21 @@ export function TorneiosPage() {
     if (storedUser) {
       setCurrentUser(JSON.parse(storedUser));
     }
+
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
+    };
+
+    handleResize(); 
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -196,6 +241,13 @@ export function TorneiosPage() {
         localStorage.removeItem('user_data');
         setCurrentUser(null);
         setShowUserPopup(false);
+    }
+  };
+
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    if (isMobile) {
+      setSidebarOpen(false);
     }
   };
 
@@ -261,7 +313,7 @@ export function TorneiosPage() {
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
       
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`} style={{zIndex: 100}}>
         <div className="logo-area">
           <div className="logo-icon">
             <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
@@ -272,36 +324,48 @@ export function TorneiosPage() {
         </div>
 
         <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item active" style={{cursor: 'pointer'}}>
+          <a onClick={() => handleNavigate('/')} className="nav-item active" style={{cursor: 'pointer'}}>
             <LayoutDashboard size={20} /> Dashboard
           </a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}>
+          <a onClick={() => handleNavigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}>
             <Users size={20} /> Jogadores
           </a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
+          <a onClick={() => handleNavigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
             <Shield size={20} /> Clubes
           </a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
+          <a onClick={() => handleNavigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
             <Trophy size={20} /> Competições
           </a>
-          <a onClick={() => navigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
+          <a onClick={() => handleNavigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
             <Star size={20} /> Títulos
           </a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
+          <a onClick={() => handleNavigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
             <CalendarSync size={20} /> Temporadas
           </a>
           <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
+          <a onClick={() => handleNavigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
             <Gamepad2 size={20} /> Partidas
           </a>
-           <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
+           <a onClick={() => handleNavigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
             <Wallet size={20} /> Minha conta
           </a>
-          <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
+          <a onClick={() => handleNavigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
             <Settings size={20} /> Suporte
           </a>
         </nav>
       </aside>
+
+      {isMobile && sidebarOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 99
+          }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       <main className="main-content">
         <header className="top-header compact">
@@ -328,7 +392,25 @@ export function TorneiosPage() {
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <button 
+              className="icon-btn" 
+              onClick={() => setShowNotificacaoPopup(true)}
+              style={{ position: 'relative' }}
+            >
+                <Bell size={20} />
+                {currentUser && temNotificacaoNaoLida && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    width: '8px',
+                    height: '8px',
+                    backgroundColor: '#ff4757',
+                    borderRadius: '50%',
+                    border: '1px solid var(--header-bg, #fff)'
+                  }}></span>
+                )}
+            </button>
             
             {currentUser ? (
               <div 
@@ -858,6 +940,12 @@ export function TorneiosPage() {
             setShowRecuperarSenhaPopup(false);
             alert("Senha redefinida com sucesso!");
           }}
+        />
+    )}
+
+    {showNotificacaoPopup && (
+        <PopupNotificacao 
+          onClose={() => setShowNotificacaoPopup(false)}
         />
     )}
     </div>

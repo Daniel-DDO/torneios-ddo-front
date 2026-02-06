@@ -9,7 +9,6 @@ import {
   Shield,
   Wallet,
   Search,
-  Bell,
   Gamepad2,
   Star,
   Lightbulb,
@@ -24,6 +23,7 @@ import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface UserData {
   id: string;
@@ -528,7 +528,7 @@ export function TelaPartidas() {
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
 
             {currentUser && (
               <div

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search, 
-  Bell, ArrowLeft, Gamepad2, Lightbulb, Settings, 
+  ArrowLeft, Gamepad2, Lightbulb, Settings, 
   CheckCircle, CalendarSync, Star, MapPin, DollarSign, 
   Activity, Info, StarHalf, TrendingUp, Landmark
 } from 'lucide-react';
@@ -11,6 +11,7 @@ import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface TituloDefinition {
   id: string;
@@ -539,7 +540,7 @@ export function TelaClubeSelecionado() {
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
             
             {currentUser ? (
               <div 

@@ -9,7 +9,6 @@ import {
   Shield, 
   Wallet, 
   Search, 
-  Bell, 
   Gamepad2, 
   Star,
   Lightbulb,
@@ -24,6 +23,7 @@ import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupNovaFase from '../components/PopupNovaFase';
 import PopupConcederTitulo from '../components/PopupConcederTitulo';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface FaseTorneioDTO {
   id: string;
@@ -329,7 +329,7 @@ export function TelaTorneiosFases() {
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
             
             {currentUser ? (
               <div 

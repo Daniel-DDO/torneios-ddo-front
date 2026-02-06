@@ -9,7 +9,6 @@ import {
   Shield,
   Wallet,
   Search,
-  Bell,
   Gamepad2,
   Star,
   Settings,
@@ -33,6 +32,7 @@ import PopupUser from '../components/PopupUser';
 import PopupRegistrarPartida from '../components/PopupRegistrarPartida';
 import PopupReportarPartida from '../components/PopupReportarPartida';
 import '../styles/TorneiosPage.css';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface JogadorClubeDTO {
   id: string;
@@ -453,7 +453,7 @@ export function TelaPartidaSelecionada() {
             <button className="icon-btn theme-toggle-btn" onClick={() => setIsDarkMode(!isDarkMode)}>
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
             {currentUser ? (
               <div 
                 className="user-avatar-mini" 

@@ -10,7 +10,6 @@ import {
   Wallet,
   Settings,
   Search,
-  Bell,
   Key,
   Lock,
   UserPlus,
@@ -33,6 +32,7 @@ import PopupCadastrarJogador from '../components/PopupCadastrarJogador';
 import PopupRecSenhaAdm from '../components/PopupRecSenhaAdm';
 import PopupSaldoConta from '../components/PopupSaldoConta';
 import PopupNovoClube from '../components/PopupNovoClube';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface UserData {
   id: string;
@@ -274,7 +274,7 @@ export function TelaAdmin() {
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
 
             {currentUser && (
               <div

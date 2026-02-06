@@ -9,7 +9,6 @@ import {
   Shield,
   Wallet,
   Search,
-  Bell,
   Gamepad2,
   Star,
   Settings,
@@ -23,6 +22,7 @@ import { API } from '../services/api';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import '../styles/TorneiosPage.css';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface UserData {
   id: string;
@@ -382,7 +382,7 @@ export function TelaSuporte() {
             <button className="icon-btn theme-toggle-btn" onClick={() => setIsDarkMode(!isDarkMode)}>
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
             {currentUser ? (
               <div 
                 className="user-avatar-mini" 

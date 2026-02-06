@@ -13,7 +13,6 @@ import {
   Wallet, 
   Settings, 
   Search, 
-  Bell, 
   Lightbulb, 
   Plus,
   Trash2,
@@ -31,6 +30,7 @@ import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupGeral from '../components/PopupGeral';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface ClubeDTO {
   id: string;
@@ -627,7 +627,7 @@ export function TelaLanceLeilao() {
             <button className="icon-btn theme-toggle-btn" onClick={() => setIsDarkMode(!isDarkMode)}>
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
             
             {currentUser ? (
               <div 

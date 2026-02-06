@@ -3,13 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
   Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, 
-  Search, Bell, Gamepad2, Star, Lightbulb, Settings, 
+  Search, Gamepad2, Star, Lightbulb, Settings, 
   CalendarSync, DollarSign, Clock, Award, ChevronLeft
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface Leilao {
   id: string;
@@ -411,7 +412,7 @@ export function TelaLeilaoClube() {
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
             
             {currentUser ? (
               <div 

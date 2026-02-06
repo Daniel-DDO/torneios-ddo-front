@@ -9,7 +9,6 @@ import {
   Shield,
   Wallet,
   Search,
-  Bell,
   Gamepad2,
   Star,
   Lightbulb,
@@ -24,6 +23,7 @@ import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface JogadorClubeDTO {
   id: string;
@@ -425,7 +425,7 @@ export function TelaTorneiosJogadores() {
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
             
             {currentUser ? (
               <div 

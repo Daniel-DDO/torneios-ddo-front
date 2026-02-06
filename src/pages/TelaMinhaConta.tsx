@@ -9,7 +9,6 @@ import {
   Shield, 
   Wallet, 
   Search, 
-  Bell, 
   Edit, 
   Camera, 
   Mail, 
@@ -27,6 +26,7 @@ import PopupUser from '../components/PopupUser';
 import PopupAtualizarFoto from '../components/PopupAtualizarFoto';
 import PopupAlterarCredenciais from '../components/PopupAlterarCredenciais';
 import PopupAtualizarConta from '../components/PopupAtualizarConta';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface UserData {
   id: string;
@@ -484,7 +484,7 @@ export function TelaMinhaConta() {
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
 
             {currentUser && (
               <div

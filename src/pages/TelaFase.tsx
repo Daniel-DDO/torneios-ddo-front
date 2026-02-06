@@ -12,7 +12,6 @@ import {
   Wallet, 
   Settings, 
   Search, 
-  Bell, 
   Gamepad2, 
   Star,
   Lightbulb,
@@ -39,6 +38,7 @@ import PopupSorteio from '../components/PopupSorteio';
 import PopupCopaReal from '../components/PopupCopaReal';
 import PopupCopaLiga from '../components/PopupCopaLiga';
 import { PdfRelatorioFase } from '../components/RelatorioFase';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface FaseTorneioDTO {
   id: string;
@@ -804,7 +804,7 @@ export function TelaFase() {
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
             
             {currentUser ? (
               <div 

@@ -9,7 +9,6 @@ import {
   Shield, 
   Wallet, 
   Search, 
-  Bell, 
   Gamepad2, 
   Star,
   Lightbulb,
@@ -29,6 +28,7 @@ import PopupUser from '../components/PopupUser';
 import PopupNovoTorneio from '../components/PopupNovoTorneio';
 import PopupJogadorClube from '../components/PopupJogadorClube';
 import PopupTrocarJogador from '../components/PopupTrocarJogador';
+import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface Torneio {
   id: string;
@@ -423,7 +423,7 @@ export function TelaTorneios() {
             <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
               <Lightbulb size={20} />
             </button>
-            <button className="icon-btn"><Bell size={20} /></button>
+            <BotaoNotificacao user={currentUser} />
             
             {currentUser ? (
               <div 
