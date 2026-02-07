@@ -33,6 +33,7 @@ import PopupRecSenhaAdm from '../components/PopupRecSenhaAdm';
 import PopupSaldoConta from '../components/PopupSaldoConta';
 import PopupNovoClube from '../components/PopupNovoClube';
 import PopupAnuncio from '../components/PopupAnuncio';
+import PopupAtualizarJogador from '../components/PopupAtualizarJogador';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface UserData {
@@ -75,6 +76,7 @@ export function TelaAdmin() {
   const [showAnuncioPopup, setShowAnuncioPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [showAtualizarJogador, setShowAtualizarJogador] = useState(false);
 
   const { data: avatars = [] } = useQuery({
     queryKey: ['avatares'],
@@ -343,7 +345,7 @@ export function TelaAdmin() {
                 <p className="action-desc">Adicionar ou remover saldo de um jogador</p>
             </div>
 
-            <div className="action-card" onClick={() => console.log('Atualizar jogador')}>
+            <div className="action-card" onClick={() => setShowAtualizarJogador(true)}>
                 <div className="action-icon"><UserCheck size={40} /></div>
                 <h4 className="action-title">Atualizar jogador</h4>
                 <p className="action-desc">Aposentou? Voltou? Atualize o status dos jogadores aqui</p>
@@ -414,6 +416,12 @@ export function TelaAdmin() {
       {showAnuncioPopup && (
         <PopupAnuncio
             onClose={() => setShowAnuncioPopup(false)}
+        />
+      )}
+
+      {showAtualizarJogador && (
+        <PopupAtualizarJogador
+            onClose={() => setShowAtualizarJogador(false)}
         />
       )}
     </div>

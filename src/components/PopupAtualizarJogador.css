@@ -1,0 +1,531 @@
+:root {
+  --poatu-bg-overlay: rgba(0, 0, 0, 0.75);
+  --poatu-bg-card: #ffffff;
+  --poatu-text-primary: #333333;
+  --poatu-text-secondary: #666666;
+  --poatu-border: #e0e0e0;
+  
+  --poatu-input-bg: #f9f9f9;
+  --poatu-input-border: #cccccc;
+  --poatu-input-text: #333333;
+  --poatu-input-focus-border: #2563eb; 
+  
+  --poatu-btn-close-bg: #f0f0f0;
+  --poatu-btn-close-text: #666666;
+
+  --poatu-sug-bg: #ffffff;
+  --poatu-sug-hover: #f0f7ff;
+  --poatu-sug-text: #333333;
+
+  --poatu-scrollbar-thumb: #c1c1c1;
+  
+  --poatu-status-active-bg: #dcfce7;
+  --poatu-status-active-text: #166534;
+  --poatu-status-inactive-bg: #f3f4f6;
+  --poatu-status-inactive-text: #4b5563;
+  --poatu-status-blocked-bg: #fee2e2;
+  --poatu-status-blocked-text: #991b1b;
+  --poatu-status-suspended-bg: #ffedd5;
+  --poatu-status-suspended-text: #9a3412;
+  --poatu-status-retired-bg: #e0e7ff;
+  --poatu-status-retired-text: #3730a3;
+}
+
+body.dark-mode {
+  --poatu-bg-card: #1a1a1a;
+  --poatu-text-primary: #ffffff;
+  --poatu-text-secondary: #aaaaaa;
+  --poatu-border: #333333;
+  
+  --poatu-input-bg: #2d2d2d;
+  --poatu-input-border: #444444;
+  --poatu-input-text: #ffffff;
+  
+  --poatu-btn-close-bg: #333333;
+  --poatu-btn-close-text: #ffffff;
+
+  --poatu-sug-bg: #2d2d2d;
+  --poatu-sug-hover: #3b3b3b;
+  --poatu-sug-text: #ffffff;
+
+  --poatu-scrollbar-thumb: #555555;
+
+  --poatu-status-active-bg: #064e3b;
+  --poatu-status-active-text: #ecfdf5;
+  --poatu-status-inactive-bg: #374151;
+  --poatu-status-inactive-text: #f3f4f6;
+  --poatu-status-blocked-bg: #7f1d1d;
+  --poatu-status-blocked-text: #fef2f2;
+  --poatu-status-suspended-bg: #7c2d12;
+  --poatu-status-suspended-text: #fff7ed;
+  --poatu-status-retired-bg: #312e81;
+  --poatu-status-retired-text: #e0e7ff;
+}
+
+.poatu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--poatu-bg-overlay);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 0;
+  animation: poatuFadeIn 0.3s forwards;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.poatu-overlay.poatu-fade-out {
+  animation: poatuFadeOut 0.3s forwards;
+  pointer-events: none;
+}
+
+.poatu-content {
+  background-color: var(--poatu-bg-card);
+  color: var(--poatu-text-primary);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px; 
+  min-height: 550px;
+  max-height: 90vh;
+  position: relative;
+  transform: scale(0.95);
+  animation: poatuScaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  border: 1px solid var(--poatu-border);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  overflow: hidden;
+}
+
+.poatu-overlay.poatu-fade-out .poatu-content {
+  animation: poatuScaleOut 0.3s forwards;
+}
+
+.poatu-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--poatu-btn-close-bg);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--poatu-btn-close-text);
+  transition: all 0.2s;
+  z-index: 20;
+}
+
+.poatu-close-btn:hover {
+  background-color: #ff4d4d;
+  color: white;
+  transform: scale(1.1);
+}
+
+.poatu-header {
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   text-align: center;
+   padding: 35px 30px 15px 30px;
+   flex-shrink: 0;
+}
+
+.poatu-icon-badge {
+   width: 60px;
+   height: 60px;
+   background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+   border-radius: 50%;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   margin-bottom: 15px;
+   box-shadow: 0 8px 16px rgba(139, 92, 246, 0.25);
+   color: white;
+}
+
+.poatu-title {
+   font-size: 1.6rem;
+   font-weight: 800;
+   margin: 0;
+   color: var(--poatu-text-primary); 
+}
+
+.poatu-subtitle {
+   font-size: 0.95rem;
+   color: var(--poatu-text-secondary); 
+   margin: 6px 0 0 0;
+}
+
+.poatu-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.poatu-search-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    position: relative;
+    padding-bottom: 10px;
+}
+
+.poatu-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: left;
+    position: relative;
+}
+
+.poatu-form-group label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--poatu-text-primary); 
+}
+
+.poatu-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.poatu-input {
+    padding: 14px 40px 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--poatu-input-border);
+    background-color: var(--poatu-input-bg);
+    color: var(--poatu-input-text); 
+    font-size: 1rem;
+    outline: none;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.poatu-input:focus {
+    border-color: var(--poatu-input-focus-border);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    background-color: var(--poatu-bg-card); 
+}
+
+.poatu-search-icon {
+    position: absolute;
+    right: 14px;
+    color: var(--poatu-text-secondary);
+}
+
+.poatu-suggestions-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: var(--poatu-sug-bg);
+    border: 1px solid var(--poatu-border);
+    border-radius: 12px;
+    margin-top: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.poatu-suggestion-item {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--poatu-border);
+}
+
+.poatu-suggestion-item:hover {
+    background-color: var(--poatu-sug-hover);
+}
+
+.poatu-sug-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #2563eb;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.85rem;
+    overflow: hidden;
+}
+
+.poatu-sug-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.poatu-sug-info {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.poatu-sug-discord {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--poatu-sug-text);
+}
+
+.poatu-sug-name {
+    font-size: 0.8rem;
+    color: var(--poatu-text-secondary);
+}
+
+.poatu-selected-card {
+    background-color: rgba(139, 92, 246, 0.08);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    padding: 16px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    animation: poatuSlideUp 0.3s ease;
+}
+
+.poatu-sp-content {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.poatu-sp-label {
+    font-size: 0.75rem;
+    color: #8b5cf6;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.poatu-sp-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--poatu-text-primary);
+}
+
+.poatu-sp-remove {
+    background: none;
+    border: none;
+    color: #ef4444;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.poatu-sp-remove:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.poatu-status-section {
+    animation: poatuSlideUp 0.4s ease;
+}
+
+.poatu-status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.poatu-status-opt {
+    padding: 12px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    transition: all 0.2s;
+    background-color: var(--poatu-input-bg);
+    color: var(--poatu-text-secondary);
+    opacity: 0.7;
+}
+
+.poatu-status-opt:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+}
+
+.poatu-status-opt.selected {
+    opacity: 1;
+    border-color: currentColor;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.poatu-st-ativo { color: #10b981; }
+.poatu-st-ativo.selected { background-color: var(--poatu-status-active-bg); color: var(--poatu-status-active-text); }
+
+.poatu-st-inativo { color: #6b7280; }
+.poatu-st-inativo.selected { background-color: var(--poatu-status-inactive-bg); color: var(--poatu-status-inactive-text); }
+
+.poatu-st-bloqueado { color: #ef4444; }
+.poatu-st-bloqueado.selected { background-color: var(--poatu-status-blocked-bg); color: var(--poatu-status-blocked-text); }
+
+.poatu-st-suspenso { color: #f97316; }
+.poatu-st-suspenso.selected { background-color: var(--poatu-status-suspended-bg); color: var(--poatu-status-suspended-text); }
+
+.poatu-st-aposentado { color: #6366f1; grid-column: span 2; }
+.poatu-st-aposentado.selected { background-color: var(--poatu-status-retired-bg); color: var(--poatu-status-retired-text); }
+
+
+.poatu-result-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    animation: poatuSlideUp 0.3s ease;
+    padding: 40px 0;
+}
+
+.poatu-success-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background-color: #10b981;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    animation: poatuScaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.poatu-result-success h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--poatu-text-primary);
+    font-weight: 800;
+}
+
+.poatu-result-success p {
+    color: var(--poatu-text-secondary);
+    margin-top: 10px;
+}
+
+.poatu-footer {
+    padding: 30px;
+    border-top: 1px solid var(--poatu-border);
+    background-color: var(--poatu-bg-card);
+    flex-shrink: 0;
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+}
+
+.poatu-btn {
+   width: 100%;
+   padding: 16px;
+   border-radius: 12px;
+   border: none;
+   background: linear-gradient(90deg, #8b5cf6 0%, #7c3aed 100%);
+   color: white;
+   font-size: 1.05rem;
+   font-weight: 700;
+   cursor: pointer;
+   transition: all 0.2s;
+   box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
+   display: flex;
+   align-items: center;
+   justify-content: center;
+}
+
+.poatu-btn.secondary {
+    background: transparent;
+    border: 1px solid var(--poatu-border);
+    color: var(--poatu-text-secondary);
+    box-shadow: none;
+}
+
+.poatu-btn:hover {
+   transform: translateY(-2px);
+   filter: brightness(1.1);
+}
+
+.poatu-btn.secondary:hover {
+    background-color: var(--poatu-input-bg);
+    color: var(--poatu-text-primary);
+}
+
+.poatu-btn:disabled {
+   opacity: 0.7;
+   cursor: not-allowed;
+   transform: none;
+   background: #94a3b8;
+   box-shadow: none;
+}
+
+.poatu-error-msg {
+   color: #d63031;
+   background-color: rgba(214, 48, 49, 0.1);
+   padding: 12px;
+   border-radius: 10px;
+   font-size: 0.9rem;
+   font-weight: 500;
+   text-align: center;
+   border: 1px solid rgba(214, 48, 49, 0.2);
+   margin-top: 15px;
+   animation: poatuSlideUp 0.2s ease;
+}
+
+.poatu-spinner {
+   width: 24px;
+   height: 24px;
+   border: 3px solid rgba(255,255,255,0.3);
+   border-top-color: white;
+   border-radius: 50%;
+   animation: spin 0.8s linear infinite;
+}
+
+.poatu-spinner-blue {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(139, 92, 246, 0.2);
+    border-top-color: #8b5cf6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.poatu-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.poatu-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.poatu-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--poatu-scrollbar-thumb);
+    border-radius: 10px;
+}
+
+@keyframes poatuFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes poatuFadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes poatuScaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes poatuScaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.9); opacity: 0; } }
+@keyframes poatuSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
