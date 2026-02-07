@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
@@ -21,7 +21,10 @@ import {
   Medal,
   Calendar,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  Zap,
+  Newspaper,
+  ChevronLeft
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -94,6 +97,15 @@ interface Notificacao {
   dataCriacao: string;
 }
 
+interface Noticia {
+  id: string;
+  titulo: string;
+  mensagem: string;
+  tipo: string;
+  linkPartida: string;
+  dataCriacao: string;
+}
+
 const fetchAvatarsService = async () => {
   const response = await API.get('/api/avatares');
   if (Array.isArray(response)) return response;
@@ -116,6 +128,11 @@ const fetchMinhasNotificacoesService = async () => {
   return response.data || [];
 };
 
+const fetchNoticiasService = async () => {
+  const response = await API.get('/api/noticias');
+  return response.data || [];
+};
+
 export function TorneiosPage() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
@@ -128,6 +145,7 @@ export function TorneiosPage() {
   const [showReivindicarPopup, setShowReivindicarPopup] = useState(false);
   const [showNotificacaoPopup, setShowNotificacaoPopup] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const newsScrollRef = useRef<HTMLDivElement>(null);
   
   const { data: avatars = [] } = useQuery({
     queryKey: ['avatares'],
@@ -153,6 +171,12 @@ export function TorneiosPage() {
     enabled: !!currentUser,
     staleTime: 1000 * 60,
     refetchInterval: 1000 * 60 * 5 
+  });
+
+  const { data: noticias = [] } = useQuery<Noticia[]>({
+    queryKey: ['noticias'],
+    queryFn: fetchNoticiasService,
+    staleTime: 1000 * 60 * 5,
   });
 
   const temNotificacaoNaoLida = useMemo(() => {
@@ -191,6 +215,10 @@ export function TorneiosPage() {
       player.discord.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [topPlayers, searchTerm]);
+
+  const noticiasRecentes = useMemo(() => {
+    return noticias.slice(0, 10);
+  }, [noticias]);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -251,6 +279,17 @@ export function TorneiosPage() {
     }
   };
 
+  const scrollNews = (direction: 'left' | 'right') => {
+    if (newsScrollRef.current) {
+      const scrollAmount = 320;
+      if (direction === 'left') {
+        newsScrollRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      } else {
+        newsScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      }
+    }
+  };
+
   const getCurrentUserAvatar = () => {
     if (!currentUser?.imagem) return null;
     return avatarMap[currentUser.imagem] || currentUser.imagem;
@@ -259,6 +298,17 @@ export function TorneiosPage() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'Agora';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m atrás`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h atrás`;
+    return formatDate(dateString);
   };
 
   const torneios: Torneio[] = [
@@ -739,7 +789,129 @@ export function TorneiosPage() {
             </>
           )}
 
-          <div className="tp-dashboard-grid" style={{ animation: 'fadeInUp 0.8s ease-out' }}>
+          {noticiasRecentes.length > 0 && (
+            <div className="news-carousel-section" style={{ marginTop: '24px', position: 'relative' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                marginBottom: '12px',
+                padding: '0 4px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600', fontSize: '1.1rem', color: 'var(--text-dark)' }}>
+                  <Newspaper size={20} className="text-primary" />
+                  Destaques e Notícias
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => scrollNews('left')} style={{ 
+                    padding: '6px', borderRadius: '50%', border: '1px solid var(--border-color)', 
+                    background: 'var(--card-bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                  }}>
+                    <ChevronLeft size={18} color="var(--text-dark)" />
+                  </button>
+                  <button onClick={() => scrollNews('right')} style={{ 
+                    padding: '6px', borderRadius: '50%', border: '1px solid var(--border-color)', 
+                    background: 'var(--card-bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                  }}>
+                    <ChevronRight size={18} color="var(--text-dark)" />
+                  </button>
+                </div>
+              </div>
+
+              <div 
+                ref={newsScrollRef}
+                style={{ 
+                  display: 'flex', 
+                  gap: '16px', 
+                  overflowX: 'auto', 
+                  paddingBottom: '10px',
+                  scrollBehavior: 'smooth',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none'
+                }}
+              >
+                {noticiasRecentes.map((noticia) => (
+                  <div 
+                    key={noticia.id} 
+                    onClick={() => navigate(`/noticias/${noticia.id}`)}
+                    style={{ 
+                      minWidth: '300px', 
+                      maxWidth: '300px',
+                      background: 'var(--card-bg)', 
+                      borderRadius: '12px', 
+                      padding: '16px', 
+                      border: '1px solid var(--border-color)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-3px)';
+                      e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.08)';
+                      e.currentTarget.style.borderColor = 'var(--primary)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.borderColor = 'var(--border-color)';
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                        <span style={{ 
+                          fontSize: '0.7rem', 
+                          fontWeight: '700', 
+                          textTransform: 'uppercase', 
+                          padding: '3px 8px', 
+                          borderRadius: '4px', 
+                          background: noticia.tipo === 'JOGO_QUENTE' ? 'rgba(255, 71, 87, 0.1)' : 'rgba(78, 62, 255, 0.1)',
+                          color: noticia.tipo === 'JOGO_QUENTE' ? '#ff4757' : 'var(--primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          {noticia.tipo === 'JOGO_QUENTE' && <Zap size={10} fill="currentColor" />}
+                          {noticia.tipo.replace('_', ' ')}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-gray)' }}>{formatTimeAgo(noticia.dataCriacao)}</span>
+                      </div>
+                      <h4 style={{ 
+                        fontSize: '1rem', 
+                        fontWeight: '600', 
+                        color: 'var(--text-dark)', 
+                        marginBottom: '8px',
+                        lineHeight: '1.4',
+                        display: '-webkit-box',
+                        WebkitLineClamp: '2',
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {noticia.titulo}
+                      </h4>
+                      <p style={{ 
+                        fontSize: '0.85rem', 
+                        color: 'var(--text-gray)', 
+                        lineHeight: '1.5',
+                        display: '-webkit-box',
+                        WebkitLineClamp: '3',
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {noticia.mensagem}
+                      </p>
+                    </div>
+                    <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', fontSize: '0.85rem', fontWeight: '500', color: 'var(--primary)' }}>
+                      Ler completa <ChevronRight size={14} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="tp-dashboard-grid" style={{ animation: 'fadeInUp 0.8s ease-out', marginTop: '10px' }}>
             
             <div className="left-section">
               <div style={{
@@ -750,7 +922,7 @@ export function TorneiosPage() {
               }}>
                 <div style={{display:'flex', alignItems:'center', gap:'10px', fontSize:'1.25rem', fontWeight:'600', color:'var(--text-dark)'}}>
                   <Gamepad2 className="text-primary" size={24} /> 
-                  Principais Novidades
+                  Navegar
                 </div>
               </div>
 
