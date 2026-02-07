@@ -1,0 +1,364 @@
+:root {
+  --poan-bg-overlay: rgba(0, 0, 0, 0.75);
+  --poan-bg-card: #ffffff;
+  --poan-text-primary: #333333;
+  --poan-text-secondary: #666666;
+  --poan-border: #e0e0e0;
+  
+  --poan-input-bg: #f9f9f9;
+  --poan-input-border: #cccccc;
+  --poan-input-text: #333333;
+  --poan-input-placeholder: #999999;
+  --poan-input-focus-border: #2563eb; 
+  
+  --poan-btn-close-bg: #f0f0f0;
+  --poan-btn-close-text: #666666;
+
+  --poan-scrollbar-track: #f1f1f1;
+  --poan-scrollbar-thumb: #c1c1c1;
+}
+
+body.dark-mode {
+  --poan-bg-card: #1a1a1a;
+  --poan-text-primary: #ffffff;
+  --poan-text-secondary: #aaaaaa;
+  --poan-border: #333333;
+  
+  --poan-input-bg: #2d2d2d;
+  --poan-input-border: #444444;
+  --poan-input-text: #ffffff;
+  --poan-input-placeholder: #777777;
+  
+  --poan-btn-close-bg: #333333;
+  --poan-btn-close-text: #ffffff;
+
+  --poan-scrollbar-track: #2d2d2d;
+  --poan-scrollbar-thumb: #555555;
+}
+
+.poan-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--poan-bg-overlay);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 0;
+  animation: poanFadeIn 0.3s forwards;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.poan-overlay.poan-fade-out {
+  animation: poanFadeOut 0.3s forwards;
+  pointer-events: none;
+}
+
+.poan-content {
+  background-color: var(--poan-bg-card);
+  color: var(--poan-text-primary);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 500px;
+  min-height: 600px;
+  max-height: 90vh;
+  position: relative;
+  transform: scale(0.95);
+  animation: poanScaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  border: 1px solid var(--poan-border);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  overflow: hidden;
+}
+
+.poan-overlay.poan-fade-out .poan-content {
+  animation: poanScaleOut 0.3s forwards;
+}
+
+.poan-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--poan-btn-close-bg);
+  border: 1px solid transparent; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--poan-btn-close-text);
+  transition: all 0.2s;
+  z-index: 20;
+  padding: 0;
+}
+
+.poan-close-btn:hover {
+  background-color: #ff4d4d;
+  color: white;
+  transform: scale(1.1);
+}
+
+.poan-header {
+   display: flex;
+   flex-direction: column;
+   align-items: center;
+   text-align: center;
+   padding: 30px 30px 10px 30px;
+   flex-shrink: 0;
+}
+
+.poan-icon-badge {
+   width: 60px;
+   height: 60px;
+   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+   border-radius: 50%;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   margin-bottom: 15px;
+   box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25);
+   color: white;
+}
+
+.poan-title {
+   font-size: 1.5rem;
+   font-weight: 800;
+   margin: 0;
+   color: var(--poan-text-primary); 
+}
+
+.poan-subtitle {
+   font-size: 0.95rem;
+   color: var(--poan-text-secondary); 
+   margin: 6px 0 0 0;
+}
+
+.poan-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 30px;
+    display: flex;
+    flex-direction: column;
+}
+
+.poan-form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.poan-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: left;
+}
+
+.poan-row {
+    display: flex;
+    gap: 15px;
+}
+
+.poan-form-group.half {
+    flex: 1;
+}
+
+.poan-form-group label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--poan-text-primary); 
+}
+
+.poan-input {
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--poan-input-border);
+    background-color: var(--poan-input-bg);
+    color: var(--poan-input-text); 
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.poan-textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+}
+
+.poan-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 30px;
+}
+
+.poan-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.poan-input:focus {
+    border-color: var(--poan-input-focus-border);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    background-color: var(--poan-bg-card); 
+}
+
+.poan-color-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: var(--poan-input-bg);
+    border: 1px solid var(--poan-input-border);
+    border-radius: 10px;
+    padding: 5px 10px;
+    height: 44px;
+    box-sizing: border-box;
+}
+
+.poan-input-color {
+    border: none;
+    background: none;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.poan-color-label {
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: var(--poan-text-secondary);
+}
+
+.poan-success-result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    animation: poanSlideUp 0.3s ease;
+    padding-top: 40px;
+    height: 100%;
+    justify-content: center;
+}
+
+.poan-success-anim {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background-color: #10b981;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    animation: poanScaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.poan-success-result h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--poan-text-primary);
+    font-weight: 800;
+}
+
+.poan-success-result p {
+    color: var(--poan-text-secondary);
+    margin: 10px 0 0 0;
+    font-size: 1rem;
+}
+
+.poan-footer {
+    padding: 25px 30px;
+    border-top: 1px solid var(--poan-border);
+    background-color: var(--poan-bg-card);
+    flex-shrink: 0;
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+}
+
+.poan-btn {
+   width: 100%;
+   padding: 16px;
+   border-radius: 12px;
+   border: none;
+   background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+   color: white;
+   font-size: 1.05rem;
+   font-weight: 700;
+   cursor: pointer;
+   transition: all 0.2s;
+   box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+   display: flex;
+   align-items: center;
+   justify-content: center;
+}
+
+.poan-btn:hover {
+   transform: translateY(-2px);
+   filter: brightness(1.1);
+}
+
+.poan-btn:disabled {
+   opacity: 0.7;
+   cursor: not-allowed;
+   transform: none;
+   background: #94a3b8;
+   box-shadow: none;
+}
+
+.poan-error-msg {
+   color: #d63031;
+   background-color: rgba(214, 48, 49, 0.1);
+   padding: 12px;
+   border-radius: 10px;
+   font-size: 0.9rem;
+   font-weight: 500;
+   text-align: center;
+   border: 1px solid rgba(214, 48, 49, 0.2);
+   animation: poanSlideUp 0.2s ease;
+}
+
+.poan-spinner {
+   width: 24px;
+   height: 24px;
+   border: 3px solid rgba(255,255,255,0.3);
+   border-top-color: white;
+   border-radius: 50%;
+   animation: spin 0.8s linear infinite;
+}
+
+.poan-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.poan-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.poan-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--poan-scrollbar-thumb);
+    border-radius: 10px;
+}
+
+@keyframes poanFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes poanFadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes poanScaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes poanScaleOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.9); opacity: 0; } }
+@keyframes poanSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }

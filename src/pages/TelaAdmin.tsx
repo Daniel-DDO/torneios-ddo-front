@@ -32,6 +32,7 @@ import PopupCadastrarJogador from '../components/PopupCadastrarJogador';
 import PopupRecSenhaAdm from '../components/PopupRecSenhaAdm';
 import PopupSaldoConta from '../components/PopupSaldoConta';
 import PopupNovoClube from '../components/PopupNovoClube';
+import PopupAnuncio from '../components/PopupAnuncio';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface UserData {
@@ -71,6 +72,7 @@ export function TelaAdmin() {
   const [showRecSenhaAdmPopup, setShowRecSenhaAdmPopup] = useState(false);
   const [showSaldoPopup, setShowSaldoPopup] = useState(false);
   const [showNovoClubePopup, setShowNovoClubePopup] = useState(false);
+  const [showAnuncioPopup, setShowAnuncioPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -347,7 +349,7 @@ export function TelaAdmin() {
                 <p className="action-desc">Aposentou? Voltou? Atualize o status dos jogadores aqui</p>
             </div>
 
-            <div className="action-card" onClick={() => console.log('Criar anúncio')}>
+            <div className="action-card" onClick={() => setShowAnuncioPopup(true)}>
                 <div className="action-icon"><Megaphone size={40} /></div>
                 <h4 className="action-title">Criar anúncio</h4>
                 <p className="action-desc">Visualize, crie e edite os anúncios</p>
@@ -406,6 +408,12 @@ export function TelaAdmin() {
       {showNovoClubePopup && (
         <PopupNovoClube
             onClose={() => setShowNovoClubePopup(false)}
+        />
+      )}
+
+      {showAnuncioPopup && (
+        <PopupAnuncio
+            onClose={() => setShowAnuncioPopup(false)}
         />
       )}
     </div>

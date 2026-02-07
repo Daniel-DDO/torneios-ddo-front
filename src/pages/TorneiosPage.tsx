@@ -24,7 +24,9 @@ import {
   ArrowRight,
   Zap,
   Newspaper,
-  ChevronLeft
+  ChevronLeft,
+  Megaphone,
+  AlertCircle
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -106,6 +108,16 @@ interface Noticia {
   dataCriacao: string;
 }
 
+interface Anuncio {
+  id: string;
+  titulo: string;
+  mensagem: string;
+  dataPostagem: string;
+  tipoMensagem: string;
+  imagem: string;
+  corMensagem: string;
+}
+
 const fetchAvatarsService = async () => {
   const response = await API.get('/api/avatares');
   if (Array.isArray(response)) return response;
@@ -130,6 +142,11 @@ const fetchMinhasNotificacoesService = async () => {
 
 const fetchNoticiasService = async () => {
   const response = await API.get('/api/noticias');
+  return response.data || [];
+};
+
+const fetchAnunciosService = async () => {
+  const response = await API.get('/anuncios/recentes');
   return response.data || [];
 };
 
@@ -177,6 +194,12 @@ export function TorneiosPage() {
     queryKey: ['noticias'],
     queryFn: fetchNoticiasService,
     staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: anuncios = [] } = useQuery<Anuncio[]>({
+    queryKey: ['anuncios'],
+    queryFn: fetchAnunciosService,
+    staleTime: 1000 * 60 * 10,
   });
 
   const temNotificacaoNaoLida = useMemo(() => {
@@ -324,7 +347,7 @@ export function TorneiosPage() {
     {
       id: 2,
       nome: 'Portal da Transparência',
-      descricao: 'Descubra e simule como funcionam as partidas',
+      descricao: 'Simule o motor de partidas.',
       status: 'disponivel',
       imagem: 'https://upload.wikimedia.org/wikipedia/commons/0/0e/Estadio_Santiago_Bernab%C3%A9u_Madrid.jpg?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
       botao_texto: 'Acessar Portal',
@@ -333,7 +356,7 @@ export function TorneiosPage() {
     {
       id: 3,
       nome: 'Mercado da Bola',
-      descricao: 'Valor de mercado de clubes e seleções.',
+      descricao: 'Valor de mercado de clubes.',
       status: 'disponivel',
       imagem: 'https://lh7-us.googleusercontent.com/OTAj3_arkkVj7wlDpWovqngMbuVUHQxEbvgJ7P-YU_mfZzr11Lp7K2630V2hFARaXYnOi6lIlyLIK2xpjyaTY3UZ6-u3hRX90RY4SheZQ2Gpf5vGIgvlxAoddvr2FXNKM37tQ_GTyxtqkQCD3kUk8UA?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
       botao_texto: 'Ver Mercado',
@@ -926,7 +949,7 @@ export function TorneiosPage() {
                 </div>
               </div>
 
-              <div className="tp-tournaments-grid">
+              <div className="tp-tournaments-grid" style={{ marginBottom: '40px' }}>
                 {torneios.map(torneio => (
                   <div key={torneio.id} className="tp-card" style={{display:'flex', flexDirection:'column', height:'100%'}}>
                     <div style={{
@@ -1000,16 +1023,142 @@ export function TorneiosPage() {
                   </div>
                 ))}
               </div>
+
+              {anuncios && anuncios.length > 0 && (
+                <div style={{ marginTop: '20px' }}>
+                  <div style={{
+                    display:'flex', 
+                    alignItems:'center', 
+                    justifyContent: 'space-between', // Adicionado para separar titulo do botão
+                    marginBottom: '20px'
+                  }}>
+                    <div style={{
+                      display:'flex', 
+                      alignItems:'center', 
+                      gap:'10px', 
+                      fontSize:'1.25rem', 
+                      fontWeight:'600', 
+                      color:'var(--text-dark)'
+                    }}>
+                      <Megaphone className="text-primary" size={24} /> 
+                      Quadro de Avisos
+                    </div>
+
+                    <button 
+                      onClick={() => navigate('/anuncios')} 
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--primary)',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.background = 'var(--hover-bg)'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      Ver anúncios <ArrowRight size={16} />
+                    </button>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {anuncios.map(anuncio => (
+                      <div key={anuncio.id} className="tp-card" style={{
+                        display: 'flex',
+                        flexDirection: isMobile ? 'column' : 'row',
+                        overflow: 'hidden',
+                        minHeight: '200px',
+                        borderLeft: `4px solid ${anuncio.corMensagem || 'var(--primary)'}`
+                      }}>
+                        <div style={{
+                          flex: isMobile ? 'none' : '0 0 40%',
+                          minHeight: isMobile ? '160px' : 'auto',
+                          backgroundImage: `url(${anuncio.imagem})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          position: 'relative'
+                        }}>
+                          <div style={{
+                             position: 'absolute',
+                             inset: 0,
+                             background: 'linear-gradient(90deg, transparent 50%, var(--bg-card) 100%)',
+                             display: isMobile ? 'none' : 'block'
+                          }}></div>
+                           <div style={{
+                             position: 'absolute',
+                             inset: 0,
+                             background: 'linear-gradient(0deg, var(--bg-card) 0%, transparent 50%)',
+                             display: isMobile ? 'block' : 'none'
+                          }}></div>
+                        </div>
+                        <div style={{
+                          flex: 1,
+                          padding: '24px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          zIndex: 1
+                        }}>
+                          <div style={{
+                             display: 'flex',
+                             alignItems: 'center',
+                             gap: '8px',
+                             marginBottom: '10px'
+                          }}>
+                            <span style={{
+                              backgroundColor: `${anuncio.corMensagem}20`,
+                              color: anuncio.corMensagem,
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: '700',
+                              textTransform: 'uppercase'
+                            }}>
+                              {anuncio.tipoMensagem}
+                            </span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-gray)' }}>
+                              {formatDate(anuncio.dataPostagem)}
+                            </span>
+                          </div>
+                          <h3 style={{
+                            fontSize: '1.4rem',
+                            fontWeight: '700',
+                            color: 'var(--text-dark)',
+                            marginBottom: '10px',
+                            lineHeight: 1.2
+                          }}>
+                            {anuncio.titulo}
+                          </h3>
+                          <p style={{
+                            fontSize: '0.95rem',
+                            color: 'var(--text-gray)',
+                            lineHeight: 1.6,
+                            whiteSpace: 'pre-line'
+                          }}>
+                            {anuncio.mensagem}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="right-section" style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
-              <div className="tp-ranking-panel" style={{display: 'flex', flexDirection: 'column', height: '480px'}}>
-                <div className="tp-ranking-header" style={{padding: '16px 20px', borderBottom: '1px solid var(--border-color)'}}>
-                  <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-                    <TrendingUp className="text-primary" size={20} />
+              <div className="tp-ranking-panel" style={{display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', minHeight: '520px', position: 'sticky', top: '100px'}}>
+                <div className="tp-ranking-header" style={{padding: '20px', borderBottom: '1px solid var(--border-color)'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
+                    <TrendingUp className="text-primary" size={22} />
                     <div>
-                      <h3 style={{fontSize:'1rem', fontWeight:'600', color:'var(--text-dark)'}}>Top Ranking</h3>
-                      <span style={{fontSize:'0.75rem', fontWeight:'400', color:'var(--text-gray)'}}>Coeficiente</span>
+                      <h3 style={{fontSize:'1.1rem', fontWeight:'700', color:'var(--text-dark)'}}>Top 10 Ranking</h3>
+                      <span style={{fontSize:'0.8rem', fontWeight:'400', color:'var(--text-gray)'}}>Coeficiente Geral</span>
                     </div>
                   </div>
                 </div>
@@ -1025,23 +1174,23 @@ export function TorneiosPage() {
                       const posClass = index === 0 ? 'tp-pos-1' : index === 1 ? 'tp-pos-2' : index === 2 ? 'tp-pos-3' : 'tp-pos-n';
                       
                       return (
-                        <div key={player.id} className="tp-rank-item" style={{padding: '12px 16px'}}>
-                          <div className={`tp-rank-pos ${posClass}`} style={{fontSize: '0.8rem', width: '24px', height: '24px'}}>
+                        <div key={player.id} className="tp-rank-item" style={{padding: '14px 20px'}}>
+                          <div className={`tp-rank-pos ${posClass}`} style={{fontSize: '0.85rem', width: '28px', height: '28px'}}>
                             {index + 1}
                           </div>
                           
                           <div style={{position:'relative'}}>
                             {avatarUrl ? (
-                              <img src={avatarUrl} alt={player.nome} style={{width:'36px', height:'36px', borderRadius:'10px', marginRight:'12px', objectFit:'cover', background:'var(--border-color)'}} />
+                              <img src={avatarUrl} alt={player.nome} style={{width:'40px', height:'40px', borderRadius:'12px', marginRight:'14px', objectFit:'cover', background:'var(--border-color)'}} />
                             ) : (
-                              <div style={{width:'36px', height:'36px', borderRadius:'10px', marginRight:'12px', background:'var(--border-color)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'500', color:'var(--text-gray)', fontSize:'0.9rem'}}>
+                              <div style={{width:'40px', height:'40px', borderRadius:'12px', marginRight:'14px', background:'var(--border-color)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:'600', color:'var(--text-gray)', fontSize:'1rem'}}>
                                 {player.nome.charAt(0)}
                               </div>
                             )}
                           </div>
 
                           <div style={{flex:1, overflow:'hidden', marginRight:'10px'}}>
-                            <div style={{fontWeight:'500', fontSize:'0.9rem', color:'var(--text-dark)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>
+                            <div style={{fontWeight:'600', fontSize:'0.95rem', color:'var(--text-dark)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}}>
                               {player.nome}
                             </div>
                             <div style={{fontSize:'0.75rem', color:'var(--text-gray)'}}>
@@ -1050,13 +1199,13 @@ export function TorneiosPage() {
                           </div>
 
                           <div style={{
-                            background:'rgba(78, 62, 255, 0.05)', 
+                            background:'rgba(78, 62, 255, 0.08)', 
                             color:'var(--primary)', 
-                            padding:'4px 8px', 
-                            borderRadius:'6px', 
-                            fontWeight:'600', 
-                            fontSize:'0.8rem',
-                            minWidth: '50px',
+                            padding:'6px 10px', 
+                            borderRadius:'8px', 
+                            fontWeight:'700', 
+                            fontSize:'0.85rem',
+                            minWidth: '55px',
                             textAlign: 'center'
                           }}>
                             {player.pontosCoeficiente.toFixed(1)}
@@ -1065,8 +1214,9 @@ export function TorneiosPage() {
                       );
                     })
                   ) : (
-                    <div style={{padding:'30px', textAlign:'center', color:'var(--text-gray)'}}>
-                      Nenhum jogador encontrado.
+                    <div style={{padding:'30px', textAlign:'center', color:'var(--text-gray)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px'}}>
+                       <AlertCircle size={32} />
+                       <p>Nenhum jogador encontrado.</p>
                     </div>
                   )}
                 </div>

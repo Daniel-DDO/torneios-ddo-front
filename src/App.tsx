@@ -29,6 +29,8 @@ import { TelaLanceLeilao } from './pages/TelaLanceLeilao';
 import { TelaLeilaoParciais } from './pages/TelaLeilaoParciais';
 import { TelaLeilaoFinal } from './pages/TelaLeilaoFinal';
 import { TelaNoticiaSelecionada } from './pages/TelaNoticiaSelecionada';
+import { TelaAnuncios } from './pages/TelaAnuncios';
+import { TelaAnuncioSelecionado } from './pages/TelaAnuncioSelecionado';
 
 import './App.css';
 
@@ -52,6 +54,8 @@ function App() {
           <Route path="/competicoes" element={<TelaCompeticoes />} />
           <Route path="/minha-conta" element={<TelaMinhaConta />} />
           <Route path="/admin" element={<TelaAdmin />} />
+          <Route path="/anuncios" element={<TelaAnuncios />} />
+          <Route path="/anuncios/:anuncioId" element={<TelaAnuncioSelecionado />} />
           <Route path="/jogador/:id" element={<TelaPerfilJogador />} />
           <Route path="/temporadas" element={<TelaTemporadas />} />
           <Route path="/noticias/:noticiaId" element={<TelaNoticiaSelecionada />} />

@@ -62,7 +62,7 @@ const NEWS_CONFIG = {
     label: 'Zebra Histórica',
     icon: <AlertTriangle size={20} />,
     color: '#ff4757',
-    image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1000&auto=format&fit=crop'
+    image: 'https://images.unsplash.com/photo-1459865264687-595d652de67e?q=80&w=1000&auto=format&fit=crop'
   },
   GOLEADA: {
     label: 'Goleada',
@@ -74,7 +74,7 @@ const NEWS_CONFIG = {
     label: 'Decisão',
     icon: <Crown size={20} />,
     color: '#ffa502',
-    image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=1000&auto=format&fit=crop'
+    image: 'https://images.unsplash.com/photo-1589487391730-58f20eb2c308?q=80&w=1000&auto=format&fit=crop'
   },
   BATALHA: {
     label: 'Batalha',
@@ -169,7 +169,8 @@ export function TelaNoticiaSelecionada() {
       month: 'long', 
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'America/Sao_Paulo'
     }).format(date);
   };
 
