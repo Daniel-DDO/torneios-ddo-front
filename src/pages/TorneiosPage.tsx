@@ -161,7 +161,7 @@ export function TorneiosPage() {
   const [trophyHover, setTrophyHover] = useState(false);
   const [showReivindicarPopup, setShowReivindicarPopup] = useState(false);
   const [showNotificacaoPopup, setShowNotificacaoPopup] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const newsScrollRef = useRef<HTMLDivElement>(null);
   
   const { data: avatars = [] } = useQuery({
@@ -182,12 +182,16 @@ export function TorneiosPage() {
     staleTime: 1000 * 60 * 2,
   });
 
-  const { data: notificacoes = [] } = useQuery<Notificacao[]>({
+  const { 
+    data: notificacoes = [], 
+    isError: isNotificacoesError, 
+    error: notificacoesError 
+  } = useQuery<Notificacao[]>({
     queryKey: ['notificacoesMinhas'],
     queryFn: fetchMinhasNotificacoesService,
-    enabled: !!currentUser,
-    staleTime: 1000 * 60,
-    refetchInterval: 1000 * 60 * 5 
+    enabled: !!currentUser, 
+    retry: false, 
+    refetchOnWindowFocus: false,
   });
 
   const { data: noticias = [] } = useQuery<Noticia[]>({
@@ -201,6 +205,19 @@ export function TorneiosPage() {
     queryFn: fetchAnunciosService,
     staleTime: 1000 * 60 * 10,
   });
+
+  useEffect(() => {
+    if (isNotificacoesError && currentUser) {
+      const err = notificacoesError as any;
+      if (err?.response?.status === 401 || err?.response?.status === 403) {
+        alert("Sessão expirada. Por favor, faça login novamente.");
+        localStorage.removeItem('token');
+        localStorage.removeItem('user_data');
+        setCurrentUser(null);
+        window.location.reload();
+      }
+    }
+  }, [isNotificacoesError, notificacoesError, currentUser]);
 
   const temNotificacaoNaoLida = useMemo(() => {
     return notificacoes.some(n => !n.lida);
@@ -239,10 +256,6 @@ export function TorneiosPage() {
     );
   }, [topPlayers, searchTerm]);
 
-  const noticiasRecentes = useMemo(() => {
-    return noticias.slice(0, 10);
-  }, [noticias]);
-
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark';
@@ -251,11 +264,15 @@ export function TorneiosPage() {
   useEffect(() => {
     const storedUser = localStorage.getItem('user_data');
     if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
+      try {
+        setCurrentUser(JSON.parse(storedUser));
+      } catch (e) {
+        localStorage.removeItem('user_data');
+      }
     }
 
     const handleResize = () => {
-      const mobile = window.innerWidth < 768;
+      const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
       if (mobile) {
         setSidebarOpen(false);
@@ -304,11 +321,11 @@ export function TorneiosPage() {
 
   const scrollNews = (direction: 'left' | 'right') => {
     if (newsScrollRef.current) {
-      const scrollAmount = 320;
+      const containerWidth = newsScrollRef.current.clientWidth;
       if (direction === 'left') {
-        newsScrollRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        newsScrollRef.current.scrollBy({ left: -containerWidth, behavior: 'smooth' });
       } else {
-        newsScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        newsScrollRef.current.scrollBy({ left: containerWidth, behavior: 'smooth' });
       }
     }
   };
@@ -580,7 +597,7 @@ export function TorneiosPage() {
                     </div>
                     
                     <h1 style={{
-                      fontSize:'3rem', 
+                      fontSize: isMobile ? '2rem' : '3rem', 
                       fontWeight:'900', 
                       marginBottom:'10px', 
                       lineHeight: 1.1,
@@ -736,7 +753,7 @@ export function TorneiosPage() {
                     </div>
                     
                     <h1 style={{
-                      fontSize:'2.8rem', 
+                      fontSize: isMobile ? '2rem' : '2.8rem', 
                       fontWeight:'700', 
                       marginBottom:'12px', 
                       lineHeight: 1.1,
@@ -812,7 +829,7 @@ export function TorneiosPage() {
             </>
           )}
 
-          {noticiasRecentes.length > 0 && (
+          {noticias.length > 0 && (
             <div className="news-carousel-section" style={{ marginTop: '24px', position: 'relative' }}>
               <div style={{ 
                 display: 'flex', 
@@ -853,13 +870,13 @@ export function TorneiosPage() {
                   msOverflowStyle: 'none'
                 }}
               >
-                {noticiasRecentes.map((noticia) => (
+                {noticias.map((noticia) => (
                   <div 
                     key={noticia.id} 
                     onClick={() => navigate(`/noticias/${noticia.id}`)}
                     style={{ 
-                      minWidth: '300px', 
-                      maxWidth: '300px',
+                      flex: isMobile ? '0 0 100%' : '0 0 calc((100% - 32px) / 3)',
+                      minWidth: isMobile ? '100%' : '0',
                       background: 'var(--card-bg)', 
                       borderRadius: '12px', 
                       padding: '16px', 
@@ -934,9 +951,15 @@ export function TorneiosPage() {
             </div>
           )}
 
-          <div className="tp-dashboard-grid" style={{ animation: 'fadeInUp 0.8s ease-out', marginTop: '10px' }}>
+          <div className="tp-dashboard-grid" style={{ 
+            animation: 'fadeInUp 0.8s ease-out', 
+            marginTop: '10px',
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: '20px'
+          }}>
             
-            <div className="left-section">
+            <div className="left-section" style={{ flex: 1, minWidth: 0 }}>
               <div style={{
                 display:'flex', 
                 alignItems:'center', 
@@ -949,7 +972,12 @@ export function TorneiosPage() {
                 </div>
               </div>
 
-              <div className="tp-tournaments-grid" style={{ marginBottom: '40px' }}>
+              <div className="tp-tournaments-grid" style={{ 
+                marginBottom: '40px',
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '20px'
+              }}>
                 {torneios.map(torneio => (
                   <div key={torneio.id} className="tp-card" style={{display:'flex', flexDirection:'column', height:'100%'}}>
                     <div style={{
@@ -1029,7 +1057,7 @@ export function TorneiosPage() {
                   <div style={{
                     display:'flex', 
                     alignItems:'center', 
-                    justifyContent: 'space-between', // Adicionado para separar titulo do botão
+                    justifyContent: 'space-between',
                     marginBottom: '20px'
                   }}>
                     <div style={{
@@ -1151,8 +1179,21 @@ export function TorneiosPage() {
               )}
             </div>
 
-            <div className="right-section" style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
-              <div className="tp-ranking-panel" style={{display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', minHeight: '520px', position: 'sticky', top: '100px'}}>
+            <div className="right-section" style={{
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '20px',
+              width: isMobile ? '100%' : '350px'
+            }}>
+              <div className="tp-ranking-panel" style={{
+                display: 'flex', 
+                flexDirection: 'column', 
+                height: isMobile ? 'auto' : 'calc(100vh - 120px)',
+                maxHeight: isMobile ? '500px' : 'none',
+                minHeight: '520px', 
+                position: isMobile ? 'static' : 'sticky', 
+                top: '100px'
+              }}>
                 <div className="tp-ranking-header" style={{padding: '20px', borderBottom: '1px solid var(--border-color)'}}>
                   <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
                     <TrendingUp className="text-primary" size={22} />
