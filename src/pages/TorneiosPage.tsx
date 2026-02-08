@@ -35,6 +35,7 @@ import PopupUser from '../components/PopupUser';
 import PopupReivindicar from '../components/PopupReivindicar';
 import PopupRecuperarSenha from '../components/PopupRecuperarSenha';
 import PopupNotificacao from '../components/PopupNotificacao';
+import PopupGeral from '../components/PopupGeral';
 
 interface Conquista {
   idConquista: string;
@@ -161,6 +162,7 @@ export function TorneiosPage() {
   const [trophyHover, setTrophyHover] = useState(false);
   const [showReivindicarPopup, setShowReivindicarPopup] = useState(false);
   const [showNotificacaoPopup, setShowNotificacaoPopup] = useState(false);
+  const [showSessionExpiredPopup, setShowSessionExpiredPopup] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const newsScrollRef = useRef<HTMLDivElement>(null);
   
@@ -210,11 +212,7 @@ export function TorneiosPage() {
     if (isNotificacoesError && currentUser) {
       const err = notificacoesError as any;
       if (err?.response?.status === 401 || err?.response?.status === 403) {
-        alert("Sessão expirada. Por favor, faça login novamente.");
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        setCurrentUser(null);
-        window.location.reload();
+        setShowSessionExpiredPopup(true);
       }
     }
   }, [isNotificacoesError, notificacoesError, currentUser]);
@@ -310,6 +308,14 @@ export function TorneiosPage() {
         setCurrentUser(null);
         setShowUserPopup(false);
     }
+  };
+
+  const handleSessionExpiredClose = () => {
+    setShowSessionExpiredPopup(false);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user_data');
+    setCurrentUser(null);
+    window.location.reload();
   };
 
   const handleNavigate = (path: string) => {
@@ -1309,6 +1315,16 @@ export function TorneiosPage() {
     {showNotificacaoPopup && (
         <PopupNotificacao 
           onClose={() => setShowNotificacaoPopup(false)}
+        />
+    )}
+
+    {showSessionExpiredPopup && (
+        <PopupGeral 
+          title="Sessão Expirada"
+          message="Sua sessão expirou. Por favor, faça login novamente para continuar."
+          type="warning"
+          buttonText="Entendido"
+          onClose={handleSessionExpiredClose}
         />
     )}
     </div>
