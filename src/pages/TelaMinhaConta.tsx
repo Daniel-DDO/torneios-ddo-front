@@ -589,6 +589,10 @@ export function TelaMinhaConta() {
                     <Camera size={20} />
                     Atualizar foto do perfil
                   </button>
+                  <button className="action-btn" onClick={() => navigate('/minha-conta/financeiro')}>
+                    <Wallet size={20} />
+                    Minhas finanças
+                  </button>
                   <button className="action-btn" onClick={() => setShowAtualizarContaPopup(true)}>
                     <Edit size={20} />
                     Atualizar conta

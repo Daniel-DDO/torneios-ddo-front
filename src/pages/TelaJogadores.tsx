@@ -13,7 +13,8 @@ import {
   Star,
   Lightbulb,
   Settings,
-  CalendarSync
+  CalendarSync,
+  TrendingUp
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -335,7 +336,7 @@ export function TelaJogadores() {
           <a onClick={() => navigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
             <Gamepad2 size={20} /> Partidas
           </a>
-           <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
+            <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
             <Wallet size={20} /> Minha conta
           </a>
           <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
@@ -418,15 +419,37 @@ export function TelaJogadores() {
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Jogadores Cadastrados</h2>
                 <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize todos os jogadores</p>
             </div>
-            {currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo) && (
+            <div style={{ display: 'flex', gap: '10px' }}>
                 <button 
-                  className="t-btn" 
-                  onClick={() => setShowCadastrarJogadorPopup(true)}
-                  style={{background: 'var(--primary)', color: 'white', border: 'none', cursor: 'pointer', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold'}}
+                    className="t-btn"
+                    onClick={() => navigate('/jogadores/ranking-financeiro')}
+                    style={{
+                        background: 'var(--card-bg)', 
+                        color: 'var(--text-dark)', 
+                        border: '1px solid var(--border-color)', 
+                        cursor: 'pointer', 
+                        padding: '10px 20px', 
+                        borderRadius: '8px', 
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}
                 >
-                    + Novo Jogador
+                    <TrendingUp size={18} />
+                    Ranking Financeiro
                 </button>
-            )}
+
+                {currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo) && (
+                    <button 
+                      className="t-btn" 
+                      onClick={() => setShowCadastrarJogadorPopup(true)}
+                      style={{background: 'var(--primary)', color: 'white', border: 'none', cursor: 'pointer', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold'}}
+                    >
+                        + Novo Jogador
+                    </button>
+                )}
+            </div>
             </div>
 
             <div className="players-grid-container">
