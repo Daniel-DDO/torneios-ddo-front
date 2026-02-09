@@ -212,6 +212,9 @@ export function TorneiosPage() {
     if (isNotificacoesError && currentUser) {
       const err = notificacoesError as any;
       if (err?.response?.status === 401 || err?.response?.status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user_data');
+        setCurrentUser(null);
         setShowSessionExpiredPopup(true);
       }
     }
@@ -312,10 +315,6 @@ export function TorneiosPage() {
 
   const handleSessionExpiredClose = () => {
     setShowSessionExpiredPopup(false);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user_data');
-    setCurrentUser(null);
-    window.location.reload();
   };
 
   const handleNavigate = (path: string) => {
