@@ -24,7 +24,8 @@ import {
   Lightbulb,
   Share2,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Percent
 } from 'lucide-react';
 import { API } from '../services/api';
 import PopupLogin from '../components/PopupLogin';
@@ -79,6 +80,13 @@ interface PartidaDTO {
   receitaVisitante: number | null;
 }
 
+interface ProbabilidadeDTO {
+  chanceMandante: number;
+  chanceEmpate: number;
+  chanceVisitante: number;
+  analisePreJogo: string;
+}
+
 interface UserData {
   id: string;
   nome: string;
@@ -109,8 +117,18 @@ export function TelaPartidaSelecionada() {
       const response = await API.get(`/partida/${partidaId}`);
       return response.data;
     },
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false
+  });
+
+  const { data: probabilidade } = useQuery<ProbabilidadeDTO>({
+    queryKey: ['partida-probabilidade', partidaId],
+    queryFn: async () => {
+      const response = await API.get(`/partida/${partidaId}/probabilidade`);
+      return response.data;
+    },
+    enabled: !!partidaId && !!partida && !partida.realizada,
+    staleTime: 1000 * 60 * 15
   });
 
   const { data: avatars = [] } = useQuery({
@@ -120,7 +138,7 @@ export function TelaPartidaSelecionada() {
       return Array.isArray(response.data) ? response.data : [];
     },
     staleTime: 1000 * 60 * 30,
-    enabled: !!currentUser 
+    enabled: !!currentUser
   });
 
   const avatarMap = useMemo(() => {
@@ -167,7 +185,6 @@ export function TelaPartidaSelecionada() {
 
   const handleShare = async () => {
     if (!partida) return;
-    
     const shareData = {
       title: 'Torneios DDO',
       text: `Confira o resultado de ${partida.mandante.clubeNome} vs ${partida.visitante.clubeNome}`,
@@ -199,7 +216,6 @@ export function TelaPartidaSelecionada() {
           border: 1px solid var(--border-color);
           margin-bottom: 24px;
         }
-
         .hero-top-bar {
           background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
           padding: 12px 24px;
@@ -210,7 +226,6 @@ export function TelaPartidaSelecionada() {
           font-weight: 600;
           font-size: 0.9rem;
         }
-
         .hero-content {
           padding: 40px 24px;
           display: flex;
@@ -219,7 +234,6 @@ export function TelaPartidaSelecionada() {
           gap: 40px;
           flex-wrap: wrap;
         }
-
         .team-display {
           flex: 1;
           display: flex;
@@ -228,7 +242,6 @@ export function TelaPartidaSelecionada() {
           text-align: center;
           min-width: 180px;
         }
-
         .team-logo-lg {
           width: 110px;
           height: 110px;
@@ -237,16 +250,13 @@ export function TelaPartidaSelecionada() {
           filter: drop-shadow(0 4px 10px rgba(0,0,0,0.1));
           transition: transform 0.3s;
         }
-        
         .team-logo-lg:hover { transform: scale(1.05); }
-
         .team-name-lg {
           font-size: 1.4rem;
           font-weight: 800;
           color: var(--text-dark);
           margin-bottom: 4px;
         }
-
         .player-badge {
           background: var(--hover-bg);
           padding: 6px 14px;
@@ -258,7 +268,6 @@ export function TelaPartidaSelecionada() {
           align-items: center;
           gap: 6px;
         }
-
         .score-display {
           display: flex;
           flex-direction: column;
@@ -266,7 +275,6 @@ export function TelaPartidaSelecionada() {
           gap: 8px;
           min-width: 140px;
         }
-
         .main-score {
           font-size: 4rem;
           font-weight: 900;
@@ -276,9 +284,7 @@ export function TelaPartidaSelecionada() {
           align-items: center;
           gap: 16px;
         }
-
         .score-divider { color: var(--border-color); font-weight: 300; }
-
         .status-tag {
           text-transform: uppercase;
           font-size: 0.75rem;
@@ -289,7 +295,6 @@ export function TelaPartidaSelecionada() {
         }
         .st-finished { background: rgba(0, 208, 156, 0.15); color: var(--success); }
         .st-scheduled { background: rgba(78, 62, 255, 0.15); color: var(--primary); }
-
         .penalties-score {
           font-size: 0.9rem;
           color: var(--text-gray);
@@ -297,19 +302,16 @@ export function TelaPartidaSelecionada() {
           padding: 4px 12px;
           border-radius: 8px;
         }
-
         .wo-badge {
           background: #ffe4e6; color: #be123c;
           padding: 6px 16px; border-radius: 8px; font-weight: 800; font-size: 1rem;
           border: 1px solid #fecdd3;
         }
-
         .match-grid {
           display: grid;
           grid-template-columns: 2fr 1fr;
           gap: 24px;
         }
-
         .detail-card {
           background: var(--bg-card);
           border: 1px solid var(--border-color);
@@ -319,7 +321,6 @@ export function TelaPartidaSelecionada() {
           display: flex;
           flex-direction: column;
         }
-
         .card-header {
           display: flex;
           align-items: center;
@@ -331,7 +332,6 @@ export function TelaPartidaSelecionada() {
           border-bottom: 1px solid var(--border-color);
           padding-bottom: 12px;
         }
-
         .info-row {
           display: flex;
           justify-content: space-between;
@@ -340,19 +340,15 @@ export function TelaPartidaSelecionada() {
           border-bottom: 1px dashed var(--border-color);
         }
         .info-row:last-child { border-bottom: none; }
-        
         .info-label { color: var(--text-gray); display: flex; align-items: center; gap: 8px; }
         .info-value { font-weight: 600; color: var(--text-dark); }
-        
         .info-sub { font-size: 0.8rem; opacity: 0.8; font-weight: 400; margin-left: 4px; }
-
         .stats-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
           margin-bottom: 16px;
         }
-
         .cards-area {
           display: flex;
           gap: 6px;
@@ -362,7 +358,6 @@ export function TelaPartidaSelecionada() {
         }
         .c-yellow { background: #fbbf24; }
         .c-red { background: #ef4444; }
-
         .log-terminal {
           background: var(--bg-body);
           border-radius: 12px;
@@ -375,14 +370,12 @@ export function TelaPartidaSelecionada() {
           line-height: 1.6;
           border: 1px solid var(--border-color);
         }
-
         .action-grid {
           display: grid;
           grid-template-columns: 1fr;
           gap: 12px;
           margin-top: auto;
         }
-
         .btn-full {
           width: 100%;
           padding: 14px;
@@ -396,23 +389,17 @@ export function TelaPartidaSelecionada() {
           cursor: pointer;
           border: none;
         }
-
         .btn-watch { background: #ef4444; color: white; }
         .btn-watch:hover { background: #dc2626; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
-
         .btn-admin { background: var(--primary); color: white; }
         .btn-admin:hover { background: var(--primary-light); box-shadow: 0 4px 12px rgba(78, 62, 255, 0.3); }
-
         .btn-report { background: #f59e0b; color: white; }
         .btn-report:hover { background: #d97706; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
-
         .skeleton-pulse {
           animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
           background: var(--hover-bg);
         }
-        
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
-
         @media (max-width: 900px) {
           .match-grid { grid-template-columns: 1fr; }
           .hero-content { gap: 20px; }
@@ -455,28 +442,28 @@ export function TelaPartidaSelecionada() {
             </button>
             <BotaoNotificacao user={currentUser} />
             {currentUser ? (
-              <div 
-                className="user-avatar-mini" 
+              <div
+                className="user-avatar-mini"
                 onClick={() => setShowUserPopup(true)}
-                style={{backgroundImage: currentUser.imagem ? `url(${avatarMap[currentUser.imagem] || currentUser.imagem})` : 'none', backgroundSize:'cover', cursor:'pointer'}}
+                style={{ backgroundImage: currentUser.imagem ? `url(${avatarMap[currentUser.imagem] || currentUser.imagem})` : 'none', backgroundSize: 'cover', cursor: 'pointer' }}
               >
                 {!currentUser.imagem && currentUser.nome.charAt(0)}
               </div>
             ) : (
-              <button className="login-btn-header" onClick={() => setShowLoginPopup(true)} style={{background:'var(--primary)', color:'white', border:'none', padding:'8px 16px', borderRadius:'8px', fontWeight:600}}>Login</button>
+              <button className="login-btn-header" onClick={() => setShowLoginPopup(true)} style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 600 }}>Login</button>
             )}
           </div>
         </header>
 
         <div className="page-content">
-          <button onClick={() => navigate(-1)} className="back-button" style={{display:'flex', alignItems:'center', gap:8, border:'none', background:'none', color:'var(--text-gray)', marginBottom:20, cursor:'pointer', fontSize:'0.9rem', fontWeight:600}}>
+          <button onClick={() => navigate(-1)} className="back-button" style={{ display: 'flex', alignItems: 'center', gap: 8, border: 'none', background: 'none', color: 'var(--text-gray)', marginBottom: 20, cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
             <ArrowLeft size={18} /> Voltar
           </button>
 
           {isLoading ? (
-            <div className="match-hero skeleton-pulse" style={{height: 300}}></div>
+            <div className="match-hero skeleton-pulse" style={{ height: 300 }}></div>
           ) : !partida ? (
-            <div style={{textAlign:'center', padding:40, color:'var(--text-gray)'}}>Partida não encontrada.</div>
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-gray)' }}>Partida não encontrada.</div>
           ) : (
             <>
               <div className="match-hero">
@@ -484,7 +471,7 @@ export function TelaPartidaSelecionada() {
                   <span>{partida.etapaMataMata || `Rodada ${partida.numeroRodada}`}</span>
                   <span>{formatDate(partida.dataHora)}</span>
                 </div>
-                
+
                 <div className="hero-content">
                   <div className="team-display">
                     <img src={partida.mandante?.clubeImagem} alt={partida.mandante?.clubeNome} className="team-logo-lg" />
@@ -496,11 +483,11 @@ export function TelaPartidaSelecionada() {
 
                   <div className="score-display">
                     {partida.wo ? (
-                        <div className="wo-badge">VENCEDOR W.O.</div>
+                      <div className="wo-badge">VENCEDOR W.O.</div>
                     ) : (
-                        <div className={`status-tag ${partida.realizada ? 'st-finished' : 'st-scheduled'}`}>
-                            {partida.realizada ? 'Partida Finalizada' : 'Partida Agendada'}
-                        </div>
+                      <div className={`status-tag ${partida.realizada ? 'st-finished' : 'st-scheduled'}`}>
+                        {partida.realizada ? 'Partida Finalizada' : 'Partida Agendada'}
+                      </div>
                     )}
 
                     <div className="main-score">
@@ -520,105 +507,147 @@ export function TelaPartidaSelecionada() {
                     <img src={partida.visitante?.clubeImagem} alt={partida.visitante?.clubeNome} className="team-logo-lg" />
                     <div className="team-name-lg">{partida.visitante?.clubeNome}</div>
                     <div className="player-badge">
-                        <Users size={12} /> {partida.visitante?.jogadorNome}
+                      <Users size={12} /> {partida.visitante?.jogadorNome}
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="match-grid">
-                <div style={{display:'flex', flexDirection:'column', gap:24}}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+                  {probabilidade && !partida.realizada && (
                     <div className="detail-card">
-                        <div className="card-header"><FileText size={20} /> Informações da Partida</div>
-                        <div className="info-row">
-                            <div className="info-label"><MapPin size={16}/> Estádio</div>
-                            <div className="info-value">{partida.estadio || 'Não definido'}</div>
+                      <div className="card-header"><Percent size={20} /> Probabilidade de Vitória</div>
+
+                      <div style={{ padding: '10px 0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, fontSize: '0.9rem', fontWeight: 600 }}>
+                          <span style={{ color: 'var(--success)' }}>{partida.mandante.clubeNome} {probabilidade.chanceMandante}%</span>
+                          <span style={{ color: 'var(--text-gray)' }}>Empate {probabilidade.chanceEmpate}%</span>
+                          <span style={{ color: '#ef4444' }}>{partida.visitante.clubeNome} {probabilidade.chanceVisitante}%</span>
                         </div>
-                        <div className="info-row">
-                            <div className="info-label"><Clock size={16}/> Duração</div>
-                            <div className="info-value">{partida.houveProrrogacao ? 'Prorrogação' : 'Tempo Normal (90 min)'}</div>
+
+                        <div style={{
+                          height: 14,
+                          width: '100%',
+                          background: 'var(--bg-body)',
+                          borderRadius: 7,
+                          overflow: 'hidden',
+                          display: 'flex',
+                          boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
+                        }}>
+                          <div style={{ width: `${probabilidade.chanceMandante}%`, background: 'var(--success)', transition: 'width 1s ease-in-out' }} />
+                          <div style={{ width: `${probabilidade.chanceEmpate}%`, background: '#9ca3af', transition: 'width 1s ease-in-out' }} />
+                          <div style={{ width: `${probabilidade.chanceVisitante}%`, background: '#ef4444', transition: 'width 1s ease-in-out' }} />
                         </div>
-                        <div className="info-row">
-                            <div className="info-label"><Settings size={16}/> Status</div>
-                            <div className="info-value">{partida.wo ? 'Decisão por W.O.' : (partida.realizada ? 'Concluída' : 'Aguardando')}</div>
-                        </div>
-                        {partida.logEventos && (
-                             <div style={{marginTop: 20}}>
-                                <div className="info-label" style={{marginBottom:10}}>Resumo de Eventos</div>
-                                <div className="log-terminal">{partida.logEventos}</div>
-                             </div>
-                        )}
+
+                        <p style={{
+                          marginTop: 16,
+                          fontSize: '0.9rem',
+                          color: 'var(--text-gray)',
+                          fontStyle: 'italic',
+                          background: 'var(--hover-bg)',
+                          padding: '10px',
+                          borderRadius: 8,
+                          borderLeft: '3px solid var(--primary)'
+                        }}>
+                          "{probabilidade.analisePreJogo}"
+                        </p>
+                      </div>
                     </div>
+                  )}
+
+                  <div className="detail-card">
+                    <div className="card-header"><FileText size={20} /> Informações da Partida</div>
+                    <div className="info-row">
+                      <div className="info-label"><MapPin size={16} /> Estádio</div>
+                      <div className="info-value">{partida.estadio || 'Não definido'}</div>
+                    </div>
+                    <div className="info-row">
+                      <div className="info-label"><Clock size={16} /> Duração</div>
+                      <div className="info-value">{partida.houveProrrogacao ? 'Prorrogação' : 'Tempo Normal (90 min)'}</div>
+                    </div>
+                    <div className="info-row">
+                      <div className="info-label"><Settings size={16} /> Status</div>
+                      <div className="info-value">{partida.wo ? 'Decisão por W.O.' : (partida.realizada ? 'Concluída' : 'Aguardando')}</div>
+                    </div>
+                    {partida.logEventos && (
+                      <div style={{ marginTop: 20 }}>
+                        <div className="info-label" style={{ marginBottom: 10 }}>Resumo de Eventos</div>
+                        <div className="log-terminal">{partida.logEventos}</div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div style={{display:'flex', flexDirection:'column', gap:24}}>
-                    <div className="detail-card">
-                        <div className="card-header"><Banknote size={20} /> Financeiro e Pontuação</div>
-                        
-                        <div className="info-row">
-                            <div className="info-label">{partida.mandante?.clubeSigla} <span className="info-sub">(Receita)</span></div>
-                            <div className="info-value" style={{color:'var(--success)'}}>+ {formatCurrency(partida.receitaMandante)}</div>
-                        </div>
-                        <div className="info-row">
-                            <div className="info-label"><TrendingUp size={14}/> Coeficiente</div>
-                            <div className="info-value">{partida.coeficienteMandante || '0.00'}</div>
-                        </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  <div className="detail-card">
+                    <div className="card-header"><Banknote size={20} /> Financeiro e Pontuação</div>
 
-                        <hr style={{margin: '10px 0', border: 0, borderTop: '1px dashed var(--border-color)'}} />
-
-                        <div className="info-row">
-                            <div className="info-label">{partida.visitante?.clubeSigla} <span className="info-sub">(Receita)</span></div>
-                            <div className="info-value" style={{color:'var(--success)'}}>+ {formatCurrency(partida.receitaVisitante)}</div>
-                        </div>
-                        <div className="info-row">
-                            <div className="info-label"><TrendingUp size={14}/> Coeficiente</div>
-                            <div className="info-value">{partida.coeficienteVisitante || '0.00'}</div>
-                        </div>
-
-                        <div className="card-header" style={{marginTop:20, borderTop:'1px solid var(--border-color)', paddingTop:20}}>
-                            <AlertCircle size={20} /> Cartões
-                        </div>
-                        
-                        <div className="stats-row">
-                             <div style={{fontSize:'0.9rem', width: 40}}>{partida.mandante?.clubeSigla}</div>
-                             <div className="cards-area">
-                                {[...Array(partida.cartoesAmarelosMandante || 0)].map((_, i) => <span key={`ym-${i}`} className="card-box c-yellow"/>)}
-                                {[...Array(partida.cartoesVermelhosMandante || 0)].map((_, i) => <span key={`rm-${i}`} className="card-box c-red"/>)}
-                             </div>
-                        </div>
-                        
-                        <div className="stats-row">
-                             <div style={{fontSize:'0.9rem', width: 40}}>{partida.visitante?.clubeSigla}</div>
-                             <div className="cards-area">
-                                {[...Array(partida.cartoesAmarelosVisitante || 0)].map((_, i) => <span key={`yv-${i}`} className="card-box c-yellow"/>)}
-                                {[...Array(partida.cartoesVermelhosVisitante || 0)].map((_, i) => <span key={`rv-${i}`} className="card-box c-red"/>)}
-                             </div>
-                        </div>
-
-                        <div className="action-grid" style={{marginTop: 24}}>
-                            {partida.linkPartida && (
-                                <button className="btn-full btn-watch" onClick={() => window.open(partida.linkPartida!, '_blank')}>
-                                    <Youtube size={18} /> Assistir Partida
-                                </button>
-                            )}
-
-                            {hasEditPermission() && partida.mandante && partida.visitante && (
-                                <button className="btn-full btn-admin" onClick={() => setShowRegistrarPopup(true)}>
-                                    <Edit3 size={18} /> Registrar Resultado
-                                </button>
-                            )}
-
-                            {hasReportPermission() && partida.mandante && partida.visitante && (
-                                <button className="btn-full btn-report" onClick={() => setShowReportarPopup(true)}>
-                                    <AlertTriangle size={18} /> Reportar Problema
-                                </button>
-                            )}
-
-                            <button className="btn-full" onClick={handleShare} style={{background:'var(--hover-bg)', color:'var(--text-gray)'}}>
-                                <Share2 size={18} /> Compartilhar
-                            </button>
-                        </div>
+                    <div className="info-row">
+                      <div className="info-label">{partida.mandante?.clubeSigla} <span className="info-sub">(Receita)</span></div>
+                      <div className="info-value" style={{ color: 'var(--success)' }}>+ {formatCurrency(partida.receitaMandante)}</div>
                     </div>
+                    <div className="info-row">
+                      <div className="info-label"><TrendingUp size={14} /> Coeficiente</div>
+                      <div className="info-value">{partida.coeficienteMandante || '0.00'}</div>
+                    </div>
+
+                    <hr style={{ margin: '10px 0', border: 0, borderTop: '1px dashed var(--border-color)' }} />
+
+                    <div className="info-row">
+                      <div className="info-label">{partida.visitante?.clubeSigla} <span className="info-sub">(Receita)</span></div>
+                      <div className="info-value" style={{ color: 'var(--success)' }}>+ {formatCurrency(partida.receitaVisitante)}</div>
+                    </div>
+                    <div className="info-row">
+                      <div className="info-label"><TrendingUp size={14} /> Coeficiente</div>
+                      <div className="info-value">{partida.coeficienteVisitante || '0.00'}</div>
+                    </div>
+
+                    <div className="card-header" style={{ marginTop: 20, borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
+                      <AlertCircle size={20} /> Cartões
+                    </div>
+
+                    <div className="stats-row">
+                      <div style={{ fontSize: '0.9rem', width: 40 }}>{partida.mandante?.clubeSigla}</div>
+                      <div className="cards-area">
+                        {[...Array(partida.cartoesAmarelosMandante || 0)].map((_, i) => <span key={`ym-${i}`} className="card-box c-yellow" />)}
+                        {[...Array(partida.cartoesVermelhosMandante || 0)].map((_, i) => <span key={`rm-${i}`} className="card-box c-red" />)}
+                      </div>
+                    </div>
+
+                    <div className="stats-row">
+                      <div style={{ fontSize: '0.9rem', width: 40 }}>{partida.visitante?.clubeSigla}</div>
+                      <div className="cards-area">
+                        {[...Array(partida.cartoesAmarelosVisitante || 0)].map((_, i) => <span key={`yv-${i}`} className="card-box c-yellow" />)}
+                        {[...Array(partida.cartoesVermelhosVisitante || 0)].map((_, i) => <span key={`rv-${i}`} className="card-box c-red" />)}
+                      </div>
+                    </div>
+
+                    <div className="action-grid" style={{ marginTop: 24 }}>
+                      {partida.linkPartida && (
+                        <button className="btn-full btn-watch" onClick={() => window.open(partida.linkPartida!, '_blank')}>
+                          <Youtube size={18} /> Assistir Partida
+                        </button>
+                      )}
+
+                      {hasEditPermission() && partida.mandante && partida.visitante && (
+                        <button className="btn-full btn-admin" onClick={() => setShowRegistrarPopup(true)}>
+                          <Edit3 size={18} /> Registrar Resultado
+                        </button>
+                      )}
+
+                      {hasReportPermission() && partida.mandante && partida.visitante && (
+                        <button className="btn-full btn-report" onClick={() => setShowReportarPopup(true)}>
+                          <AlertTriangle size={18} /> Reportar Problema
+                        </button>
+                      )}
+
+                      <button className="btn-full" onClick={handleShare} style={{ background: 'var(--hover-bg)', color: 'var(--text-gray)' }}>
+                        <Share2 size={18} /> Compartilhar
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </>
@@ -627,9 +656,9 @@ export function TelaPartidaSelecionada() {
       </main>
 
       {showLoginPopup && <PopupLogin onClose={() => setShowLoginPopup(false)} onLoginSuccess={setCurrentUser} />}
-      {showUserPopup && currentUser && <PopupUser user={{...currentUser, imagem: avatarMap[currentUser.imagem || ''] || currentUser.imagem}} onClose={() => setShowUserPopup(false)} onLogout={() => { localStorage.removeItem('token'); localStorage.removeItem('user_data'); setCurrentUser(null); setShowUserPopup(false); }} />}
+      {showUserPopup && currentUser && <PopupUser user={{ ...currentUser, imagem: avatarMap[currentUser.imagem || ''] || currentUser.imagem }} onClose={() => setShowUserPopup(false)} onLogout={() => { localStorage.removeItem('token'); localStorage.removeItem('user_data'); setCurrentUser(null); setShowUserPopup(false); }} />}
       {showRegistrarPopup && partida && partida.mandante && partida.visitante && (
-        <PopupRegistrarPartida 
+        <PopupRegistrarPartida
           partida={{
             ...partida,
             dataHora: partida.dataHora || "",
@@ -651,19 +680,19 @@ export function TelaPartidaSelecionada() {
             cartoesVermelhosMandante: partida.cartoesVermelhosMandante || 0,
             cartoesAmarelosVisitante: partida.cartoesAmarelosVisitante || 0,
             cartoesVermelhosVisitante: partida.cartoesVermelhosVisitante || 0,
-            mandante: { 
-              nome: partida.mandante.clubeNome, 
-              psnId: partida.mandante.jogadorNome, 
-              imgUrl: partida.mandante.clubeImagem 
+            mandante: {
+              nome: partida.mandante.clubeNome,
+              psnId: partida.mandante.jogadorNome,
+              imgUrl: partida.mandante.clubeImagem
             },
-            visitante: { 
-              nome: partida.visitante.clubeNome, 
-              psnId: partida.visitante.jogadorNome, 
-              imgUrl: partida.visitante.clubeImagem 
+            visitante: {
+              nome: partida.visitante.clubeNome,
+              psnId: partida.visitante.jogadorNome,
+              imgUrl: partida.visitante.clubeImagem
             }
-          }} 
-          onClose={() => setShowRegistrarPopup(false)} 
-          onSuccess={() => { refetch(); }} 
+          }}
+          onClose={() => setShowRegistrarPopup(false)}
+          onSuccess={() => { refetch(); }}
         />
       )}
       {showReportarPopup && partida && partida.mandante && partida.visitante && (
