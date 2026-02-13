@@ -22,6 +22,7 @@ import { API } from '../services/api';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupTitulo from '../components/PopupTitulo';
+import PopupTituloLegado from '../components/PopupTituloLegado';
 import '../styles/TorneiosPage.css';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
@@ -55,6 +56,7 @@ export function TelaTitulos() {
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [showTituloPopup, setShowTituloPopup] = useState(false);
+  const [showTituloLegadoPopup, setShowTituloLegadoPopup] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
@@ -345,9 +347,22 @@ export function TelaTitulos() {
                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Conquistas e premiações dos Torneios DDO</p>
             </div>
             {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
-              <button className="t-btn" style={{background: 'var(--primary)', color: 'white', border: 'none'}} onClick={() => setShowTituloPopup(true)}>
-                  + Novo Título
-              </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  className="t-btn" 
+                  style={{ background: '#4b5563', color: 'white', border: 'none' }} 
+                  onClick={() => setShowTituloLegadoPopup(true)}
+                >
+                    Conceder Título Legado
+                </button>
+                <button 
+                  className="t-btn" 
+                  style={{ background: 'var(--primary)', color: 'white', border: 'none' }} 
+                  onClick={() => setShowTituloPopup(true)}
+                >
+                    + Novo Título
+                </button>
+              </div>
             )}
           </div>
 
@@ -466,6 +481,12 @@ export function TelaTitulos() {
       {showTituloPopup && (
         <PopupTitulo
           onClose={() => setShowTituloPopup(false)}
+          onSuccess={() => refetch()}
+        />
+      )}
+      {showTituloLegadoPopup && (
+        <PopupTituloLegado
+          onClose={() => setShowTituloLegadoPopup(false)}
           onSuccess={() => refetch()}
         />
       )}
