@@ -31,12 +31,15 @@ const PopupTituloLegado: React.FC<PopupTituloLegadoProps> = ({ onClose, onSucces
     const [loading, setLoading] = useState(false);
     const [loadingTitulos, setLoadingTitulos] = useState(true);
     const [error, setError] = useState('');
+    const [modo, setModo] = useState<'individual' | 'coletivo'>('individual');
 
     const [titulos, setTitulos] = useState<Titulo[]>([]);
     
     const [termoJogador, setTermoJogador] = useState('');
     const [sugestoesJogadores, setSugestoesJogadores] = useState<JogadorSugestao[]>([]);
+    
     const [jogadorSelecionado, setJogadorSelecionado] = useState<JogadorSugestao | null>(null);
+    const [jogadoresSelecionados, setJogadoresSelecionados] = useState<JogadorSugestao[]>([]);
 
     const [termoClube, setTermoClube] = useState('');
     const [sugestoesClubes, setSugestoesClubes] = useState<ClubeSugestao[]>([]);
@@ -100,16 +103,28 @@ const PopupTituloLegado: React.FC<PopupTituloLegadoProps> = ({ onClose, onSucces
     };
 
     const selecionarJogador = (jogador: JogadorSugestao) => {
-        setFormData(prev => ({ ...prev, jogadorId: jogador.id }));
-        setJogadorSelecionado(jogador);
-        setTermoJogador(''); 
-        setSugestoesJogadores([]);
+        if (modo === 'individual') {
+            setFormData(prev => ({ ...prev, jogadorId: jogador.id }));
+            setJogadorSelecionado(jogador);
+            setTermoJogador(''); 
+            setSugestoesJogadores([]);
+        } else {
+            if (!jogadoresSelecionados.some(j => j.id === jogador.id)) {
+                setJogadoresSelecionados(prev => [...prev, jogador]);
+            }
+            setTermoJogador('');
+            setSugestoesJogadores([]);
+        }
     };
 
     const removerJogador = () => {
         setFormData(prev => ({ ...prev, jogadorId: '' }));
         setJogadorSelecionado(null);
         setTermoJogador('');
+    };
+
+    const removerJogadorDaLista = (id: string) => {
+        setJogadoresSelecionados(prev => prev.filter(j => j.id !== id));
     };
 
     const selecionarClube = (clube: ClubeSugestao) => {
@@ -140,22 +155,42 @@ const PopupTituloLegado: React.FC<PopupTituloLegadoProps> = ({ onClose, onSucces
     const handleSubmit = async () => {
         setError('');
 
-        if (!formData.jogadorId || !formData.clubeId || !formData.idTitulo || !formData.edicao || !formData.data) {
-            setError('Todos os campos são obrigatórios.');
-            return;
+        if (modo === 'individual') {
+            if (!formData.jogadorId || !formData.clubeId || !formData.idTitulo || !formData.edicao || !formData.data) {
+                setError('Todos os campos são obrigatórios.');
+                return;
+            }
+        } else {
+            if (jogadoresSelecionados.length === 0 || !formData.clubeId || !formData.idTitulo || !formData.edicao || !formData.data) {
+                setError('Selecione ao menos um jogador e preencha todos os campos.');
+                return;
+            }
         }
 
         setLoading(true);
 
         try {
-            const response = await API.post('/titulos/conceder-legado', formData);
+            let response;
+            if (modo === 'individual') {
+                response = await API.post('/titulos/conceder-legado', formData);
+            } else {
+                const payload = {
+                    jogadoresIds: jogadoresSelecionados.map(j => j.id),
+                    clubeId: formData.clubeId,
+                    idTitulo: formData.idTitulo,
+                    edicao: formData.edicao,
+                    data: formData.data
+                };
+                response = await API.post('/titulos/conceder-coletivo', payload);
+            }
+            
             setFadeout(true);
             setTimeout(() => {
                 onSuccess(response.data);
                 onClose();
             }, 300);
         } catch (err: any) {
-            const msg = err.response?.data?.erro || err.response?.data?.message || "Erro ao conceder título legado.";
+            const msg = err.response?.data?.erro || err.response?.data?.message || "Erro ao conceder título.";
             setError(msg);
         } finally {
             setLoading(false);
@@ -179,11 +214,46 @@ const PopupTituloLegado: React.FC<PopupTituloLegadoProps> = ({ onClose, onSucces
                         </svg>
                     </div>
                     <h2 className="ptl-title">
-                        Título Legado
+                        Conceder Título
                     </h2>
                 </div>
 
                 <div className="ptl-body ptl-scrollbar">
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', justifyContent: 'center' }}>
+                        <button 
+                            type="button"
+                            onClick={() => setModo('individual')}
+                            style={{
+                                flex: 1,
+                                padding: '8px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                background: modo === 'individual' ? '#2563eb' : '#334155',
+                                color: 'white',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            Individual
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={() => setModo('coletivo')}
+                            style={{
+                                flex: 1,
+                                padding: '8px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                cursor: 'pointer',
+                                background: modo === 'coletivo' ? '#2563eb' : '#334155',
+                                color: 'white',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            Coletivo
+                        </button>
+                    </div>
+
                     {loadingTitulos ? (
                         <div style={{textAlign: 'center', padding: '20px'}}>
                             <div className="ptl-spinner" style={{borderColor: '#2563eb', borderTopColor: 'transparent', margin: '0 auto'}}></div>
@@ -191,8 +261,9 @@ const PopupTituloLegado: React.FC<PopupTituloLegadoProps> = ({ onClose, onSucces
                     ) : (
                         <div className="ptl-form">
                             <div className="ptl-form-group">
-                                <label>Jogador</label>
-                                {!jogadorSelecionado ? (
+                                <label>{modo === 'individual' ? 'Jogador' : 'Jogadores'}</label>
+                                
+                                {(modo === 'individual' && !jogadorSelecionado) || modo === 'coletivo' ? (
                                     <>
                                         <input 
                                             type="text" 
@@ -220,12 +291,37 @@ const PopupTituloLegado: React.FC<PopupTituloLegadoProps> = ({ onClose, onSucces
                                 ) : (
                                     <div className="ptl-selected-item-card">
                                         <div className="ptl-selected-info">
-                                            {jogadorSelecionado.imagem && <img src={jogadorSelecionado.imagem} alt="" className="ptl-suggestion-avatar"/>}
-                                            <span>{jogadorSelecionado.nome}</span>
+                                            {jogadorSelecionado?.imagem && <img src={jogadorSelecionado.imagem} alt="" className="ptl-suggestion-avatar"/>}
+                                            <span>{jogadorSelecionado?.nome}</span>
                                         </div>
                                         <button className="ptl-remove-btn" onClick={removerJogador}>
                                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                                         </button>
+                                    </div>
+                                )}
+
+                                {modo === 'coletivo' && jogadoresSelecionados.length > 0 && (
+                                    <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                        {jogadoresSelecionados.map(j => (
+                                            <div key={j.id} style={{
+                                                background: '#334155',
+                                                padding: '4px 10px',
+                                                borderRadius: '20px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                fontSize: '0.9rem',
+                                                color: '#e2e8f0'
+                                            }}>
+                                                <span>{j.nome}</span>
+                                                <button 
+                                                    onClick={() => removerJogadorDaLista(j.id)}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex' }}
+                                                >
+                                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                                </button>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>
@@ -319,7 +415,7 @@ const PopupTituloLegado: React.FC<PopupTituloLegadoProps> = ({ onClose, onSucces
                         onClick={handleSubmit} 
                         disabled={loading || loadingTitulos}
                     >
-                        {loading ? <div className="ptl-spinner"></div> : 'Conceder Título'}
+                        {loading ? <div className="ptl-spinner"></div> : (modo === 'individual' ? 'Conceder Título' : `Conceder a ${jogadoresSelecionados.length} Jogadores`)}
                     </button>
                 </div>
             </div>
