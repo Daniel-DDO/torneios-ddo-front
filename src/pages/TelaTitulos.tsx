@@ -14,11 +14,14 @@ import {
   Settings,
   CalendarSync,
   Lightbulb,
-  Coins
+  Coins,
+  History,
+  Medal
 } from 'lucide-react';
 import { API } from '../services/api';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import PopupTitulo from '../components/PopupTitulo';
 import '../styles/TorneiosPage.css';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
@@ -42,6 +45,7 @@ interface Titulo {
   descricao: string;
   imagem: string;
   imagemGerarPost: string;
+  ativo: boolean;
 }
 
 export function TelaTitulos() {
@@ -50,6 +54,7 @@ export function TelaTitulos() {
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
+  const [showTituloPopup, setShowTituloPopup] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
 
@@ -63,7 +68,7 @@ export function TelaTitulos() {
     enabled: !!currentUser
   });
 
-  const { data: titulos = [], isLoading } = useQuery({
+  const { data: titulos = [], isLoading, refetch } = useQuery({
     queryKey: ['titulos'],
     queryFn: async () => {
       const response = await API.get('/titulos');
@@ -99,6 +104,9 @@ export function TelaTitulos() {
   const filteredTitulos = titulos.filter((t: Titulo) => 
     t.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const titulosAtivos = filteredTitulos.filter((t: Titulo) => t.ativo);
+  const titulosInativos = filteredTitulos.filter((t: Titulo) => !t.ativo);
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -213,6 +221,45 @@ export function TelaTitulos() {
           color: var(--text-gray);
           gap: 16px;
         }
+
+        .section-divider {
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .section-divider h3 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-info {
+            font-size: 0.9rem;
+            color: var(--text-gray);
+            margin-top: 4px;
+        }
+
+        .badge-historico {
+            background-color: #71717a;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: 700;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
       `}</style>
 
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
@@ -292,52 +339,112 @@ export function TelaTitulos() {
         </header>
 
         <div className="page-content">
-          <div className="page-header-simple">
-            <h2>Galeria de Títulos</h2>
-            <p>Conquistas e premiações dos Torneios DDO</p>
-          </div>
-
-          <div className="titulos-grid">
-            {isLoading ? (
-              Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="titulo-card shimmer" style={{ height: '300px' }}></div>
-              ))
-            ) : filteredTitulos.length > 0 ? (
-              filteredTitulos.map((titulo: Titulo) => (
-                <div key={titulo.id} className="titulo-card">
-                  <div className="titulo-image-container">
-                    {titulo.imagem ? (
-                      <img
-                        src={titulo.imagem}
-                        alt={titulo.nome}
-                        className="titulo-img"
-                      />
-                    ) : (
-                      <Trophy size={64} color="#FFD700" strokeWidth={1} />
-                    )}
-                  </div>
-                  
-                  <h3 className="titulo-name">{titulo.nome}</h3>
-                  <p className="titulo-desc" title={titulo.descricao}>
-                    {titulo.descricao || 'Sem descrição disponível.'}
-                  </p>
-                  
-                  <div className="titulo-footer">
-                    <div className="titulo-value">
-                        <Coins size={16} />
-                        <span>{titulo.valor}</span>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="empty-state">
-                <Trophy size={48} opacity={0.3} />
-                <h3>Nenhum título encontrado</h3>
-                <p>Não há títulos correspondentes à sua busca.</p>
-              </div>
+          <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+               <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Galeria de Títulos</h2>
+               <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Conquistas e premiações dos Torneios DDO</p>
+            </div>
+            {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
+              <button className="t-btn" style={{background: 'var(--primary)', color: 'white', border: 'none'}} onClick={() => setShowTituloPopup(true)}>
+                  + Novo Título
+              </button>
             )}
           </div>
+
+          {isLoading ? (
+             <div className="titulos-grid">
+               {Array.from({ length: 4 }).map((_, i) => (
+                 <div key={i} className="titulo-card shimmer" style={{ height: '300px' }}></div>
+               ))}
+             </div>
+          ) : (
+             <>
+                {(titulosAtivos.length > 0 || searchTerm === '') && (
+                    <div className="section-container">
+                        <div className="section-divider">
+                            <div>
+                                <h3><Medal size={24} color="#eab308" /> Títulos em Disputa</h3>
+                                <p className="section-info">Estes títulos estão ativos e podem ser conquistados nas competições atuais.</p>
+                            </div>
+                        </div>
+
+                        {titulosAtivos.length > 0 ? (
+                            <div className="titulos-grid">
+                                {titulosAtivos.map((titulo: Titulo) => (
+                                    <div key={titulo.id} className="titulo-card">
+                                        <div className="titulo-image-container">
+                                            {titulo.imagem ? (
+                                                <img src={titulo.imagem} alt={titulo.nome} className="titulo-img" />
+                                            ) : (
+                                                <Trophy size={64} color="#FFD700" strokeWidth={1} />
+                                            )}
+                                        </div>
+                                        <h3 className="titulo-name">{titulo.nome}</h3>
+                                        <p className="titulo-desc" title={titulo.descricao}>
+                                            {titulo.descricao || 'Sem descrição disponível.'}
+                                        </p>
+                                        <div className="titulo-footer">
+                                            <div className="titulo-value">
+                                                <Coins size={16} />
+                                                <span>{titulo.valor}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="empty-state" style={{padding: '30px'}}>
+                                <p>Nenhum título ativo encontrado para a busca.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {(titulosInativos.length > 0) && (
+                    <div className="section-container" style={{marginTop: '20px'}}>
+                        <div className="section-divider">
+                            <div>
+                                <h3><History size={24} color="#71717a" /> Acervo Histórico</h3>
+                                <p className="section-info">Títulos de edições passadas ou competições extintas. Não podem mais ser obtidos.</p>
+                            </div>
+                        </div>
+
+                        <div className="titulos-grid">
+                            {titulosInativos.map((titulo: Titulo) => (
+                                <div key={titulo.id} className="titulo-card" style={{filter: 'grayscale(0.1)'}}>
+                                    <div className="badge-historico">Histórico</div>
+                                    <div className="titulo-image-container">
+                                        {titulo.imagem ? (
+                                            <img src={titulo.imagem} alt={titulo.nome} className="titulo-img" />
+                                        ) : (
+                                            <Trophy size={64} color="#9ca3af" strokeWidth={1} />
+                                        )}
+                                    </div>
+                                    <h3 className="titulo-name" style={{color: 'var(--text-secondary)'}}>{titulo.nome}</h3>
+                                    <p className="titulo-desc" title={titulo.descricao}>
+                                        {titulo.descricao || 'Sem descrição disponível.'}
+                                    </p>
+                                    <div className="titulo-footer">
+                                        <div className="titulo-value" style={{background: 'rgba(100,100,100,0.1)', color: '#666'}}>
+                                            <Coins size={16} />
+                                            <span>{titulo.valor}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {filteredTitulos.length === 0 && (
+                    <div className="empty-state">
+                        <Trophy size={48} opacity={0.3} />
+                        <h3>Nenhum título encontrado</h3>
+                        <p>Não há títulos correspondentes à sua busca.</p>
+                    </div>
+                )}
+             </>
+          )}
         </div>
       </main>
 
@@ -354,6 +461,12 @@ export function TelaTitulos() {
             setCurrentUser(null);
             setShowUserPopup(false);
           }}
+        />
+      )}
+      {showTituloPopup && (
+        <PopupTitulo
+          onClose={() => setShowTituloPopup(false)}
+          onSuccess={() => refetch()}
         />
       )}
     </div>

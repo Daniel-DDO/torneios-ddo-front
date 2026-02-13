@@ -20,6 +20,7 @@ import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
+import PopupCompeticao from '../components/PopupCompeticao';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface Competicao {
@@ -78,7 +79,7 @@ const fetchAvatarsService = async () => {
 export function TelaCompeticoes() {
   const navigate = useNavigate();
   
-  const { data: competicoes = [], isLoading: loading } = useQuery<Competicao[]>({
+  const { data: competicoes = [], isLoading: loading, refetch } = useQuery<Competicao[]>({
     queryKey: ['competicoes'],
     queryFn: fetchAllCompeticoesService,
     staleTime: 1000 * 60 * 5,
@@ -101,6 +102,7 @@ export function TelaCompeticoes() {
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
+  const [showCompeticaoPopup, setShowCompeticaoPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -386,7 +388,11 @@ export function TelaCompeticoes() {
                 <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize as competições oficiais</p>
             </div>
             {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
-              <button className="t-btn" style={{background: 'var(--primary)', color: 'white', border: 'none'}}>
+              <button 
+                className="t-btn" 
+                style={{background: 'var(--primary)', color: 'white', border: 'none'}}
+                onClick={() => setShowCompeticaoPopup(true)}
+              >
                   + Nova Competição
               </button>
             )}
@@ -451,6 +457,13 @@ export function TelaCompeticoes() {
           }}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
+        />
+      )}
+
+      {showCompeticaoPopup && (
+        <PopupCompeticao 
+          onClose={() => setShowCompeticaoPopup(false)}
+          onSuccess={() => refetch()}
         />
       )}
     </div>
