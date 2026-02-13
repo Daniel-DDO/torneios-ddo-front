@@ -385,7 +385,7 @@ export function TelaPerfilJogador() {
       doc.setFillColor(accentColor);
       doc.roundedRect(115, yPos + 20, 40, 10, 3, 3, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.text(`COEF: ${historyData.pontosCoeficiente.toFixed(2)}`, 135, yPos + 26.5, { align: 'center' });
+      doc.text(`COEF: ${(historyData.pontosCoeficiente || 0).toFixed(2)}`, 135, yPos + 26.5, { align: 'center' });
 
       yPos += 50;
 
@@ -423,7 +423,7 @@ export function TelaPerfilJogador() {
       drawStatCard("Gols Pró", historyData.golsMarcados, 15, startY);
       drawStatCard("Gols Contra", historyData.golsSofridos, 60, startY);
       drawStatCard("Saldo", historyData.saldoGols, 105, startY, historyData.saldoGols >= 0 ? '#10b981' : '#ef4444');
-      drawStatCard("Média Gols", historyData.mediaGolsPorJogo.toFixed(2), 150, startY);
+      drawStatCard("Média Gols", (historyData.mediaGolsPorJogo || 0).toFixed(2), 150, startY);
 
       startY += 45;
       doc.text("CONQUISTAS & APROVEITAMENTO", 15, startY - 5);
@@ -1343,7 +1343,7 @@ export function TelaPerfilJogador() {
                             <div className="stat-ov-icon-wrapper bg-purple">
                                 <TrendingUp size={20} />
                             </div>
-                            <span className="stat-ov-value">{player.pontosCoeficiente.toFixed(2)}</span>
+                            <span className="stat-ov-value">{(player.pontosCoeficiente || 0).toFixed(2)}</span>
                             <span className="stat-ov-label">Coeficiente</span>
                         </div>
                         <div className="stat-overview-card">
