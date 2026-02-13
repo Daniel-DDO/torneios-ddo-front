@@ -182,12 +182,13 @@ export function TorneiosPage() {
     staleTime: 1000 * 60 * 2,
   });
 
-  const { data: notificacoes = [] } = useQuery<Notificacao[]>({
+  const { data: notificacoes = [], isError: isAuthError } = useQuery<Notificacao[]>({
     queryKey: ['notificacoesMinhas'],
     queryFn: fetchMinhasNotificacoesService,
     enabled: !!currentUser,
     staleTime: 1000 * 60,
-    refetchInterval: 1000 * 60 * 5 
+    refetchInterval: 1000 * 60 * 5,
+    retry: false
   });
 
   const { data: noticias = [] } = useQuery<Noticia[]>({
@@ -269,6 +270,14 @@ export function TorneiosPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (isAuthError) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_data');
+      setCurrentUser(null);
+    }
+  }, [isAuthError]);
 
   useEffect(() => {
     if (isDarkMode) {
