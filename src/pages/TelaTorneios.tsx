@@ -19,7 +19,8 @@ import {
   Link,
   UserCheck,
   Gavel,
-  RefreshCw
+  RefreshCw,
+  Shuffle
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -28,6 +29,7 @@ import PopupUser from '../components/PopupUser';
 import PopupNovoTorneio from '../components/PopupNovoTorneio';
 import PopupJogadorClube from '../components/PopupJogadorClube';
 import PopupTrocarJogador from '../components/PopupTrocarJogador';
+import PopupSorteioJogClube from '../components/PopupSorteioJogClube';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface Torneio {
@@ -132,6 +134,7 @@ export function TelaTorneios() {
   const [showNovoTorneioPopup, setShowNovoTorneioPopup] = useState(false);
   const [showJogadorClubePopup, setShowJogadorClubePopup] = useState(false);
   const [showTrocarJogadorPopup, setShowTrocarJogadorPopup] = useState(false);
+  const [showSorteioPopup, setShowSorteioPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -586,7 +589,22 @@ export function TelaTorneios() {
             </div>
 
             {canSwapPlayers && (
-                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                     <button 
+                        className="t-btn" 
+                        onClick={() => setShowSorteioPopup(true)}
+                        style={{
+                            background: 'var(--bg-card)', 
+                            color: 'var(--text-primary)', 
+                            border: '1px solid var(--border-color)', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <Shuffle size={18} /> Sorteio de Times
+                    </button>
                     <button 
                         className="t-btn" 
                         onClick={() => setShowTrocarJogadorPopup(true)}
@@ -644,6 +662,13 @@ export function TelaTorneios() {
           temporadaId={temporadaId}
           onClose={() => setShowTrocarJogadorPopup(false)}
           onSuccess={handleTrocarJogadorSuccess}
+        />
+      )}
+
+      {showSorteioPopup && (
+        <PopupSorteioJogClube 
+            onClose={() => setShowSorteioPopup(false)}
+            onSuccess={() => setShowSorteioPopup(false)}
         />
       )}
     </div>
