@@ -26,7 +26,8 @@ import {
   FileText,
   CalendarDays,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  Gavel
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -37,6 +38,7 @@ import PopupColorirPos from '../components/PopupColorirPos';
 import PopupSorteio from '../components/PopupSorteio';
 import PopupCopaReal from '../components/PopupCopaReal';
 import PopupCopaLiga from '../components/PopupCopaLiga';
+import PopupPunicao from '../components/PopupPunicao';
 import { PdfRelatorioFase } from '../components/RelatorioFase';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
@@ -55,6 +57,7 @@ interface FaseTorneioDTO {
 }
 
 interface ParticipanteFase {
+  id?: string; 
   posicao: number;
   jogadorClubeId: string;
   nomeJogador: string;
@@ -109,6 +112,12 @@ export function TelaFase() {
   const [showSorteioPopup, setShowSorteioPopup] = useState(false);
   const [showCopaRealPopup, setShowCopaRealPopup] = useState(false);
   const [showCopaLigaPopup, setShowCopaLigaPopup] = useState(false);
+  
+  const [punicaoTarget, setPunicaoTarget] = useState<{
+    id: string;
+    nome: string;
+    clube: string;
+  } | null>(null);
 
   const { data: avatars = [] } = useQuery<Avatar[]>({
     queryKey: ['avatares'],
@@ -132,8 +141,25 @@ export function TelaFase() {
   const { data: participantes = [], isLoading: isLoadingParticipantes } = useQuery<ParticipanteFase[]>({
     queryKey: ['participantes-fase', faseId],
     queryFn: async () => {
-      const response = await API.get(`/participacao-fase/fase/${faseId}`);
-      return Array.isArray(response.data) ? response.data : [];
+      const [resVisual, resIds] = await Promise.all([
+        API.get(`/participacao-fase/fase/${faseId}`),
+        API.get(`/participacao-fase/fase-a/${faseId}`)
+      ]);
+
+      const visualData = Array.isArray(resVisual.data) ? resVisual.data : [];
+      const idData = Array.isArray(resIds.data) ? resIds.data : [];
+
+      const idMap = new Map();
+      idData.forEach((item: any) => {
+        if (item.jogadorClubeId && item.id) {
+            idMap.set(item.jogadorClubeId, item.id);
+        }
+      });
+
+      return visualData.map((p: any) => ({
+          ...p,
+          id: idMap.get(p.jogadorClubeId) 
+      }));
     },
     enabled: !!faseId,
     refetchInterval: 5000,
@@ -887,9 +913,11 @@ export function TelaFase() {
               )}
 
               {isAdmin && (
-                <button className="btn-action btn-add" onClick={() => setShowAddPlayerPopup(true)}>
-                  <Plus size={18} /> Add Jogador
-                </button>
+                <>
+                  <button className="btn-action btn-add" onClick={() => setShowAddPlayerPopup(true)}>
+                    <Plus size={18} /> Add Jogador
+                  </button>
+                </>
               )}
 
               {isProprietario && (
@@ -967,6 +995,7 @@ export function TelaFase() {
                       <th className="hide-mobile" style={{ textAlign: 'center' }}>GP</th>
                       <th className="hide-mobile" style={{ textAlign: 'center' }}>GC</th>
                       <th style={{ textAlign: 'center' }}>SG</th>
+                      {isAdmin && <th style={{ textAlign: 'center', width: '60px' }}>Ações</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1013,11 +1042,42 @@ export function TelaFase() {
                             }}>
                               {p.saldoGols > 0 ? `+${p.saldoGols}` : p.saldoGols}
                             </td>
+                            {isAdmin && (
+                                <td style={{ textAlign: 'center' }}>
+                                    <button 
+                                        onClick={() => {
+                                          if(!p.id) {
+                                            alert("ID de participação não encontrado. Tente atualizar a página.");
+                                            return;
+                                          }
+                                          setPunicaoTarget({
+                                            id: p.id,
+                                            nome: p.nomeJogador,
+                                            clube: p.nomeClube
+                                          });
+                                        }}
+                                        title="Punir jogador nesta fase"
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            color: '#ef4444',
+                                            padding: '6px',
+                                            borderRadius: '6px',
+                                            transition: 'background 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                    >
+                                        <Gavel size={18} />
+                                    </button>
+                                </td>
+                            )}
                           </tr>
                         ))}
                         {filteredParticipantes.length === 0 && !isLoadingParticipantes && (
                           <tr>
-                            <td colSpan={10} style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-gray)' }}>
+                            <td colSpan={isAdmin ? 11 : 10} style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-gray)' }}>
                               <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px'}}>
                                 <div style={{background: 'var(--hover-bg)', padding: '20px', borderRadius: '50%'}}>
                                     <AlertCircle size={40} style={{ opacity: 0.5 }} />
@@ -1123,6 +1183,16 @@ export function TelaFase() {
           onSubmit={() => {
             queryClient.invalidateQueries({ queryKey: ['participantes-fase', faseId] });
             queryClient.invalidateQueries({ queryKey: ['fase-detalhe', faseId] });
+          }}
+        />
+      )}
+
+      {punicaoTarget && (
+        <PopupPunicao
+          target={punicaoTarget}
+          onClose={() => setPunicaoTarget(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['participantes-fase', faseId] });
           }}
         />
       )}
