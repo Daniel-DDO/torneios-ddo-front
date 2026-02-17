@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Menu,
   LayoutDashboard,
@@ -25,13 +25,19 @@ import {
   Share2,
   TrendingUp,
   AlertCircle,
-  Percent
+  Percent,
+  MessageSquare,
+  Send,
+  Trash2,
+  Lock
 } from 'lucide-react';
-import { API } from '../services/api';
+import { API, API_SECUNDARIA } from '../services/api';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupRegistrarPartida from '../components/PopupRegistrarPartida';
 import PopupReportarPartida from '../components/PopupReportarPartida';
+import PopupGeral from '../components/PopupGeral';
+import PopupGeralConf from '../components/PopupGeralConf';
 import '../styles/TorneiosPage.css';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
@@ -100,9 +106,123 @@ interface UserData {
   golsMarcados: number;
 }
 
+interface ComentarioBackend {
+  id: string;
+  texto: string;
+  jogadorId: string;
+  partidaId: string;
+  dataHora: string;
+}
+
+interface JogadorResumoDTO {
+  id: string;
+  nome: string;
+  discord: string;
+  pontosCoeficiente: number;
+  imagem: string | null;
+  cargo?: string; 
+}
+
+interface AvatarDTO {
+  id: string;
+  url: string;
+  nome: string;
+}
+
+const formatDateComment = (dateString: string) => {
+  const date = new Date(dateString); 
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+
+  if (diffMins < 1) return 'Agora mesmo';
+  if (diffMins < 60) return `Há ${diffMins} min`;
+  if (diffHours < 24) return `Há ${diffHours} h`;
+  
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+};
+
+function CommentItem({ 
+  comentario, 
+  currentUser, 
+  onDeleteRequest 
+}: { 
+  comentario: ComentarioBackend; 
+  currentUser: UserData | null;
+  onDeleteRequest: (id: string) => void;
+}) {
+  const { data: jogador } = useQuery<JogadorResumoDTO>({
+    queryKey: ['jogador-resumo', comentario.jogadorId],
+    queryFn: async () => {
+      const response = await API.get(`/jogador/${comentario.jogadorId}/resumo`);
+      return response.data;
+    },
+    staleTime: 1000 * 60 * 30
+  });
+
+  const isUuidImage = jogador?.imagem && !jogador.imagem.startsWith('http');
+  
+  const { data: avatarData } = useQuery<AvatarDTO>({
+    queryKey: ['avatar-url', jogador?.imagem],
+    queryFn: async () => {
+      if (!jogador?.imagem) return null;
+      const response = await API.get(`/api/avatares/${jogador.imagem}`);
+      return response.data;
+    },
+    enabled: !!isUuidImage,
+    staleTime: Infinity
+  });
+
+  const displayImage = isUuidImage ? avatarData?.url : jogador?.imagem;
+  const displayName = jogador?.nome || 'Carregando...';
+
+  const canDelete = currentUser && (
+    currentUser.id === comentario.jogadorId || 
+    ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo)
+  );
+
+  return (
+    <div className="comment-item">
+      <div 
+        className="user-avatar-comment"
+        style={{ 
+          backgroundImage: displayImage ? `url(${displayImage})` : 'none',
+          backgroundSize: 'cover',
+          width: 40, height: 40, fontSize: '0.9rem'
+        }}
+      >
+        {!displayImage && (displayName.charAt(0) || <Users size={20} />)}
+      </div>
+      <div className="comment-content">
+        <div className="comment-header">
+          <span className="comment-author">{displayName}</span>
+          {jogador && jogador.cargo && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(jogador.cargo) && (
+            <span className={`role-badge ${jogador.cargo.toLowerCase()}`}>
+              {jogador.cargo === 'ADMINISTRADOR' || jogador.cargo === 'PROPRIETARIO' ? 'Admin' : 'Staff'}
+            </span>
+          )}
+          <span className="comment-time">{formatDateComment(comentario.dataHora)}</span>
+          
+          {canDelete && (
+            <button className="btn-delete-comment" onClick={() => onDeleteRequest(comentario.id)} title="Apagar comentário">
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+        <div className="comment-bubble">
+          {comentario.texto}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function TelaPartidaSelecionada() {
   const navigate = useNavigate();
   const { partidaId } = useParams();
+  const queryClient = useQueryClient();
+  
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
@@ -110,6 +230,22 @@ export function TelaPartidaSelecionada() {
   const [showRegistrarPopup, setShowRegistrarPopup] = useState(false);
   const [showReportarPopup, setShowReportarPopup] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
+  
+  const [novoComentario, setNovoComentario] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const [popupInfo, setPopupInfo] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+  }>({
+    show: false,
+    title: '',
+    message: '',
+    type: 'info'
+  });
 
   const { data: partida, isLoading, refetch } = useQuery<PartidaDTO>({
     queryKey: ['partida-detalhe', partidaId],
@@ -131,21 +267,64 @@ export function TelaPartidaSelecionada() {
     staleTime: 1000 * 60 * 15
   });
 
-  const { data: avatars = [] } = useQuery({
-    queryKey: ['avatares'],
+  const { data: comentarios = [], isLoading: isLoadingComentarios } = useQuery<ComentarioBackend[]>({
+    queryKey: ['comentarios', partidaId],
     queryFn: async () => {
-      const response = await API.get('/api/avatares');
-      return Array.isArray(response.data) ? response.data : [];
+      const response = await API_SECUNDARIA.get(`/comentarios/${partidaId}`);
+      return response.data;
     },
-    staleTime: 1000 * 60 * 30,
-    enabled: !!currentUser
+    enabled: !!partidaId,
+    refetchInterval: 5000 
   });
 
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((a: any) => map[a.id] = a.url);
-    return map;
-  }, [avatars]);
+  const postComentarioMutation = useMutation({
+    mutationFn: async (texto: string) => {
+      return await API_SECUNDARIA.post('/comentarios', {
+        texto,
+        partidaId
+      });
+    },
+    onSuccess: () => {
+      setNovoComentario('');
+      queryClient.invalidateQueries({ queryKey: ['comentarios', partidaId] });
+    },
+    onError: () => {
+      setPopupInfo({
+        show: true,
+        title: 'Erro',
+        message: 'Não foi possível enviar o comentário.',
+        type: 'error'
+      });
+    }
+  });
+
+  const deleteComentarioMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!currentUser) throw new Error("Não logado");
+      return await API_SECUNDARIA.delete(`/comentarios/${id}`, {
+        params: { jogadorId: currentUser.id }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comentarios', partidaId] });
+      setPopupInfo({
+        show: true,
+        title: 'Apagado',
+        message: 'Comentário removido com sucesso.',
+        type: 'info'
+      });
+      setCommentToDelete(null);
+    },
+    onError: () => {
+      setPopupInfo({
+        show: true,
+        title: 'Erro',
+        message: 'Erro ao excluir o comentário.',
+        type: 'error'
+      });
+      setCommentToDelete(null);
+    }
+  });
 
   useEffect(() => {
     if (isDarkMode) {
@@ -199,8 +378,41 @@ export function TelaPartidaSelecionada() {
       }
     } else {
       navigator.clipboard.writeText(window.location.href);
-      alert('Link copiado para a área de transferência!');
+      setPopupInfo({
+        show: true,
+        title: 'Copiado',
+        message: 'Link copiado para a área de transferência!',
+        type: 'success'
+      });
     }
+  };
+
+  const handleEnviarComentario = () => {
+    if (!novoComentario.trim()) return;
+    if (novoComentario.length > 500) {
+      setPopupInfo({
+        show: true,
+        title: 'Atenção',
+        message: 'O comentário excede o limite de 500 caracteres.',
+        type: 'warning'
+      });
+      return;
+    }
+    postComentarioMutation.mutate(novoComentario);
+  };
+
+  const handleDeleteRequest = (id: string) => {
+    setCommentToDelete(id);
+  };
+
+  const handleConfirmDelete = () => {
+    if (commentToDelete) {
+      deleteComentarioMutation.mutate(commentToDelete);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setCommentToDelete(null);
   };
 
   return (
@@ -311,6 +523,7 @@ export function TelaPartidaSelecionada() {
           display: grid;
           grid-template-columns: 2fr 1fr;
           gap: 24px;
+          margin-bottom: 32px;
         }
         .detail-card {
           background: var(--bg-card);
@@ -399,6 +612,206 @@ export function TelaPartidaSelecionada() {
           animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
           background: var(--hover-bg);
         }
+
+        .comments-section {
+          background: var(--bg-card);
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius);
+          padding: 0;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        .comments-header-area {
+          padding: 20px 24px;
+          border-bottom: 1px solid var(--border-color);
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .comments-title {
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: var(--text-dark);
+        }
+        
+        .comment-input-area {
+          padding: 24px;
+          background: var(--bg-body);
+          border-bottom: 1px solid var(--border-color);
+        }
+        .input-box-wrapper {
+          display: flex;
+          gap: 16px;
+          background: var(--bg-card);
+          padding: 16px;
+          border-radius: 16px;
+          border: 1px solid var(--border-color);
+          box-shadow: var(--shadow-sm);
+        }
+        .user-avatar-comment {
+          border-radius: 50%;
+          background: var(--bg-body);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 2px solid var(--border-color);
+          flex-shrink: 0;
+          font-weight: 700;
+          color: var(--text-gray);
+          overflow: hidden;
+        }
+        .input-fields-container {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .comment-textarea {
+          width: 100%;
+          background: transparent;
+          border: none;
+          color: var(--text-dark);
+          font-family: inherit;
+          resize: vertical;
+          min-height: 60px;
+          font-size: 0.95rem;
+        }
+        .comment-textarea:focus {
+          outline: none;
+        }
+        .input-actions {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-top: 8px;
+          border-top: 1px solid var(--border-color);
+        }
+        .char-count {
+          font-size: 0.75rem;
+          color: var(--text-gray);
+        }
+        .btn-send-comment {
+          background: var(--primary);
+          color: white;
+          border: none;
+          padding: 8px 24px;
+          border-radius: 8px;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .btn-send-comment:hover {
+          background: var(--primary-light);
+        }
+        .btn-send-comment:disabled {
+          background: var(--text-gray);
+          cursor: not-allowed;
+          opacity: 0.7;
+        }
+        
+        .login-prompt {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          padding: 20px;
+          background: var(--bg-card);
+          border-radius: 12px;
+          border: 1px dashed var(--border-color);
+          color: var(--text-gray);
+        }
+        .login-btn-inline {
+          background: var(--hover-bg);
+          color: var(--primary);
+          border: 1px solid var(--border-color);
+          padding: 6px 16px;
+          border-radius: 6px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .comments-list-container {
+          padding: 0;
+          max-height: 700px;
+          overflow-y: auto;
+        }
+        .comment-item {
+          display: flex;
+          gap: 16px;
+          padding: 20px 24px;
+          border-bottom: 1px solid var(--border-color);
+          transition: background 0.1s;
+        }
+        .comment-item:last-child {
+          border-bottom: none;
+        }
+        .comment-item:hover {
+          background: var(--hover-bg);
+        }
+        .comment-content {
+          flex: 1;
+        }
+        .comment-header {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 6px;
+        }
+        .comment-author {
+          font-weight: 700;
+          color: var(--text-dark);
+          font-size: 0.95rem;
+        }
+        .role-badge {
+          font-size: 0.7rem;
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+        .role-badge.administrador, .role-badge.proprietario {
+          background: rgba(239, 68, 68, 0.1);
+          color: #ef4444;
+          border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .role-badge.diretor {
+          background: rgba(78, 62, 255, 0.1);
+          color: var(--primary);
+          border: 1px solid rgba(78, 62, 255, 0.2);
+        }
+        .comment-time {
+          font-size: 0.8rem;
+          color: var(--text-gray);
+          margin-left: auto;
+        }
+        .btn-delete-comment {
+          background: transparent;
+          border: none;
+          color: var(--text-gray);
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 4px;
+          transition: all 0.2s;
+          margin-left: 8px;
+        }
+        .btn-delete-comment:hover {
+          color: #ef4444;
+          background: rgba(239, 68, 68, 0.1);
+        }
+        .comment-bubble {
+          color: var(--text-dark);
+          line-height: 1.6;
+          font-size: 0.95rem;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
         @media (max-width: 900px) {
           .match-grid { grid-template-columns: 1fr; }
@@ -445,7 +858,7 @@ export function TelaPartidaSelecionada() {
               <div
                 className="user-avatar-mini"
                 onClick={() => setShowUserPopup(true)}
-                style={{ backgroundImage: currentUser.imagem ? `url(${avatarMap[currentUser.imagem] || currentUser.imagem})` : 'none', backgroundSize: 'cover', cursor: 'pointer' }}
+                style={{ backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none', backgroundSize: 'cover', cursor: 'pointer' }}
               >
                 {!currentUser.imagem && currentUser.nome.charAt(0)}
               </div>
@@ -650,13 +1063,109 @@ export function TelaPartidaSelecionada() {
                   </div>
                 </div>
               </div>
+
+              <div className="comments-section">
+                <div className="comments-header-area">
+                  <MessageSquare size={20} className="text-primary" />
+                  <span className="comments-title">Comentários ({comentarios.length})</span>
+                </div>
+
+                <div className="comment-input-area">
+                  {currentUser ? (
+                    <div className="input-box-wrapper">
+                      <div 
+                        className="user-avatar-comment"
+                        style={{ 
+                          backgroundImage: `url(${currentUser.imagem})`, 
+                          backgroundSize: 'cover' 
+                        }}
+                      >
+                        {!currentUser.imagem && <Users size={20} />}
+                      </div>
+                      <div className="input-fields-container">
+                        <textarea
+                          ref={textareaRef}
+                          className="comment-textarea"
+                          placeholder="Escreva seu comentário..."
+                          value={novoComentario}
+                          onChange={(e) => setNovoComentario(e.target.value)}
+                          maxLength={500}
+                          disabled={postComentarioMutation.isPending}
+                        />
+                        <div className="input-actions">
+                          <span className="char-count">{novoComentario.length}/500</span>
+                          <button 
+                            className="btn-send-comment" 
+                            onClick={handleEnviarComentario}
+                            disabled={!novoComentario.trim() || postComentarioMutation.isPending}
+                          >
+                            {postComentarioMutation.isPending ? 'Enviando...' : (
+                              <>Enviar <Send size={16} /></>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="login-prompt">
+                      <Lock size={18} />
+                      <span>Faça login para participar da discussão.</span>
+                      <button className="login-btn-inline" onClick={() => setShowLoginPopup(true)}>
+                        Entrar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="comments-list-container">
+                  {isLoadingComentarios ? (
+                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-gray)' }}>
+                      Carregando comentários...
+                    </div>
+                  ) : comentarios.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-gray)', fontStyle: 'italic' }}>
+                      Nenhum comentário ainda. Seja o primeiro!
+                    </div>
+                  ) : (
+                    comentarios.map((comentario) => (
+                      <CommentItem 
+                        key={comentario.id} 
+                        comentario={comentario} 
+                        currentUser={currentUser}
+                        onDeleteRequest={handleDeleteRequest}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+
             </>
           )}
         </div>
       </main>
 
+      {commentToDelete && (
+        <PopupGeralConf
+          title="Confirmar Exclusão"
+          message="Tem certeza que deseja apagar este comentário? Esta ação não pode ser desfeita."
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+          confirmText="Apagar"
+          cancelText="Cancelar"
+        />
+      )}
+
+      {popupInfo.show && (
+        <PopupGeral
+          title={popupInfo.title}
+          message={popupInfo.message}
+          type={popupInfo.type}
+          onClose={() => setPopupInfo({ ...popupInfo, show: false })}
+        />
+      )}
+
       {showLoginPopup && <PopupLogin onClose={() => setShowLoginPopup(false)} onLoginSuccess={setCurrentUser} />}
-      {showUserPopup && currentUser && <PopupUser user={{ ...currentUser, imagem: avatarMap[currentUser.imagem || ''] || currentUser.imagem }} onClose={() => setShowUserPopup(false)} onLogout={() => { localStorage.removeItem('token'); localStorage.removeItem('user_data'); setCurrentUser(null); setShowUserPopup(false); }} />}
+      {showUserPopup && currentUser && <PopupUser user={currentUser} onClose={() => setShowUserPopup(false)} onLogout={() => { localStorage.removeItem('token'); localStorage.removeItem('user_data'); setCurrentUser(null); setShowUserPopup(false); }} />}
       {showRegistrarPopup && partida && partida.mandante && partida.visitante && (
         <PopupRegistrarPartida
           partida={{
