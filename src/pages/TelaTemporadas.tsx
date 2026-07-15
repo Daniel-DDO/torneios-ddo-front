@@ -15,7 +15,9 @@ import {
   Settings,
   CalendarSync,
   Plus,
-  Loader2
+  Loader2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -30,6 +32,15 @@ interface Season {
   dataInicio: string;
   dataFim: string;
   ativa: boolean;
+}
+
+interface PaginacaoResponse<T> {
+  conteudo: T[];
+  numero: number;
+  totalPaginas: number;
+  totalElementos: number;
+  tamanho: number;
+  ultima: boolean;
 }
 
 interface UserData {
@@ -58,9 +69,15 @@ const fetchAvatarsService = async () => {
   return [];
 };
 
-const fetchSeasonsService = async () => {
-  const response = await API.get('/temporada/all');
-  return response.data;
+const fetchSeasonsService = async (pagina: number, tamanho: number, busca: string) => {
+  const params = new URLSearchParams();
+  params.set('pagina', String(pagina));
+  params.set('tamanho', String(tamanho));
+  if (busca.trim()) {
+    params.set('busca', busca.trim());
+  }
+  const response = await API.get(`/temporada/all?${params.toString()}`);
+  return response.data as PaginacaoResponse<Season>;
 };
 
 export function TelaTemporadas() {
@@ -73,10 +90,28 @@ export function TelaTemporadas() {
     staleTime: 1000 * 60 * 60,
   });
 
-  const { data: seasons = [], isLoading } = useQuery<Season[]>({
-    queryKey: ['temporadas'],
-    queryFn: fetchSeasonsService,
+  const [pagina, setPagina] = useState(0);
+  const [tamanho] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPagina(0);
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [searchTerm]);
+
+  const { data: seasonsPage, isLoading } = useQuery<PaginacaoResponse<Season>>({
+    queryKey: ['temporadas', pagina, tamanho, debouncedSearch],
+    queryFn: () => fetchSeasonsService(pagina, tamanho, debouncedSearch),
+    placeholderData: (previousData) => previousData,
   });
+
+  const seasons = seasonsPage?.conteudo ?? [];
+  const totalPaginas = seasonsPage?.totalPaginas ?? 0;
+  const ultima = seasonsPage?.ultima ?? true;
 
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -91,7 +126,6 @@ export function TelaTemporadas() {
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [showNovaTemporadaPopup, setShowNovaTemporadaPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -150,10 +184,6 @@ export function TelaTemporadas() {
         return { label: 'EM BREVE', className: 'status-breve' };
     }
   };
-
-  const filteredSeasons = seasons.filter((season) =>
-    season.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const getCurrentUserAvatar = () => {
     if (!currentUser?.imagem) return null;
@@ -260,6 +290,38 @@ export function TelaTemporadas() {
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+        }
+
+        .pagination-bar {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 12px;
+          padding: 16px 24px;
+          border-top: 1px solid var(--border-color);
+        }
+
+        .pagination-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border-radius: 6px;
+          border: 1px solid var(--border-color);
+          background-color: transparent;
+          color: var(--text-dark);
+          cursor: pointer;
+        }
+
+        .pagination-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .pagination-label {
+          font-size: 0.9rem;
+          color: var(--text-gray);
         }
 
         @media (max-width: 768px) {
@@ -401,37 +463,58 @@ export function TelaTemporadas() {
                     <Loader2 size={32} className="spinner-icon" />
                     <p>Buscando temporadas...</p>
                 </div>
-              ) : filteredSeasons.length > 0 ? (
-                <table className="custom-table">
-                  <thead>
-                    <tr>
-                      <th>Nome</th>
-                      <th>Início</th>
-                      <th>Fim</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredSeasons.map((season) => {
-                      const statusInfo = getSeasonStatus(season.dataInicio, season.dataFim);
-                      return (
-                          <tr 
-                              key={season.id} 
-                              onClick={() => navigate(`/${season.id}/torneios`)}
-                          >
-                            <td>{season.nome}</td>
-                            <td>{new Date(season.dataInicio).toLocaleDateString('pt-BR')}</td>
-                            <td>{new Date(season.dataFim).toLocaleDateString('pt-BR')}</td>
-                            <td>
-                              <span className={`status-badge ${statusInfo.className}`}>
-                                {statusInfo.label}
-                              </span>
-                            </td>
-                          </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              ) : seasons.length > 0 ? (
+                <>
+                  <table className="custom-table">
+                    <thead>
+                      <tr>
+                        <th>Nome</th>
+                        <th>Início</th>
+                        <th>Fim</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {seasons.map((season) => {
+                        const statusInfo = getSeasonStatus(season.dataInicio, season.dataFim);
+                        return (
+                            <tr 
+                                key={season.id} 
+                                onClick={() => navigate(`/${season.id}/torneios`)}
+                            >
+                              <td>{season.nome}</td>
+                              <td>{new Date(season.dataInicio).toLocaleDateString('pt-BR')}</td>
+                              <td>{new Date(season.dataFim).toLocaleDateString('pt-BR')}</td>
+                              <td>
+                                <span className={`status-badge ${statusInfo.className}`}>
+                                  {statusInfo.label}
+                                </span>
+                              </td>
+                            </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <div className="pagination-bar">
+                    <span className="pagination-label">
+                      Página {pagina + 1} de {Math.max(totalPaginas, 1)}
+                    </span>
+                    <button
+                      className="pagination-btn"
+                      disabled={pagina === 0}
+                      onClick={() => setPagina((p) => Math.max(p - 1, 0))}
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button
+                      className="pagination-btn"
+                      disabled={ultima}
+                      onClick={() => setPagina((p) => p + 1)}
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+                </>
               ) : (
                 <div className="state-container">
                     <p style={{ fontSize: '1.1rem', fontWeight: 500 }}>Nenhuma temporada encontrada</p>

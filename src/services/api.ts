@@ -4,6 +4,7 @@ import axios, { type AxiosRequestConfig, type AxiosError } from 'axios';
 const SERVERS = [
   'https://torneios-ddo-backend.onrender.com',
   'https://torneios-ddo-599q.onrender.com'
+  //'http://localhost:8080'
 ];
 
 const MICROSERVICE_URL = 'https://backend2torneios.onrender.com';
