@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import {
   Menu,
   LayoutDashboard,
@@ -83,6 +83,15 @@ interface PartidaDTO {
   penaltisVisitante: number | null;
 }
 
+interface PaginacaoResponse<T> {
+  conteudo: T[];
+  paginaAtual: number;
+  totalPaginas: number;
+  totalElementos: number;
+  tamanhoPagina: number;
+  ultimaPagina: boolean;
+}
+
 const fetchAvatarsService = async () => {
   const response = await API.get('/api/avatares');
   if (Array.isArray(response)) return response;
@@ -144,29 +153,74 @@ export function TelaPartidas() {
     setLoading(false);
   }, [navigate]);
 
-  const { data: partidasPendentes = [], isLoading: isLoadingPendentes } = useQuery({
+  const {
+    data: pendentesData,
+    fetchNextPage: fetchNextPendentes,
+    hasNextPage: hasNextPendentes,
+    isFetchingNextPage: isFetchingNextPendentes,
+    isLoading: isLoadingPendentes
+  } = useInfiniteQuery({
     queryKey: ['partidasPendentes', currentUser?.id],
-    queryFn: async () => {
-      const response = await API.get(`partida/jogador/${currentUser?.id}/pendentes`);
-      return response.data || [];
+    queryFn: async ({ pageParam = 0 }) => {
+      const response = await API.get(`partida/jogador/${currentUser?.id}/pendentes?pagina=${pageParam}&tamanho=10`);
+      return (response.data || response) as PaginacaoResponse<PartidaDTO>;
     },
+    getNextPageParam: (lastPage) => lastPage.ultimaPagina ? undefined : lastPage.paginaAtual + 1,
+    initialPageParam: 0,
     enabled: !!currentUser?.id,
     staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
     refetchOnMount: false
   });
 
-  const { data: partidasFeitas = [], isLoading: isLoadingFeitas } = useQuery({
+  const {
+    data: feitasData,
+    fetchNextPage: fetchNextFeitas,
+    hasNextPage: hasNextFeitas,
+    isFetchingNextPage: isFetchingNextFeitas,
+    isLoading: isLoadingFeitas
+  } = useInfiniteQuery({
     queryKey: ['partidasFeitas', currentUser?.id],
-    queryFn: async () => {
-      const response = await API.get(`partida/jogador/${currentUser?.id}/feitas`);
-      return response.data || [];
+    queryFn: async ({ pageParam = 0 }) => {
+      const response = await API.get(`partida/jogador/${currentUser?.id}/feitas?pagina=${pageParam}&tamanho=10`);
+      return (response.data || response) as PaginacaoResponse<PartidaDTO>;
     },
+    getNextPageParam: (lastPage) => lastPage.ultimaPagina ? undefined : lastPage.paginaAtual + 1,
+    initialPageParam: 0,
     enabled: !!currentUser?.id,
     staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
     refetchOnMount: false
   });
+
+  const partidasPendentes = useMemo(() => pendentesData?.pages.flatMap(p => p.conteudo) ?? [], [pendentesData]);
+  const partidasFeitas = useMemo(() => feitasData?.pages.flatMap(p => p.conteudo) ?? [], [feitasData]);
+
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  const loadMore = useCallback(() => {
+    if (activeTab === 'pendentes' && hasNextPendentes && !isFetchingNextPendentes) {
+      fetchNextPendentes();
+    } else if (activeTab === 'feitas' && hasNextFeitas && !isFetchingNextFeitas) {
+      fetchNextFeitas();
+    }
+  }, [activeTab, hasNextPendentes, hasNextFeitas, isFetchingNextPendentes, isFetchingNextFeitas, fetchNextPendentes, fetchNextFeitas]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadMore();
+      },
+      { threshold: 1.0 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) observer.observe(currentTarget);
+
+    return () => {
+      if (currentTarget) observer.unobserve(currentTarget);
+    };
+  }, [loadMore]);
 
   const handleLoginSuccess = (userData: UserData) => {
     setCurrentUser(userData);
@@ -440,6 +494,12 @@ export function TelaPartidas() {
     
     .btn-admin-header:hover {
       opacity: 0.9;
+    }
+
+    .load-more-status {
+        text-align: center;
+        padding: 1rem;
+        color: var(--text-gray);
     }
 
     @media (max-width: 768px) {
@@ -721,6 +781,11 @@ export function TelaPartidas() {
                     <p>Nenhuma partida realizada encontrada.</p>
                   </div>
                 )
+              )}
+
+              <div ref={observerTarget} style={{ height: '20px' }} />
+              {(activeTab === 'pendentes' ? isFetchingNextPendentes : isFetchingNextFeitas) && (
+                <div className="load-more-status">Carregando mais partidas...</div>
               )}
             </div>
           </div>
