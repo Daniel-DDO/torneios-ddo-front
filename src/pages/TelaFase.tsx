@@ -139,32 +139,15 @@ export function TelaFase() {
   });
 
   const { data: participantes = [], isLoading: isLoadingParticipantes } = useQuery<ParticipanteFase[]>({
-    queryKey: ['participantes-fase', faseId],
-    queryFn: async () => {
-      const [resVisual, resIds] = await Promise.all([
-        API.get(`/participacao-fase/fase/${faseId}`),
-        API.get(`/participacao-fase/fase-a/${faseId}`)
-      ]);
-
-      const visualData = Array.isArray(resVisual.data) ? resVisual.data : [];
-      const idData = Array.isArray(resIds.data) ? resIds.data : [];
-
-      const idMap = new Map();
-      idData.forEach((item: any) => {
-        if (item.jogadorClubeId && item.id) {
-            idMap.set(item.jogadorClubeId, item.id);
-        }
-      });
-
-      return visualData.map((p: any) => ({
-          ...p,
-          id: idMap.get(p.jogadorClubeId) 
-      }));
-    },
-    enabled: !!faseId,
-    refetchInterval: 5000,
-    staleTime: 2000
-  });
+  queryKey: ['participantes-fase', faseId],
+  queryFn: async () => {
+    const response = await API.get(`/participacao-fase/fase/${faseId}`);
+    return Array.isArray(response.data) ? response.data : [];
+  },
+  enabled: !!faseId,
+  refetchInterval: 5000,
+  staleTime: 2000
+});
 
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};

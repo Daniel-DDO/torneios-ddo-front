@@ -29,7 +29,9 @@ import {
   MessageSquare,
   Send,
   Trash2,
-  Lock
+  Lock,
+  CheckCircle2,
+  ShieldCheck
 } from 'lucide-react';
 import { API, API_SECUNDARIA } from '../services/api';
 import PopupLogin from '../components/PopupLogin';
@@ -114,13 +116,22 @@ interface ComentarioBackend {
   dataHora: string;
 }
 
+interface PalpiteBackend {
+  id: string;
+  partidaId: string;
+  jogadorId: string;
+  placarMandante: number;
+  placarVisitante: number;
+  dataPalpite: string;
+}
+
 interface JogadorResumoDTO {
   id: string;
   nome: string;
   discord: string;
   pontosCoeficiente: number;
   imagem: string | null;
-  cargo?: string; 
+  cargo?: string;
 }
 
 interface AvatarDTO {
@@ -130,7 +141,7 @@ interface AvatarDTO {
 }
 
 const formatDateComment = (dateString: string) => {
-  const date = new Date(dateString); 
+  const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -139,16 +150,16 @@ const formatDateComment = (dateString: string) => {
   if (diffMins < 1) return 'Agora mesmo';
   if (diffMins < 60) return `Há ${diffMins} min`;
   if (diffHours < 24) return `Há ${diffHours} h`;
-  
+
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 };
 
-function CommentItem({ 
-  comentario, 
-  currentUser, 
-  onDeleteRequest 
-}: { 
-  comentario: ComentarioBackend; 
+function CommentItem({
+  comentario,
+  currentUser,
+  onDeleteRequest
+}: {
+  comentario: ComentarioBackend;
   currentUser: UserData | null;
   onDeleteRequest: (id: string) => void;
 }) {
@@ -162,7 +173,7 @@ function CommentItem({
   });
 
   const isUuidImage = jogador?.imagem && !jogador.imagem.startsWith('http');
-  
+
   const { data: avatarData } = useQuery<AvatarDTO>({
     queryKey: ['avatar-url', jogador?.imagem],
     queryFn: async () => {
@@ -178,15 +189,15 @@ function CommentItem({
   const displayName = jogador?.nome || 'Carregando...';
 
   const canDelete = currentUser && (
-    currentUser.id === comentario.jogadorId || 
+    currentUser.id === comentario.jogadorId ||
     ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo)
   );
 
   return (
     <div className="comment-item">
-      <div 
+      <div
         className="user-avatar-comment"
-        style={{ 
+        style={{
           backgroundImage: displayImage ? `url(${displayImage})` : 'none',
           backgroundSize: 'cover',
           width: 40, height: 40, fontSize: '0.9rem'
@@ -203,7 +214,7 @@ function CommentItem({
             </span>
           )}
           <span className="comment-time">{formatDateComment(comentario.dataHora)}</span>
-          
+
           {canDelete && (
             <button className="btn-delete-comment" onClick={() => onDeleteRequest(comentario.id)} title="Apagar comentário">
               <Trash2 size={14} />
@@ -218,11 +229,59 @@ function CommentItem({
   );
 }
 
+function PalpiteItem({ palpite, mandanteSigla, visitanteSigla }: { palpite: PalpiteBackend; mandanteSigla?: string; visitanteSigla?: string }) {
+  const { data: jogador } = useQuery<JogadorResumoDTO>({
+    queryKey: ['jogador-resumo', palpite.jogadorId],
+    queryFn: async () => {
+      const response = await API.get(`/jogador/${palpite.jogadorId}/resumo`);
+      return response.data;
+    },
+    staleTime: 1000 * 60 * 30
+  });
+
+  const isUuidImage = jogador?.imagem && !jogador.imagem.startsWith('http');
+
+  const { data: avatarData } = useQuery<AvatarDTO>({
+    queryKey: ['avatar-url', jogador?.imagem],
+    queryFn: async () => {
+      if (!jogador?.imagem) return null;
+      const response = await API.get(`/api/avatares/${jogador.imagem}`);
+      return response.data;
+    },
+    enabled: !!isUuidImage,
+    staleTime: Infinity
+  });
+
+  const displayImage = isUuidImage ? avatarData?.url : jogador?.imagem;
+  const displayName = jogador?.nome || 'Carregando...';
+
+  return (
+    <div className="palpite-item">
+      <div
+        className="palpite-avatar"
+        style={{
+          backgroundImage: displayImage ? `url(${displayImage})` : 'none'
+        }}
+      >
+        {!displayImage && (displayName.charAt(0) || <Users size={16} />)}
+      </div>
+      <span className="palpite-nome">{displayName}</span>
+      <div className="palpite-placar-chip">
+        <span className="palpite-time-sigla">{mandanteSigla}</span>
+        <span className="palpite-numero">{palpite.placarMandante}</span>
+        <span className="palpite-x">:</span>
+        <span className="palpite-numero">{palpite.placarVisitante}</span>
+        <span className="palpite-time-sigla">{visitanteSigla}</span>
+      </div>
+    </div>
+  );
+}
+
 export function TelaPartidaSelecionada() {
   const navigate = useNavigate();
   const { partidaId } = useParams();
   const queryClient = useQueryClient();
-  
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
@@ -231,9 +290,12 @@ export function TelaPartidaSelecionada() {
   const [showReportarPopup, setShowReportarPopup] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
-  
+
   const [novoComentario, setNovoComentario] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const [palpiteMandante, setPalpiteMandante] = useState<string>('');
+  const [palpiteVisitante, setPalpiteVisitante] = useState<string>('');
 
   const [popupInfo, setPopupInfo] = useState<{
     show: boolean;
@@ -257,6 +319,8 @@ export function TelaPartidaSelecionada() {
     refetchOnWindowFocus: false
   });
 
+  const partidaEncerrada = !!partida && (partida.realizada || partida.wo);
+
   const { data: probabilidade } = useQuery<ProbabilidadeDTO>({
     queryKey: ['partida-probabilidade', partidaId],
     queryFn: async () => {
@@ -267,14 +331,38 @@ export function TelaPartidaSelecionada() {
     staleTime: 1000 * 60 * 15
   });
 
-  const { data: comentarios = [], isLoading: isLoadingComentarios } = useQuery<ComentarioBackend[]>({
+  const { data: comentarios = [], isLoading: isLoadingComentarios, isError: isErrorComentarios } = useQuery<ComentarioBackend[]>({
     queryKey: ['comentarios', partidaId],
     queryFn: async () => {
       const response = await API_SECUNDARIA.get(`/comentarios/${partidaId}`);
       return response.data;
     },
     enabled: !!partidaId,
-    refetchInterval: 5000 
+    retry: false,
+    refetchInterval: 5000
+  });
+
+  const { data: palpites = [], isLoading: isLoadingPalpites, isError: isErrorPalpites } = useQuery<PalpiteBackend[]>({
+    queryKey: ['palpites', partidaId],
+    queryFn: async () => {
+      const response = await API_SECUNDARIA.get(`/palpites/${partidaId}`);
+      return response.data;
+    },
+    enabled: !!partidaId,
+    retry: false,
+    refetchInterval: 15000
+  });
+
+  const { data: meuPalpite } = useQuery<PalpiteBackend>({
+    queryKey: ['meu-palpite', partidaId, currentUser?.id],
+    queryFn: async () => {
+      const response = await API_SECUNDARIA.get(`/palpites/meu/${partidaId}`, {
+        params: { jogadorId: currentUser!.id }
+      });
+      return response.data;
+    },
+    enabled: !!partidaId && !!currentUser,
+    retry: false
   });
 
   const postComentarioMutation = useMutation({
@@ -326,6 +414,35 @@ export function TelaPartidaSelecionada() {
     }
   });
 
+  const salvarPalpiteMutation = useMutation({
+    mutationFn: async () => {
+      return await API_SECUNDARIA.post('/palpites', {
+        partidaId,
+        jogadorId: currentUser!.id,
+        placarMandante: Number(palpiteMandante),
+        placarVisitante: Number(palpiteVisitante)
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['palpites', partidaId] });
+      queryClient.invalidateQueries({ queryKey: ['meu-palpite', partidaId, currentUser?.id] });
+      setPopupInfo({
+        show: true,
+        title: 'Palpite salvo',
+        message: 'Seu palpite foi registrado!',
+        type: 'success'
+      });
+    },
+    onError: () => {
+      setPopupInfo({
+        show: true,
+        title: 'Erro',
+        message: 'Não foi possível salvar o palpite agora.',
+        type: 'error'
+      });
+    }
+  });
+
   useEffect(() => {
     if (isDarkMode) {
       document.body.classList.add('dark-mode');
@@ -340,6 +457,13 @@ export function TelaPartidaSelecionada() {
     const storedUser = localStorage.getItem('user_data');
     if (storedUser) setCurrentUser(JSON.parse(storedUser));
   }, []);
+
+  useEffect(() => {
+    if (meuPalpite) {
+      setPalpiteMandante(String(meuPalpite.placarMandante));
+      setPalpiteVisitante(String(meuPalpite.placarVisitante));
+    }
+  }, [meuPalpite]);
 
   const hasEditPermission = () => {
     if (!currentUser) return false;
@@ -413,6 +537,21 @@ export function TelaPartidaSelecionada() {
 
   const handleCancelDelete = () => {
     setCommentToDelete(null);
+  };
+
+  const handleSalvarPalpite = () => {
+    if (partidaEncerrada) return;
+    if (palpiteMandante === '' || palpiteVisitante === '') return;
+    if (Number(palpiteMandante) < 0 || Number(palpiteVisitante) < 0) {
+      setPopupInfo({
+        show: true,
+        title: 'Atenção',
+        message: 'O placar não pode ser negativo.',
+        type: 'warning'
+      });
+      return;
+    }
+    salvarPalpiteMutation.mutate();
   };
 
   return (
@@ -634,7 +773,7 @@ export function TelaPartidaSelecionada() {
           font-weight: 700;
           color: var(--text-dark);
         }
-        
+
         .comment-input-area {
           padding: 24px;
           background: var(--bg-body);
@@ -712,7 +851,7 @@ export function TelaPartidaSelecionada() {
           cursor: not-allowed;
           opacity: 0.7;
         }
-        
+
         .login-prompt {
           display: flex;
           align-items: center;
@@ -811,12 +950,206 @@ export function TelaPartidaSelecionada() {
           word-break: break-word;
         }
 
+        .palpites-section {
+          background: var(--bg-card);
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius);
+          padding: 0;
+          overflow: hidden;
+          margin-bottom: 24px;
+        }
+        .palpites-header-area {
+          padding: 20px 24px;
+          border-bottom: 1px solid var(--border-color);
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: linear-gradient(90deg, rgba(78, 62, 255, 0.06) 0%, transparent 100%);
+        }
+        .palpites-title {
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: var(--text-dark);
+        }
+        .palpite-body { padding: 24px; }
+        .palpite-form-card {
+          background: var(--bg-body);
+          border: 1px solid var(--border-color);
+          border-radius: 18px;
+          padding: 22px;
+          margin-bottom: 22px;
+        }
+        .palpite-form-teams {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 24px;
+          flex-wrap: wrap;
+        }
+        .palpite-team-col {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+          min-width: 90px;
+        }
+        .palpite-team-logo {
+          width: 52px;
+          height: 52px;
+          object-fit: contain;
+          filter: drop-shadow(0 2px 6px rgba(0,0,0,0.08));
+        }
+        .palpite-team-sigla {
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: var(--text-gray);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .palpite-input {
+          width: 64px;
+          height: 64px;
+          text-align: center;
+          border-radius: 14px;
+          border: 2px solid var(--border-color);
+          background: var(--bg-card);
+          color: var(--text-dark);
+          font-weight: 800;
+          font-size: 1.6rem;
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .palpite-input:focus {
+          outline: none;
+          border-color: var(--primary);
+          box-shadow: 0 0 0 4px rgba(78, 62, 255, 0.12);
+        }
+        .palpite-input:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        .palpite-form-divider {
+          font-size: 1.4rem;
+          font-weight: 800;
+          color: var(--border-color);
+          padding-top: 20px;
+        }
+        .palpite-form-footer {
+          display: flex;
+          justify-content: center;
+          margin-top: 20px;
+        }
+        .btn-palpite-enviar {
+          background: var(--primary);
+          color: white;
+          border: none;
+          padding: 12px 32px;
+          border-radius: 12px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 4px 12px rgba(78, 62, 255, 0.25);
+        }
+        .btn-palpite-enviar:hover {
+          background: var(--primary-light);
+          transform: translateY(-1px);
+        }
+        .btn-palpite-enviar:disabled {
+          background: var(--text-gray);
+          box-shadow: none;
+          cursor: not-allowed;
+          opacity: 0.6;
+          transform: none;
+        }
+        .palpite-locked-banner {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          padding: 16px;
+          background: var(--hover-bg);
+          border: 1px dashed var(--border-color);
+          border-radius: 14px;
+          color: var(--text-gray);
+          font-weight: 600;
+          font-size: 0.9rem;
+          margin-bottom: 22px;
+          text-align: center;
+        }
+        .palpite-list { display: flex; flex-direction: column; gap: 10px; }
+        .palpite-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px 16px;
+          border-radius: 14px;
+          background: var(--bg-body);
+          border: 1px solid var(--border-color);
+          transition: background 0.15s;
+        }
+        .palpite-item:hover {
+          background: var(--hover-bg);
+        }
+        .palpite-avatar {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: var(--bg-card);
+          background-size: cover;
+          background-position: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 0.85rem;
+          color: var(--text-gray);
+          border: 2px solid var(--border-color);
+          flex-shrink: 0;
+        }
+        .palpite-nome { flex: 1; font-weight: 600; color: var(--text-dark); font-size: 0.9rem; }
+        .palpite-placar-chip {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: var(--bg-card);
+          border: 1px solid var(--border-color);
+          padding: 4px 12px;
+          border-radius: 20px;
+          font-size: 0.8rem;
+        }
+        .palpite-time-sigla {
+          font-weight: 700;
+          color: var(--text-gray);
+          font-size: 0.7rem;
+          text-transform: uppercase;
+        }
+        .palpite-numero {
+          font-weight: 800;
+          color: var(--primary);
+          font-size: 0.95rem;
+          min-width: 14px;
+          text-align: center;
+        }
+        .palpite-x { color: var(--text-gray); font-weight: 700; }
+        .palpite-offline {
+          text-align: center;
+          padding: 20px;
+          color: var(--text-gray);
+          font-style: italic;
+        }
+
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
         @media (max-width: 900px) {
           .match-grid { grid-template-columns: 1fr; }
           .hero-content { gap: 20px; }
           .main-score { font-size: 3rem; }
+        }
+        @media (max-width: 520px) {
+          .palpite-form-teams { gap: 12px; }
+          .palpite-input { width: 52px; height: 52px; font-size: 1.3rem; }
         }
       `}</style>
 
@@ -1064,6 +1397,102 @@ export function TelaPartidaSelecionada() {
                 </div>
               </div>
 
+              <div className="palpites-section">
+                <div className="palpites-header-area">
+                  <Gamepad2 size={20} className="text-primary" />
+                  <span className="palpites-title">Palpites ({palpites.length})</span>
+                </div>
+
+                <div className="palpite-body">
+                  {partidaEncerrada ? (
+                    <div className="palpite-locked-banner">
+                      <ShieldCheck size={18} />
+                      <span>
+                        {partida.wo
+                          ? 'Esta partida já foi decidida por W.O. Os palpites estão encerrados.'
+                          : 'Esta partida já foi finalizada. Os palpites estão encerrados.'}
+                      </span>
+                    </div>
+                  ) : currentUser ? (
+                    <div className="palpite-form-card">
+                      <div className="palpite-form-teams">
+                        <div className="palpite-team-col">
+                          {partida.mandante?.clubeImagem && (
+                            <img src={partida.mandante.clubeImagem} alt={partida.mandante.clubeNome} className="palpite-team-logo" />
+                          )}
+                          <span className="palpite-team-sigla">{partida.mandante?.clubeSigla}</span>
+                          <input
+                            type="number"
+                            min={0}
+                            className="palpite-input"
+                            value={palpiteMandante}
+                            onChange={(e) => setPalpiteMandante(e.target.value)}
+                          />
+                        </div>
+
+                        <span className="palpite-form-divider">:</span>
+
+                        <div className="palpite-team-col">
+                          {partida.visitante?.clubeImagem && (
+                            <img src={partida.visitante.clubeImagem} alt={partida.visitante.clubeNome} className="palpite-team-logo" />
+                          )}
+                          <span className="palpite-team-sigla">{partida.visitante?.clubeSigla}</span>
+                          <input
+                            type="number"
+                            min={0}
+                            className="palpite-input"
+                            value={palpiteVisitante}
+                            onChange={(e) => setPalpiteVisitante(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="palpite-form-footer">
+                        <button
+                          className="btn-palpite-enviar"
+                          onClick={handleSalvarPalpite}
+                          disabled={salvarPalpiteMutation.isPending || palpiteMandante === '' || palpiteVisitante === ''}
+                        >
+                          {salvarPalpiteMutation.isPending ? 'Salvando...' : (
+                            <>
+                              {meuPalpite ? <CheckCircle2 size={18} /> : <Send size={18} />}
+                              {meuPalpite ? 'Atualizar palpite' : 'Enviar palpite'}
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="login-prompt" style={{ marginBottom: 22 }}>
+                      <Lock size={18} />
+                      <span>Faça login para registrar seu palpite.</span>
+                      <button className="login-btn-inline" onClick={() => setShowLoginPopup(true)}>Entrar</button>
+                    </div>
+                  )}
+
+                  {isLoadingPalpites ? (
+                    <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-gray)' }}>Carregando palpites...</div>
+                  ) : isErrorPalpites ? (
+                    <div className="palpite-offline">Palpites indisponíveis no momento.</div>
+                  ) : palpites.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-gray)', fontStyle: 'italic' }}>
+                      Nenhum palpite registrado ainda.
+                    </div>
+                  ) : (
+                    <div className="palpite-list">
+                      {palpites.map((p) => (
+                        <PalpiteItem
+                          key={p.id}
+                          palpite={p}
+                          mandanteSigla={partida.mandante?.clubeSigla}
+                          visitanteSigla={partida.visitante?.clubeSigla}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="comments-section">
                 <div className="comments-header-area">
                   <MessageSquare size={20} className="text-primary" />
@@ -1073,11 +1502,11 @@ export function TelaPartidaSelecionada() {
                 <div className="comment-input-area">
                   {currentUser ? (
                     <div className="input-box-wrapper">
-                      <div 
+                      <div
                         className="user-avatar-comment"
-                        style={{ 
-                          backgroundImage: `url(${currentUser.imagem})`, 
-                          backgroundSize: 'cover' 
+                        style={{
+                          backgroundImage: `url(${currentUser.imagem})`,
+                          backgroundSize: 'cover'
                         }}
                       >
                         {!currentUser.imagem && <Users size={20} />}
@@ -1090,14 +1519,14 @@ export function TelaPartidaSelecionada() {
                           value={novoComentario}
                           onChange={(e) => setNovoComentario(e.target.value)}
                           maxLength={500}
-                          disabled={postComentarioMutation.isPending}
+                          disabled={postComentarioMutation.isPending || isErrorComentarios}
                         />
                         <div className="input-actions">
                           <span className="char-count">{novoComentario.length}/500</span>
-                          <button 
-                            className="btn-send-comment" 
+                          <button
+                            className="btn-send-comment"
                             onClick={handleEnviarComentario}
-                            disabled={!novoComentario.trim() || postComentarioMutation.isPending}
+                            disabled={!novoComentario.trim() || postComentarioMutation.isPending || isErrorComentarios}
                           >
                             {postComentarioMutation.isPending ? 'Enviando...' : (
                               <>Enviar <Send size={16} /></>
@@ -1122,15 +1551,17 @@ export function TelaPartidaSelecionada() {
                     <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-gray)' }}>
                       Carregando comentários...
                     </div>
+                  ) : isErrorComentarios ? (
+                    <div className="palpite-offline">Comentários indisponíveis no momento.</div>
                   ) : comentarios.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-gray)', fontStyle: 'italic' }}>
                       Nenhum comentário ainda. Seja o primeiro!
                     </div>
                   ) : (
                     comentarios.map((comentario) => (
-                      <CommentItem 
-                        key={comentario.id} 
-                        comentario={comentario} 
+                      <CommentItem
+                        key={comentario.id}
+                        comentario={comentario}
                         currentUser={currentUser}
                         onDeleteRequest={handleDeleteRequest}
                       />
