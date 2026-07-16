@@ -79,7 +79,7 @@ const fetchAvatarsService = async () => {
 };
 
 const fetchInscritosService = async (temporadaId: string) => {
-  const response = await API.get(`/inscricao/temporada/${temporadaId}`);
+  const response = await API.get(`/inscricao/temporada/${temporadaId}/resumo`);
   return response.data;
 };
 
