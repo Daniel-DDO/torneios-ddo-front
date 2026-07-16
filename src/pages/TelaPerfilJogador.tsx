@@ -5,7 +5,7 @@ import {
   Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search, 
   ArrowLeft, Gamepad2, Lightbulb, Settings, 
   CheckCircle, Clock, Award, BarChart3, Target, CalendarSync,
-  Flag, Ban, TrendingUp, Info, FileText, Star, Swords, Activity
+  Flag, Ban, TrendingUp, Info, FileText, Star, Swords, Activity, Skull
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { API } from '../services/api';
@@ -152,6 +152,15 @@ const fetchPlayerVictimsService = async (playerId: string) => {
     }
 };
 
+const fetchPlayerCarrascosService = async (playerId: string) => {
+    try {
+        const response = await API.get(`/jogador/${playerId}/carrascos`);
+        return response.data;
+    } catch (error) {
+        return [];
+    }
+};
+
 const fetchPlayerMomentoService = async (playerId: string) => {
     try {
         const response = await API.get(`/jogador/${playerId}/momento`);
@@ -196,6 +205,12 @@ export function TelaPerfilJogador() {
   const { data: victims = [], isLoading: isLoadingVictims } = useQuery<VictimData[]>({
     queryKey: ['playerVictims', id],
     queryFn: () => fetchPlayerVictimsService(id!),
+    enabled: !!id,
+  });
+
+  const { data: carrascos = [], isLoading: isLoadingCarrascos } = useQuery<VictimData[]>({
+    queryKey: ['playerCarrascos', id],
+    queryFn: () => fetchPlayerCarrascosService(id!),
     enabled: !!id,
   });
 
@@ -1162,6 +1177,12 @@ export function TelaPerfilJogador() {
             border-radius: 4px;
         }
 
+        .win-rate-fill-neg {
+            height: 100%;
+            background: #ef4444;
+            border-radius: 4px;
+        }
+
         @media (max-width: 768px) {
             .profile-hero { padding: 24px; }
             .hero-body { flex-direction: column; text-align: center; gap: 20px; }
@@ -1588,6 +1609,70 @@ export function TelaPerfilJogador() {
                                                 <div 
                                                     className="win-rate-fill" 
                                                     style={{ width: victim.aproveitamento }}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="card-box" style={{ marginTop: '24px' }}>
+                        <div className="card-header">
+                            <div className="card-title"><Skull size={20} style={{color: '#8b5cf6'}} /> Maiores Carrascos</div>
+                        </div>
+                        
+                        {isLoadingCarrascos ? (
+                             <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-gray)' }}>Carregando dados...</div>
+                        ) : carrascos.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-gray)' }}>
+                                Nenhum carrasco encontrado. Este jogador não perde de ninguém!
+                            </div>
+                        ) : (
+                            <div className="victims-grid">
+                                {carrascos.map((carrasco) => (
+                                    <div key={carrasco.adversarioId} className="victim-card">
+                                        <div className="victim-header">
+                                            {getVictimAvatar(carrasco) ? (
+                                                 <img src={getVictimAvatar(carrasco)!} alt={carrasco.adversarioNome} className="victim-avatar" />
+                                            ) : (
+                                                <div className="victim-avatar">{carrasco.adversarioNome.charAt(0)}</div>
+                                            )}
+                                            <div className="victim-identity">
+                                                <span className="victim-name">{carrasco.adversarioNome}</span>
+                                                <span className="victim-discord">{carrasco.adversarioDiscord}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="victim-stats">
+                                            <div className="v-stat-box">
+                                                <span className="v-stat-val" style={{color: '#ef4444'}}>{carrasco.minhasDerrotas}</span>
+                                                <span className="v-stat-lbl">Derrotas</span>
+                                            </div>
+                                            <div className="v-stat-box">
+                                                <span className="v-stat-val">{carrasco.partidasJogadas}</span>
+                                                <span className="v-stat-lbl">Jogos</span>
+                                            </div>
+                                            <div className="v-stat-box">
+                                                <span className="v-stat-val">{carrasco.golsSofridos}</span>
+                                                <span className="v-stat-lbl">GC</span>
+                                            </div>
+                                            <div className="v-stat-box">
+                                                <span className="v-stat-val">{carrasco.saldoGols > 0 ? `+${carrasco.saldoGols}` : carrasco.saldoGols}</span>
+                                                <span className="v-stat-lbl">Saldo</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="win-rate-visual">
+                                            <div className="win-rate-header">
+                                                <span>Aproveitamento</span>
+                                                <span>{carrasco.aproveitamento}</span>
+                                            </div>
+                                            <div className="win-rate-track">
+                                                <div 
+                                                    className="win-rate-fill-neg" 
+                                                    style={{ width: carrasco.aproveitamento }}
                                                 ></div>
                                             </div>
                                         </div>
