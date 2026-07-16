@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Menu,
@@ -13,23 +13,27 @@ import {
   Gamepad2,
   Star,
   Lightbulb,
-  CalendarSync
+  CalendarSync,
+  ArrowLeft,
+  Award
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
-import PopupCompeticao from '../components/PopupCompeticao';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
-interface Competicao {
+interface CompeticaoDetalheDTO {
   id: string;
   nome: string;
   imagem: string;
   divisao: string;
   valor: number;
   descricao: string;
+  tituloId: string | null;
+  tituloNome: string | null;
+  tituloImagem: string | null;
 }
 
 interface UserData {
@@ -51,21 +55,14 @@ interface Avatar {
   nome?: string;
 }
 
-const fetchAllCompeticoesService = async (): Promise<Competicao[]> => {
+const fetchCompeticaoPorIdService = async (id: string): Promise<CompeticaoDetalheDTO | null> => {
   try {
-    const response = await API.get('/competicao/all');
+    const response = await API.get(`/competicao/${id}`);
     const data = (response && (response as any).data) ? (response as any).data : response;
-
-    if (data && data.conteudo) {
-      return data.conteudo as Competicao[];
-    } else if (Array.isArray(data)) {
-      return data as Competicao[];
-    } else {
-      return [];
-    }
+    return data as CompeticaoDetalheDTO;
   } catch (error) {
-    console.error("Erro ao buscar competições", error);
-    return [];
+    console.error('Erro ao buscar competição', error);
+    return null;
   }
 };
 
@@ -76,12 +73,14 @@ const fetchAvatarsService = async () => {
   return [];
 };
 
-export function TelaCompeticoes() {
+export function TelaCompeticaoSelecionada() {
   const navigate = useNavigate();
-  
-  const { data: competicoes = [], isLoading: loading, refetch } = useQuery<Competicao[]>({
-    queryKey: ['competicoes'],
-    queryFn: fetchAllCompeticoesService,
+  const { competicaoId } = useParams();
+
+  const { data: competicao, isLoading: loading } = useQuery<CompeticaoDetalheDTO | null>({
+    queryKey: ['competicao', competicaoId],
+    queryFn: () => fetchCompeticaoPorIdService(competicaoId || ''),
+    enabled: !!competicaoId,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -102,7 +101,6 @@ export function TelaCompeticoes() {
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
-  const [showCompeticaoPopup, setShowCompeticaoPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -132,7 +130,7 @@ export function TelaCompeticoes() {
   };
 
   const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
+    if (window.confirm('Deseja realmente sair?')) {
       localStorage.removeItem('token');
       localStorage.removeItem('user_data');
       setCurrentUser(null);
@@ -142,14 +140,18 @@ export function TelaCompeticoes() {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const filteredCompeticoes = competicoes.filter((competicao: Competicao) =>
-    competicao.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const getCurrentUserAvatar = () => {
     if (!currentUser?.imagem) return null;
     return avatarMap[currentUser.imagem] || currentUser.imagem;
   };
+
+  const competicaoImagemUrl = competicao?.imagem
+    ? (avatarMap[competicao.imagem] || competicao.imagem)
+    : null;
+
+  const tituloImagemUrl = competicao?.tituloImagem
+    ? (avatarMap[competicao.tituloImagem] || competicao.tituloImagem)
+    : null;
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -161,113 +163,152 @@ export function TelaCompeticoes() {
           padding: 2rem 3rem;
         }
 
-        .players-grid-container {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-          gap: 24px;
-          margin-top: 24px;
+        .back-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-gray);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            padding: 0;
         }
 
-        .player-card-item {
+        .back-button:hover {
+            color: var(--primary);
+        }
+
+        .competicao-header-card {
           background-color: var(--bg-card);
           border: 1px solid var(--border-color);
           border-radius: var(--radius);
-          padding: 24px;
+          padding: 32px;
           display: flex;
-          flex-direction: column;
           align-items: center;
-          text-align: center;
-          transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-          position: relative;
+          gap: 32px;
+          box-shadow: var(--shadow-sm);
         }
 
-        .player-card-item:hover {
-          transform: translateY(-5px);
-          box-shadow: var(--shadow-md);
-          border-color: var(--primary);
-        }
-
-        .card-rank-badge {
-          position: absolute;
-          top: 16px;
-          right: 16px;
-          background: var(--hover-bg);
-          color: var(--primary);
-          font-weight: 800;
-          padding: 4px 10px;
-          border-radius: 12px;
-          font-size: 0.8rem;
-          border: 1px solid var(--border-color);
-        }
-
-        .card-avatar-large {
-          width: 80px;
-          height: 80px;
-          border-radius: 50%;
+        .competicao-avatar-grande {
+          width: 120px;
+          height: 120px;
+          border-radius: 20px;
           background: var(--hover-bg);
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 2rem;
+          font-size: 2.5rem;
           font-weight: 700;
           color: var(--primary);
-          margin-bottom: 16px;
           border: 2px solid var(--border-color);
           background-size: contain;
           background-repeat: no-repeat;
           background-position: center;
+          flex-shrink: 0;
         }
 
-        .card-name {
+        .competicao-info-principal {
+          flex: 1;
+        }
+
+        .competicao-nome {
+          font-size: 1.8rem;
+          font-weight: 800;
+          color: var(--text-dark);
+          margin-bottom: 8px;
+        }
+
+        .competicao-descricao {
+          color: var(--text-gray);
+          font-size: 0.95rem;
+          line-height: 1.5;
+          max-width: 700px;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 20px;
+          margin-top: 24px;
+        }
+
+        .stat-card {
+          background-color: var(--bg-card);
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius);
+          padding: 20px 24px;
+          box-shadow: var(--shadow-sm);
+        }
+
+        .stat-card-label {
+          font-size: 0.8rem;
+          color: var(--text-gray);
+          text-transform: uppercase;
+          font-weight: 600;
+          margin-bottom: 8px;
+        }
+
+        .stat-card-value {
+          font-size: 1.4rem;
+          font-weight: 700;
+          color: var(--text-dark);
+        }
+
+        .titulo-card {
+          margin-top: 24px;
+          background-color: var(--bg-card);
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius);
+          padding: 24px;
+          box-shadow: var(--shadow-sm);
+          display: flex;
+          align-items: center;
+          gap: 20px;
+        }
+
+        .titulo-avatar {
+          width: 64px;
+          height: 64px;
+          border-radius: 12px;
+          background: var(--hover-bg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-size: contain;
+          background-repeat: no-repeat;
+          background-position: center;
+          border: 2px solid var(--border-color);
+          flex-shrink: 0;
+        }
+
+        .titulo-label {
+          font-size: 0.8rem;
+          color: var(--text-gray);
+          text-transform: uppercase;
+          font-weight: 600;
+          margin-bottom: 4px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .titulo-nome {
           font-size: 1.1rem;
           font-weight: 700;
           color: var(--text-dark);
-          margin-bottom: 4px;
         }
 
-        .card-location {
-          font-size: 0.85rem;
+        .empty-state {
+          padding: 3rem;
+          text-align: center;
           color: var(--text-gray);
-          margin-bottom: 16px;
-        }
-
-        .card-stats-row {
-          display: flex;
-          justify-content: space-between;
-          width: 100%;
-          background: var(--hover-bg);
-          padding: 10px 16px;
-          border-radius: 12px;
-          margin-bottom: 16px;
-        }
-
-        .stat-box {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .stat-val { font-weight: 700; color: var(--text-dark); font-size: 0.95rem; }
-        .stat-lbl { font-size: 0.7rem; color: var(--text-gray); text-transform: uppercase; }
-
-        .btn-profile {
-          width: 100%;
-          padding: 10px;
-          border-radius: 10px;
-          border: 1px solid var(--primary);
-          background: transparent;
-          color: var(--primary);
-          font-weight: 600;
-          cursor: pointer;
-          transition: 0.2s;
-        }
-
-        .btn-profile:hover {
-          background: var(--primary);
-          color: white;
         }
 
         @media (max-width: 768px) {
           .page-content { padding: 1rem; }
+          .competicao-header-card { flex-direction: column; text-align: center; }
         }
       `}</style>
 
@@ -382,66 +423,62 @@ export function TelaCompeticoes() {
         </header>
 
         <div className="page-content">
-            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Competições</h2>
-                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize as competições oficiais</p>
-            </div>
-            {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
-              <button 
-                className="t-btn" 
-                style={{background: 'var(--primary)', color: 'white', border: 'none'}}
-                onClick={() => setShowCompeticaoPopup(true)}
-              >
-                  + Nova Competição
-              </button>
+            <button onClick={() => navigate('/competicoes')} className="back-button">
+                <ArrowLeft size={16} /> Voltar para Competições
+            </button>
+
+            {!loading && !competicao && (
+              <div className="empty-state">Competição não encontrada.</div>
             )}
-            </div>
 
-            {!loading && (
-                <div className="players-grid-container">
-                {filteredCompeticoes.map((competicao: Competicao, index: number) => {
-                    const avatarUrl = competicao.imagem ? (avatarMap[competicao.imagem] || competicao.imagem) : null;
+            {!loading && competicao && (
+              <>
+                <div className="competicao-header-card">
+                  {competicaoImagemUrl ? (
+                    <div className="competicao-avatar-grande" style={{backgroundImage: `url(${competicaoImagemUrl})`}}></div>
+                  ) : (
+                    <div className="competicao-avatar-grande">
+                      {competicao.nome.substring(0, 2).toUpperCase()}
+                    </div>
+                  )}
 
-                    return (
-                        <div 
-                          key={competicao.id} 
-                          className="player-card-item"
-                          onClick={() => navigate(`/competicao/${competicao.id}`)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                        <div className="card-rank-badge">#{index + 1}</div>
-                        
-                        {avatarUrl ? (
-                            <div className="card-avatar-large" style={{backgroundImage: `url(${avatarUrl})`}}></div>
-                        ) : (
-                            <div className="card-avatar-large">
-                                {competicao.nome.substring(0,2).toUpperCase()}
-                            </div>
-                        )}
-                        
-                        <div className="card-name">{competicao.nome}</div>
-                        <div className="card-location" title={competicao.descricao}>
-                            {competicao.descricao ? competicao.descricao.substring(0, 40) + '...' : 'Sem descrição'}
-                        </div>
-                        
-                        <div className="card-stats-row">
-                            <div className="stat-box">
-                            <span className="stat-val">{competicao.divisao}</span>
-                            <span className="stat-lbl">Divisão</span>
-                            </div>
-                            <div style={{width: '1px', background: 'var(--border-color)'}}></div>
-                            <div className="stat-box">
-                            <span className="stat-val">{competicao.valor}</span>
-                            <span className="stat-lbl">Valor</span>
-                            </div>
-                        </div>
-
-                        <button className="btn-profile">Ver Competição</button>
-                        </div>
-                    );
-                })}
+                  <div className="competicao-info-principal">
+                    <div className="competicao-nome">{competicao.nome}</div>
+                    <div className="competicao-descricao">
+                      {competicao.descricao || 'Sem descrição cadastrada para esta competição.'}
+                    </div>
+                  </div>
                 </div>
+
+                <div className="stats-grid">
+                  <div className="stat-card">
+                    <div className="stat-card-label">Divisão</div>
+                    <div className="stat-card-value">{competicao.divisao || '-'}</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-card-label">Valor (Peso)</div>
+                    <div className="stat-card-value">{competicao.valor ?? '-'}</div>
+                  </div>
+                </div>
+
+                {competicao.tituloId && (
+                  <div className="titulo-card">
+                    {tituloImagemUrl ? (
+                      <div className="titulo-avatar" style={{backgroundImage: `url(${tituloImagemUrl})`}}></div>
+                    ) : (
+                      <div className="titulo-avatar">
+                        <Award size={28} color="var(--primary)" />
+                      </div>
+                    )}
+                    <div>
+                      <div className="titulo-label">
+                        <Award size={14} /> Título vinculado
+                      </div>
+                      <div className="titulo-nome">{competicao.tituloNome}</div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
         </div>
 
@@ -462,13 +499,6 @@ export function TelaCompeticoes() {
           }}
           onClose={() => setShowUserPopup(false)}
           onLogout={handleLogout}
-        />
-      )}
-
-      {showCompeticaoPopup && (
-        <PopupCompeticao 
-          onClose={() => setShowCompeticaoPopup(false)}
-          onSuccess={() => refetch()}
         />
       )}
     </div>

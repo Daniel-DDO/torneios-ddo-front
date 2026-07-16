@@ -34,6 +34,7 @@ import { TelaAnuncioSelecionado } from './pages/TelaAnuncioSelecionado';
 import { TelaMinhasTransacoes } from './pages/TelaMinhasTransacoes';
 import { TelaRankingFinanceiro } from './pages/TelaRankingFinanceiro';
 import { TelaComparandoJogador } from './pages/TelaComparandoJogador';
+import { TelaCompeticaoSelecionada } from './pages/TelaCompeticaoSelecionada';
 
 import './App.css';
 
@@ -57,6 +58,7 @@ function App() {
           <Route path="/jogadores/ranking-financeiro" element={<TelaRankingFinanceiro />} />
           <Route path="/clubes" element={<TelaClubes />} />
           <Route path="/competicoes" element={<TelaCompeticoes />} />
+          <Route path="/competicao/:competicaoId" element={<TelaCompeticaoSelecionada />} />
           <Route path="/minha-conta" element={<TelaMinhaConta />} />
           <Route path="/minha-conta/financeiro" element={<TelaMinhasTransacoes />} />
           <Route path="/admin" element={<TelaAdmin />} />
