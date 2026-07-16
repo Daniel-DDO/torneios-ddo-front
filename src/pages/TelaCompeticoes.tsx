@@ -127,8 +127,6 @@ export function TelaCompeticoes() {
     [data]
   );
 
-  const totalElementos = data?.pages[0]?.totalElementos ?? 0;
-
   const { data: avatars = [] } = useQuery({
     queryKey: ['avatares'],
     queryFn: fetchAvatarsService,
