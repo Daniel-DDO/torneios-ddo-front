@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
   Menu,
   LayoutDashboard,
@@ -13,7 +13,8 @@ import {
   Gamepad2,
   Star,
   Lightbulb,
-  CalendarSync
+  CalendarSync,
+  Loader2
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -21,6 +22,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupCompeticao from '../components/PopupCompeticao';
+import PopupVincularCompTitulo from '../components/PopupVincularCompTitulo';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface Competicao {
@@ -30,6 +32,20 @@ interface Competicao {
   divisao: string;
   valor: number;
   descricao: string;
+  titulo?: {
+    id: string;
+    nome: string;
+    imagem: string;
+  } | null;
+}
+
+interface PaginacaoResponse<T> {
+  conteudo: T[];
+  paginaAtual: number;
+  totalPaginas: number;
+  totalElementos: number;
+  tamanhoPagina: number;
+  ultimaPagina: boolean;
 }
 
 interface UserData {
@@ -51,22 +67,23 @@ interface Avatar {
   nome?: string;
 }
 
-const fetchAllCompeticoesService = async (): Promise<Competicao[]> => {
-  try {
-    const response = await API.get('/competicao/all');
-    const data = (response && (response as any).data) ? (response as any).data : response;
+const PAGE_SIZE = 10;
 
-    if (data && data.conteudo) {
-      return data.conteudo as Competicao[];
-    } else if (Array.isArray(data)) {
-      return data as Competicao[];
-    } else {
-      return [];
+const fetchCompeticoesPageService = async (
+  pageParam: number,
+  nomeFiltro: string
+): Promise<PaginacaoResponse<Competicao>> => {
+  const response = await API.get('/competicao/all', {
+    params: {
+      page: pageParam,
+      size: PAGE_SIZE,
+      sortBy: 'nome',
+      direction: 'asc',
+      nomeFiltro
     }
-  } catch (error) {
-    console.error("Erro ao buscar competições", error);
-    return [];
-  }
+  });
+  const data = (response && (response as any).data) ? (response as any).data : response;
+  return data as PaginacaoResponse<Competicao>;
 };
 
 const fetchAvatarsService = async () => {
@@ -78,12 +95,39 @@ const fetchAvatarsService = async () => {
 
 export function TelaCompeticoes() {
   const navigate = useNavigate();
-  
-  const { data: competicoes = [], isLoading: loading, refetch } = useQuery<Competicao[]>({
-    queryKey: ['competicoes'],
-    queryFn: fetchAllCompeticoesService,
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [searchTerm]);
+
+  const {
+    data,
+    isLoading: loading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+    refetch
+  } = useInfiniteQuery({
+    queryKey: ['competicoes', debouncedSearchTerm],
+    queryFn: ({ pageParam = 0 }) => fetchCompeticoesPageService(pageParam, debouncedSearchTerm),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) =>
+      lastPage.ultimaPagina ? undefined : lastPage.paginaAtual + 1,
     staleTime: 1000 * 60 * 5,
   });
+
+  const competicoes = useMemo(
+    () => data?.pages.flatMap((page) => page.conteudo) ?? [],
+    [data]
+  );
+
+  const totalElementos = data?.pages[0]?.totalElementos ?? 0;
 
   const { data: avatars = [] } = useQuery({
     queryKey: ['avatares'],
@@ -103,8 +147,8 @@ export function TelaCompeticoes() {
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [showCompeticaoPopup, setShowCompeticaoPopup] = useState(false);
+  const [showVincularTituloPopup, setShowVincularTituloPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark';
@@ -142,14 +186,36 @@ export function TelaCompeticoes() {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const filteredCompeticoes = competicoes.filter((competicao: Competicao) =>
-    competicao.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const getCurrentUserAvatar = () => {
     if (!currentUser?.imagem) return null;
     return avatarMap[currentUser.imagem] || currentUser.imagem;
   };
+
+  // Scroll infinito: observa uma sentinela no fim da grid e busca a próxima página
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const [entry] = entries;
+      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage]
+  );
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(handleObserver, {
+      rootMargin: '200px',
+      threshold: 0,
+    });
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [handleObserver]);
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -264,6 +330,49 @@ export function TelaCompeticoes() {
         .btn-profile:hover {
           background: var(--primary);
           color: white;
+        }
+
+        .resultado-contagem {
+          font-size: 0.85rem;
+          color: var(--text-gray);
+          margin-top: 4px;
+        }
+
+        .scroll-sentinel {
+          height: 1px;
+          grid-column: 1 / -1;
+        }
+
+        .carregando-mais {
+          grid-column: 1 / -1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 24px;
+          color: var(--text-gray);
+          font-size: 0.9rem;
+        }
+
+        .carregando-mais svg {
+          animation: spin-icon 0.8s linear infinite;
+        }
+
+        @keyframes spin-icon {
+          to { transform: rotate(360deg); }
+        }
+
+        .titulo-mini-badge {
+          position: absolute;
+          top: 16px;
+          left: 16px;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background-size: cover;
+          background-position: center;
+          background-color: var(--hover-bg);
+          border: 1px solid var(--border-color);
         }
 
         @media (max-width: 768px) {
@@ -386,22 +495,35 @@ export function TelaCompeticoes() {
             <div>
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Competições</h2>
                 <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Visualize as competições oficiais</p>
+                
             </div>
             {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
-              <button 
-                className="t-btn" 
-                style={{background: 'var(--primary)', color: 'white', border: 'none'}}
-                onClick={() => setShowCompeticaoPopup(true)}
-              >
-                  + Nova Competição
-              </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  className="t-btn" 
+                  style={{background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)'}}
+                  onClick={() => setShowVincularTituloPopup(true)}
+                >
+                    Vincular Título
+                </button>
+                <button 
+                  className="t-btn" 
+                  style={{background: 'var(--primary)', color: 'white', border: 'none'}}
+                  onClick={() => setShowCompeticaoPopup(true)}
+                >
+                    + Nova Competição
+                </button>
+              </div>
             )}
             </div>
 
             {!loading && (
                 <div className="players-grid-container">
-                {filteredCompeticoes.map((competicao: Competicao, index: number) => {
+                {competicoes.map((competicao: Competicao, index: number) => {
                     const avatarUrl = competicao.imagem ? (avatarMap[competicao.imagem] || competicao.imagem) : null;
+                    const tituloAvatarUrl = competicao.titulo?.imagem
+                      ? (avatarMap[competicao.titulo.imagem] || competicao.titulo.imagem)
+                      : null;
 
                     return (
                         <div 
@@ -410,6 +532,13 @@ export function TelaCompeticoes() {
                           onClick={() => navigate(`/competicao/${competicao.id}`)}
                           style={{ cursor: 'pointer' }}
                         >
+                        {tituloAvatarUrl && (
+                          <div
+                            className="titulo-mini-badge"
+                            style={{ backgroundImage: `url(${tituloAvatarUrl})` }}
+                            title={competicao.titulo?.nome}
+                          />
+                        )}
                         <div className="card-rank-badge">#{index + 1}</div>
                         
                         {avatarUrl ? (
@@ -441,6 +570,20 @@ export function TelaCompeticoes() {
                         </div>
                     );
                 })}
+
+                {competicoes.length === 0 && (
+                  <div className="empty-state" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem', color: 'var(--text-gray)' }}>
+                    Nenhuma competição encontrada
+                  </div>
+                )}
+
+                {isFetchingNextPage && (
+                  <div className="carregando-mais">
+                    <Loader2 size={18} /> Carregando mais competições...
+                  </div>
+                )}
+
+                <div ref={sentinelRef} className="scroll-sentinel" />
                 </div>
             )}
         </div>
@@ -468,6 +611,13 @@ export function TelaCompeticoes() {
       {showCompeticaoPopup && (
         <PopupCompeticao 
           onClose={() => setShowCompeticaoPopup(false)}
+          onSuccess={() => refetch()}
+        />
+      )}
+
+      {showVincularTituloPopup && (
+        <PopupVincularCompTitulo 
+          onClose={() => setShowVincularTituloPopup(false)}
           onSuccess={() => refetch()}
         />
       )}
