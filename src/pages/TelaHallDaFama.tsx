@@ -20,8 +20,7 @@ import {
   ShieldCheck,
   Swords,
   Flame,
-  Zap,
-  Crown
+  Zap
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
