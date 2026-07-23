@@ -290,7 +290,7 @@ export function TelaFase() {
   const isProprietario = currentUser && currentUser.cargo === 'PROPRIETARIO';
   // Requisito específico: só Diretor pode disparar a geração da análise
   // quando ela ainda não existir para a fase.
-  const isDiretor = currentUser && currentUser.cargo === 'DIRETOR';
+  const isDiretor = currentUser && currentUser.cargo === 'DIRETOR' || 'PROPRIETARIO';
 
   const handleLoginSuccess = (userData: UserData) => setCurrentUser(userData);
   
