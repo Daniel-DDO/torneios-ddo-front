@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { API } from '../services/api';
+import { API, API_ANALISE } from '../services/api';
 import './PopupDesign.css';
 
 interface JogadorClubeDTO {
@@ -42,6 +42,16 @@ interface PopupRegistrarPartidaProps {
   partida: PartidaDTO;
   onClose: () => void;
   onSuccess: () => void;
+}
+
+// Dispara o evento de "partida finalizada" pro microsserviço de análise,
+// SEM esperar a resposta (fire-and-forget) e SEM propagar erro - se o
+// microsserviço estiver fora do ar ou lento, isso não pode atrasar nem
+// quebrar o registro/desfazimento do resultado da partida no back principal.
+function notificarMicroservicoAnalise(faseId: string) {
+  API_ANALISE.post(`/fases/${faseId}/eventos/partida-finalizada`).catch((err) => {
+    console.warn('Não foi possível notificar o serviço de análise (não crítico):', err);
+  });
 }
 
 const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, onClose, onSuccess }) => {
@@ -119,6 +129,12 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
 
     try {
       await API.post('/partida/registrar-resultado', payload);
+
+      // Fluxo principal (back Java) já confirmou - a partir daqui é
+      // seguro disparar o aviso pro microsserviço de análise, sem esperar
+      // por ele nem deixar erro dele afetar o fechamento do popup.
+      notificarMicroservicoAnalise(partida.faseId);
+
       setFadeout(true);
       setTimeout(() => {
         onSuccess();
@@ -140,6 +156,11 @@ const PopupRegistrarPartida: React.FC<PopupRegistrarPartidaProps> = ({ partida, 
 
     try {
       await API.post(`/partida/${partida.id}/desfazer-resultado`);
+
+      // Desfazer também muda o cenário da fase (jogo volta a ser "em aberto"),
+      // então o cache de probabilidades precisa ser recalculado também.
+      notificarMicroservicoAnalise(partida.faseId);
+
       setFadeout(true);
       setTimeout(() => {
         onSuccess();
