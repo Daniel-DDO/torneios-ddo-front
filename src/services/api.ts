@@ -1,6 +1,5 @@
 import axios, { type AxiosRequestConfig, type AxiosError } from 'axios';
 
-// --- CONFIGURAÇÃO DO BACKEND PRINCIPAL (NODE) ---
 const SERVERS = [
   'https://torneios-ddo-backend.onrender.com',
   'https://torneios-ddo-599q.onrender.com'
@@ -8,6 +7,12 @@ const SERVERS = [
 ];
 
 const MICROSERVICE_URL = 'https://backend2torneios.onrender.com';
+
+// --- MICROSSERVIÇO DE ANÁLISE DE TORNEIOS (Python/FastAPI) ---
+// Independente do back principal: se estiver fora do ar, NUNCA deve
+// impedir o funcionamento da tela (tabela, mata-mata, etc). Timeout maior
+// porque o Render free tier "dorme" a instância e pode demorar pra acordar.
+const ANALISE_TORNEIOS_URL = 'https://analise-torneios.onrender.com';
 
 let currentServerIndex = Math.floor(Math.random() * SERVERS.length);
 
@@ -27,6 +32,14 @@ const microserviceInstance = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 15000,
+});
+
+const analiseInstance = axios.create({
+  baseURL: ANALISE_TORNEIOS_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 25000,
 });
 
 interface CustomAxiosRequestConfig extends AxiosRequestConfig {
@@ -90,6 +103,15 @@ microserviceInstance.interceptors.response.use(
     }
 );
 
+// Sem interceptor de logout aqui de propósito: esse serviço é auxiliar
+// (probabilidades/análises). Um erro ou timeout dele nunca deve derrubar
+// a sessão do usuário nem afetar o restante do app - quem consome essa
+// instância trata o erro localmente e simplesmente não exibe a seção.
+analiseInstance.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => Promise.reject(error)
+);
+
 function handleLogout() {
     console.warn('Sessão expirada. Logout...');
     localStorage.removeItem('token');
@@ -132,5 +154,17 @@ export const API_SECUNDARIA = {
     },
     delete(endpoint: string, config?: AxiosRequestConfig) {
         return microserviceInstance.delete(endpoint, config);
+    }
+};
+
+// Microsserviço de análise/probabilidades de torneios (Python/FastAPI).
+// Uso esperado: GET /fases/{faseId}/analise, POST /fases/{faseId}/sync,
+// POST /fases/{faseId}/eventos/partida-finalizada.
+export const API_ANALISE = {
+    get(endpoint: string, config?: AxiosRequestConfig) {
+        return analiseInstance.get(endpoint, config);
+    },
+    post(endpoint: string, data?: any, config?: AxiosRequestConfig) {
+        return analiseInstance.post(endpoint, data, config);
     }
 };

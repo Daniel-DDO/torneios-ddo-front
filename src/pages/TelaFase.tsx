@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import type { AxiosError } from 'axios';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
 import { 
@@ -27,9 +28,13 @@ import {
   CalendarDays,
   ChevronRight,
   AlertCircle,
-  Gavel
+  Gavel,
+  Sparkles,
+  RefreshCw,
+  ShieldAlert,
+  Target
 } from 'lucide-react';
-import { API } from '../services/api';
+import { API, API_ANALISE } from '../services/api';
 import '../styles/TorneiosPage.css';
 import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
@@ -94,6 +99,53 @@ interface Avatar {
   nome?: string;
 }
 
+// --- Tipos do microsserviço de análise (Python/FastAPI) ---
+interface TimeAnaliseDTO {
+  jogadorClubeId: string;
+  nomeJogador: string | null;
+  nomeClube: string | null;
+  posicaoMedia: number;
+  posicaoMediana: number;
+  probTitulo: number;
+  probZona: number | null;
+  probRebaixamento: number | null;
+  zonaNome: string | null;
+  zonaCor: string | null;
+  distribuicaoPosicoes: Record<string, number>;
+}
+
+interface AnaliseFaseDTO {
+  faseId: string;
+  calculadoEm: string;
+  numeroSimulacoes: number;
+  faseEncerrada: boolean;
+  favorito: {
+    jogadorClubeId: string;
+    nomeJogador: string | null;
+    nomeClube: string | null;
+    probTitulo: number;
+  };
+  times: TimeAnaliseDTO[];
+}
+
+function formatarPercentual(valor: number | null | undefined): string {
+  if (valor === null || valor === undefined) return '—';
+  return `${(valor * 100).toFixed(1)}%`;
+}
+
+function formatarDataHora(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
 export function TelaFase() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -149,6 +201,43 @@ export function TelaFase() {
   staleTime: 2000
 });
 
+  // --- Análise/probabilidades (microsserviço independente) ---
+  // Isolado de propósito: se o serviço estiver fora do ar, `isError` fica
+  // true e simplesmente não renderizamos a seção. Nunca deve travar nem
+  // afetar o restante da tela (tabela/mata-mata continuam normais).
+  const {
+    data: analise,
+    isLoading: isLoadingAnalise,
+    isError: isErrorAnalise,
+    error: erroAnalise,
+  } = useQuery<AnaliseFaseDTO>({
+    queryKey: ['analise-fase', faseId],
+    queryFn: async () => {
+      const response = await API_ANALISE.get(`/fases/${faseId}/analise`);
+      return response.data;
+    },
+    enabled: !!faseId,
+    retry: false,
+    staleTime: 1000 * 60,
+    refetchOnWindowFocus: false,
+  });
+
+  const statusHttpErroAnalise = (erroAnalise as AxiosError)?.response?.status;
+  // 404 = microsserviço está de pé, só não tem análise calculada ainda pra essa fase.
+  const analiseAindaNaoCalculada = isErrorAnalise && statusHttpErroAnalise === 404;
+  // Qualquer outro erro (timeout, 500, serviço fora do ar, rede) -> tratamos
+  // como serviço indisponível e escondemos a seção inteira, silenciosamente.
+  const servicoAnaliseIndisponivel = isErrorAnalise && statusHttpErroAnalise !== 404;
+
+  const gerarAnaliseMutation = useMutation({
+    mutationFn: async () => {
+      return API_ANALISE.post(`/fases/${faseId}/sync`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['analise-fase', faseId] });
+    },
+  });
+
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};
     avatars.forEach((avatar) => { map[avatar.id] = avatar.url; });
@@ -187,6 +276,11 @@ export function TelaFase() {
     return Array.from(zones.entries());
   }, [participantes]);
 
+  const timesOrdenadosPorPosicao = useMemo(() => {
+    if (!analise?.times) return [];
+    return [...analise.times].sort((a, b) => a.posicaoMedia - b.posicaoMedia);
+  }, [analise]);
+
   const getCurrentUserAvatar = () => {
     if (!currentUser?.imagem) return null;
     return avatarMap[currentUser.imagem] || currentUser.imagem;
@@ -194,6 +288,9 @@ export function TelaFase() {
 
   const isAdmin = currentUser && ['DIRETOR', 'PROPRIETARIO', 'ADMINISTRADOR'].includes(currentUser.cargo);
   const isProprietario = currentUser && currentUser.cargo === 'PROPRIETARIO';
+  // Requisito específico: só Diretor pode disparar a geração da análise
+  // quando ela ainda não existir para a fase.
+  const isDiretor = currentUser && currentUser.cargo === 'DIRETOR';
 
   const handleLoginSuccess = (userData: UserData) => setCurrentUser(userData);
   
@@ -702,6 +799,66 @@ export function TelaFase() {
         }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
+        /* --- Seção de Análise & Probabilidades --- */
+        .analise-container {
+          margin-top: 32px;
+          background: var(--bg-card);
+          border-radius: 24px;
+          border: 1px solid var(--border-color);
+          overflow: hidden;
+          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+        }
+        .analise-header {
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+          padding: 24px 28px;
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        .analise-header-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .analise-header-icon {
+          width: 44px; height: 44px;
+          border-radius: 12px;
+          background: rgba(255,255,255,0.12);
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+        }
+        .analise-header-title { font-size: 1.2rem; font-weight: 800; }
+        .analise-header-sub { font-size: 0.8rem; color: rgba(255,255,255,0.65); margin-top: 2px; }
+        .analise-favorito-badge {
+          display: flex; align-items: center; gap: 8px;
+          background: rgba(255,255,255,0.1);
+          padding: 8px 16px;
+          border-radius: 30px;
+          font-size: 0.85rem;
+          font-weight: 700;
+        }
+        .analise-body { padding: 24px 28px; }
+        .analise-empty-state {
+          display: flex; flex-direction: column; align-items: center; text-align: center;
+          padding: 40px 20px; gap: 12px;
+        }
+        .analise-empty-icon {
+          width: 56px; height: 56px; border-radius: 50%;
+          background: var(--hover-bg);
+          display: flex; align-items: center; justify-content: center;
+          color: var(--primary);
+        }
+        .prob-bar-track {
+          width: 100%; height: 8px; border-radius: 6px;
+          background: var(--hover-bg); overflow: hidden;
+        }
+        .prob-bar-fill { height: 100%; border-radius: 6px; transition: width 0.4s ease; }
+        .spin { animation: spin-anim 1s linear infinite; }
+        @keyframes spin-anim { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
         @media (max-width: 1100px) {
           .grid-layout {
             grid-template-columns: 1fr;
@@ -742,6 +899,7 @@ export function TelaFase() {
           .action-area { justify-content: stretch; width: 100%; }
           .btn-action { flex: 1; justify-content: center; }
           .hide-mobile { display: none; }
+          .analise-header { flex-direction: column; align-items: flex-start; }
         }
       `}</style>
 
@@ -1102,6 +1260,177 @@ export function TelaFase() {
                 </button>
               </div>
             </>
+          )}
+
+          {/*
+            --- Seção de Análise & Probabilidades (microsserviço independente) ---
+            Fica sempre ABAIXO do conteúdo principal (tabela ou mata-mata).
+            Regras:
+            - Serviço fora do ar / erro que não seja 404 -> não renderiza nada
+              (servicoAnaliseIndisponivel), tabela/mata-mata continuam intactos.
+            - Sem análise calculada ainda (404) e usuário não é Diretor -> não
+              renderiza nada, silenciosamente.
+            - Sem análise calculada ainda (404) e usuário é Diretor -> mostra
+              card com botão para gerar a análise.
+            - Análise existe -> mostra o painel completo.
+          */}
+          {!servicoAnaliseIndisponivel && (analise || analiseAindaNaoCalculada || isLoadingAnalise) && (
+            <div className="analise-container">
+              <div className="analise-header">
+                <div className="analise-header-left">
+                  <div className="analise-header-icon">
+                    <Sparkles size={22} />
+                  </div>
+                  <div>
+                    <div className="analise-header-title">Análise & Probabilidades</div>
+                    {analise && (
+                      <div className="analise-header-sub">
+                        {analise.faseEncerrada ? 'Fase encerrada — resultado final' : `Atualizado em ${formatarDataHora(analise.calculadoEm)}`}
+                        {' · '}{analise.numeroSimulacoes.toLocaleString('pt-BR')} simulações
+                      </div>
+                    )}
+                    {!analise && isLoadingAnalise && (
+                      <div className="analise-header-sub">Carregando projeções...</div>
+                    )}
+                  </div>
+                </div>
+
+                {analise?.favorito && (
+                  <div className="analise-favorito-badge">
+                    <Crown size={16} color="#FFD700" />
+                    Favorito: {analise.favorito.nomeJogador} ({analise.favorito.nomeClube}) — {formatarPercentual(analise.favorito.probTitulo)}
+                  </div>
+                )}
+              </div>
+
+              <div className="analise-body">
+                {isLoadingAnalise && !analise && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {Array(3).fill(0).map((_, i) => (
+                      <div key={i} className="skeleton" style={{ width: '100%', height: '36px' }}></div>
+                    ))}
+                  </div>
+                )}
+
+                {analiseAindaNaoCalculada && (
+                  <div className="analise-empty-state">
+                    <div className="analise-empty-icon">
+                      <Target size={26} />
+                    </div>
+                    <p style={{ fontWeight: 600, color: 'var(--text-dark)', fontSize: '1rem' }}>
+                      Ainda não há análise calculada para esta fase.
+                    </p>
+                    {isDiretor ? (
+                      <>
+                        <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem', maxWidth: '420px' }}>
+                          Gere a primeira análise para começar a acompanhar favorito ao título, chances de classificação/rebaixamento e posição final projetada.
+                        </p>
+                        <button
+                          className="btn-action btn-add"
+                          onClick={() => gerarAnaliseMutation.mutate()}
+                          disabled={gerarAnaliseMutation.isPending}
+                          style={{ marginTop: '8px' }}
+                        >
+                          {gerarAnaliseMutation.isPending ? (
+                            <>
+                              <RefreshCw size={18} className="spin" /> Gerando análise...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles size={18} /> Gerar Análise desta Fase
+                            </>
+                          )}
+                        </button>
+                        {gerarAnaliseMutation.isError && (
+                          <p style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: '4px' }}>
+                            Não foi possível gerar a análise agora. Tente novamente em instantes.
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>
+                        Peça a um Diretor para gerar a análise desta fase.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {analise && timesOrdenadosPorPosicao.length > 0 && (
+                  <div className="table-container" style={{ marginTop: 0, boxShadow: 'none' }}>
+                    <table className="custom-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '60px', textAlign: 'center' }}>Proj.</th>
+                          <th>Participante</th>
+                          <th style={{ textAlign: 'center' }}><Crown size={14} style={{ verticalAlign: 'middle' }} /> Título</th>
+                          <th style={{ textAlign: 'center' }}><Shield size={14} style={{ verticalAlign: 'middle' }} /> Zona</th>
+                          <th className="hide-mobile" style={{ textAlign: 'center' }}><ShieldAlert size={14} style={{ verticalAlign: 'middle' }} /> Rebaixamento</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {timesOrdenadosPorPosicao.map((t) => (
+                          <tr key={t.jogadorClubeId}>
+                            <td style={{ textAlign: 'center', fontWeight: 800 }}>
+                              {t.posicaoMedia.toFixed(1)}º
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{t.nomeJogador}</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-gray)', fontWeight: 500 }}>{t.nomeClube}</span>
+                              </div>
+                            </td>
+                            <td style={{ minWidth: '140px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                                <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--primary)' }}>
+                                  {formatarPercentual(t.probTitulo)}
+                                </span>
+                                <div className="prob-bar-track" style={{ maxWidth: '100px' }}>
+                                  <div
+                                    className="prob-bar-fill"
+                                    style={{ width: `${Math.min(t.probTitulo * 100, 100)}%`, background: 'var(--primary)' }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              {t.probZona !== null ? (
+                                <span style={{ fontWeight: 700, color: t.zonaCor || 'var(--text-dark)' }}>
+                                  {formatarPercentual(t.probZona)}
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text-gray)' }}>—</span>
+                              )}
+                            </td>
+                            <td className="hide-mobile" style={{ textAlign: 'center' }}>
+                              {t.probRebaixamento !== null ? (
+                                <span style={{ fontWeight: 700, color: t.probRebaixamento > 0.3 ? '#ef4444' : 'var(--text-gray)' }}>
+                                  {formatarPercentual(t.probRebaixamento)}
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text-gray)' }}>—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {isDiretor && analise && !analise.faseEncerrada && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                    <button
+                      className="btn-action btn-utility"
+                      onClick={() => gerarAnaliseMutation.mutate()}
+                      disabled={gerarAnaliseMutation.isPending}
+                    >
+                      <RefreshCw size={16} className={gerarAnaliseMutation.isPending ? 'spin' : ''} />
+                      {gerarAnaliseMutation.isPending ? 'Recalculando...' : 'Recalcular agora'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
       </main>
