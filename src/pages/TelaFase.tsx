@@ -99,7 +99,6 @@ interface Avatar {
   nome?: string;
 }
 
-// --- Tipos do microsserviço de análise (Python/FastAPI) ---
 interface TimeAnaliseDTO {
   jogadorClubeId: string;
   nomeJogador: string | null;
@@ -127,6 +126,75 @@ interface AnaliseFaseDTO {
   };
   times: TimeAnaliseDTO[];
 }
+
+type StatusSituacao =
+  | 'CAMPEAO_MATEMATICO'
+  | 'ELIMINADO_DO_TITULO'
+  | 'REBAIXAMENTO_MATEMATICO'
+  | 'ZONA_GARANTIDA'
+  | 'EM_DISPUTA';
+
+interface SituacaoTimeDTO {
+  jogadorClubeId: string;
+  nomeJogador: string;
+  nomeClube: string;
+  status: StatusSituacao;
+  mensagem: string;
+  pontosMinimoGarantido: number;
+  pontosMaximoPossivel: number;
+  jogosRestantes: number;
+}
+
+interface TimeDecisivoDTO {
+  jogadorClubeId: string;
+  nomeJogador: string;
+  nomeClube: string;
+  metrica: 'probTitulo' | 'probRebaixamento' | 'probZona';
+  probSeVitoria: number;
+  probSeEmpate: number;
+  probSeDerrota: number;
+  impacto: number;
+}
+
+interface JogoDecisivoDTO {
+  partidaId: string | null;
+  numeroRodada: number | null;
+  mandante: string | null;
+  visitante: string | null;
+  impacto: 'ALTO' | 'MEDIO';
+  variacaoMaxima: number;
+  times: TimeDecisivoDTO[];
+}
+
+interface ParecerFaseDTO {
+  faseId: string;
+  calculadoEm: string;
+  proximaRodada: number | null;
+  situacoes: SituacaoTimeDTO[];
+  jogosDecisivos: JogoDecisivoDTO[];
+}
+
+const LABEL_STATUS: Record<StatusSituacao, string> = {
+  CAMPEAO_MATEMATICO: 'Matematicamente campeão',
+  ELIMINADO_DO_TITULO: 'Impossível do título',
+  REBAIXAMENTO_MATEMATICO: 'Matematicamente rebaixado',
+  ZONA_GARANTIDA: 'Garantido na 1ª divisão',
+  EM_DISPUTA: 'Em disputa',
+};
+
+const COR_STATUS: Record<StatusSituacao, string> = {
+  CAMPEAO_MATEMATICO: '#f59e0b',
+  ELIMINADO_DO_TITULO: '#6b7280',
+  REBAIXAMENTO_MATEMATICO: '#ef4444',
+  ZONA_GARANTIDA: '#10b981',
+  EM_DISPUTA: '#6366f1',
+};
+
+const LABEL_METRICA: Record<TimeDecisivoDTO['metrica'], string> = {
+  probTitulo: 'título',
+  probRebaixamento: 'rebaixamento',
+  probZona: 'zona atual',
+};
 
 function formatarPercentual(valor: number | null | undefined): string {
   if (valor === null || valor === undefined) return '—';
@@ -201,10 +269,6 @@ export function TelaFase() {
   staleTime: 2000
 });
 
-  // --- Análise/probabilidades (microsserviço independente) ---
-  // Isolado de propósito: se o serviço estiver fora do ar, `isError` fica
-  // true e simplesmente não renderizamos a seção. Nunca deve travar nem
-  // afetar o restante da tela (tabela/mata-mata continuam normais).
   const {
     data: analise,
     isLoading: isLoadingAnalise,
@@ -223,11 +287,25 @@ export function TelaFase() {
   });
 
   const statusHttpErroAnalise = (erroAnalise as AxiosError)?.response?.status;
-  // 404 = microsserviço está de pé, só não tem análise calculada ainda pra essa fase.
   const analiseAindaNaoCalculada = isErrorAnalise && statusHttpErroAnalise === 404;
-  // Qualquer outro erro (timeout, 500, serviço fora do ar, rede) -> tratamos
-  // como serviço indisponível e escondemos a seção inteira, silenciosamente.
   const servicoAnaliseIndisponivel = isErrorAnalise && statusHttpErroAnalise !== 404;
+
+  const {
+    data: parecer,
+    isError: isErrorParecer,
+  } = useQuery<ParecerFaseDTO>({
+    queryKey: ['parecer-fase', faseId],
+    queryFn: async () => {
+      const response = await API_ANALISE.get(`/fases/${faseId}/parecer`);
+      return response.data;
+    },
+    enabled: !!faseId,
+    retry: false,
+    staleTime: 1000 * 60,
+    refetchOnWindowFocus: false,
+  });
+
+  const parecerIndisponivel = isErrorParecer;
 
   const gerarAnaliseMutation = useMutation({
     mutationFn: async () => {
@@ -281,6 +359,20 @@ export function TelaFase() {
     return [...analise.times].sort((a, b) => a.posicaoMedia - b.posicaoMedia);
   }, [analise]);
 
+  const situacoesRelevantes = useMemo(() => {
+    if (!parecer?.situacoes) return [];
+    const ordem: StatusSituacao[] = [
+      'CAMPEAO_MATEMATICO',
+      'REBAIXAMENTO_MATEMATICO',
+      'ZONA_GARANTIDA',
+      'ELIMINADO_DO_TITULO',
+      'EM_DISPUTA',
+    ];
+    return [...parecer.situacoes].sort(
+      (a, b) => ordem.indexOf(a.status) - ordem.indexOf(b.status)
+    );
+  }, [parecer]);
+
   const getCurrentUserAvatar = () => {
     if (!currentUser?.imagem) return null;
     return avatarMap[currentUser.imagem] || currentUser.imagem;
@@ -288,9 +380,7 @@ export function TelaFase() {
 
   const isAdmin = currentUser && ['DIRETOR', 'PROPRIETARIO', 'ADMINISTRADOR'].includes(currentUser.cargo);
   const isProprietario = currentUser && currentUser.cargo === 'PROPRIETARIO';
-  // Requisito específico: só Diretor pode disparar a geração da análise
-  // quando ela ainda não existir para a fase.
-  const isDiretor = currentUser && currentUser.cargo === 'DIRETOR' || 'PROPRIETARIO';
+  const isDiretor = currentUser && currentUser.cargo === 'DIRETOR';
 
   const handleLoginSuccess = (userData: UserData) => setCurrentUser(userData);
   
@@ -711,7 +801,6 @@ export function TelaFase() {
           color: var(--primary);
         }
 
-        /* Specific Table Styles for TelaFase */
         .page-content { padding: 40px; }
         .table-container {
           background-color: var(--bg-card);
@@ -799,7 +888,6 @@ export function TelaFase() {
         }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-        /* --- Seção de Análise & Probabilidades --- */
         .analise-container {
           margin-top: 32px;
           background: var(--bg-card);
@@ -858,6 +946,88 @@ export function TelaFase() {
         .prob-bar-fill { height: 100%; border-radius: 6px; transition: width 0.4s ease; }
         .spin { animation: spin-anim 1s linear infinite; }
         @keyframes spin-anim { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .parecer-divider {
+          border-top: 1px solid var(--border-color);
+          margin: 24px 0;
+          padding-top: 24px;
+        }
+        .parecer-subtitle {
+          font-size: 1rem;
+          font-weight: 800;
+          color: var(--text-dark);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+        .situacao-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 12px;
+          margin-bottom: 8px;
+        }
+        .situacao-card {
+          border-radius: 14px;
+          padding: 14px 16px;
+          background: var(--hover-bg);
+          border-left: 4px solid var(--border-color);
+        }
+        .situacao-card.em-disputa {
+          opacity: 0.85;
+        }
+        .situacao-status-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.7rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+          padding: 3px 10px;
+          border-radius: 20px;
+          margin-bottom: 8px;
+        }
+        .situacao-nome { font-weight: 700; font-size: 0.95rem; color: var(--text-dark); margin-bottom: 2px; }
+        .situacao-msg { font-size: 0.82rem; color: var(--text-gray); line-height: 1.4; }
+        .jogo-decisivo-card {
+          border-radius: 16px;
+          border: 1px solid var(--border-color);
+          padding: 16px 20px;
+          margin-bottom: 12px;
+        }
+        .jogo-decisivo-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+        .jogo-decisivo-titulo { font-weight: 700; font-size: 1rem; color: var(--text-dark); }
+        .impacto-badge {
+          font-size: 0.7rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          padding: 4px 10px;
+          border-radius: 20px;
+        }
+        .impacto-alto { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .impacto-medio { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .cenario-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-size: 0.85rem;
+          padding: 8px 0;
+          border-top: 1px solid var(--border-color);
+        }
+        .cenario-time-nome { font-weight: 600; color: var(--text-dark); min-width: 140px; }
+        .cenario-metrica { font-size: 0.72rem; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.03em; }
+        .cenario-valores { display: flex; gap: 14px; flex-wrap: wrap; margin-left: auto; }
+        .cenario-valor { display: flex; flex-direction: column; align-items: center; min-width: 60px; }
+        .cenario-valor-label { font-size: 0.65rem; color: var(--text-gray); text-transform: uppercase; }
+        .cenario-valor-num { font-weight: 800; font-size: 0.9rem; }
 
         @media (max-width: 1100px) {
           .grid-layout {
@@ -1262,18 +1432,6 @@ export function TelaFase() {
             </>
           )}
 
-          {/*
-            --- Seção de Análise & Probabilidades (microsserviço independente) ---
-            Fica sempre ABAIXO do conteúdo principal (tabela ou mata-mata).
-            Regras:
-            - Serviço fora do ar / erro que não seja 404 -> não renderiza nada
-              (servicoAnaliseIndisponivel), tabela/mata-mata continuam intactos.
-            - Sem análise calculada ainda (404) e usuário não é Diretor -> não
-              renderiza nada, silenciosamente.
-            - Sem análise calculada ainda (404) e usuário é Diretor -> mostra
-              card com botão para gerar a análise.
-            - Análise existe -> mostra o painel completo.
-          */}
           {!servicoAnaliseIndisponivel && (analise || analiseAindaNaoCalculada || isLoadingAnalise) && (
             <div className="analise-container">
               <div className="analise-header">
@@ -1414,6 +1572,77 @@ export function TelaFase() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                )}
+
+                {!parecerIndisponivel && parecer && (situacoesRelevantes.length > 0 || parecer.jogosDecisivos.length > 0) && (
+                  <div className="parecer-divider">
+                    {situacoesRelevantes.length > 0 && (
+                      <>
+                        <div className="parecer-subtitle">
+                          <Target size={18} /> Situações Matemáticas
+                        </div>
+                        <div className="situacao-grid">
+                          {situacoesRelevantes.map((s) => (
+                            <div
+                              key={s.jogadorClubeId}
+                              className={`situacao-card ${s.status === 'EM_DISPUTA' ? 'em-disputa' : ''}`}
+                              style={{ borderLeftColor: COR_STATUS[s.status] }}
+                            >
+                              <span
+                                className="situacao-status-badge"
+                                style={{ background: `${COR_STATUS[s.status]}22`, color: COR_STATUS[s.status] }}
+                              >
+                                {LABEL_STATUS[s.status]}
+                              </span>
+                              <div className="situacao-nome">{s.nomeJogador} · {s.nomeClube}</div>
+                              <div className="situacao-msg">{s.mensagem}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {parecer.jogosDecisivos.length > 0 && (
+                      <>
+                        <div className="parecer-subtitle" style={{ marginTop: situacoesRelevantes.length > 0 ? '24px' : 0 }}>
+                          <AlertCircle size={18} />
+                          Jogos Decisivos {parecer.proximaRodada ? `da Rodada ${parecer.proximaRodada}` : ''}
+                        </div>
+                        {parecer.jogosDecisivos.map((jogo, idx) => (
+                          <div key={jogo.partidaId || idx} className="jogo-decisivo-card">
+                            <div className="jogo-decisivo-header">
+                              <span className="jogo-decisivo-titulo">
+                                {jogo.mandante} <span style={{ opacity: 0.5, fontWeight: 500 }}>x</span> {jogo.visitante}
+                              </span>
+                              <span className={`impacto-badge ${jogo.impacto === 'ALTO' ? 'impacto-alto' : 'impacto-medio'}`}>
+                                Impacto {jogo.impacto === 'ALTO' ? 'Alto' : 'Médio'} · {formatarPercentual(jogo.variacaoMaxima)}
+                              </span>
+                            </div>
+                            {jogo.times.map((t) => (
+                              <div key={t.jogadorClubeId} className="cenario-row">
+                                <span className="cenario-time-nome">{t.nomeJogador}</span>
+                                <span className="cenario-metrica">{LABEL_METRICA[t.metrica]}</span>
+                                <div className="cenario-valores">
+                                  <div className="cenario-valor">
+                                    <span className="cenario-valor-label">Vitória</span>
+                                    <span className="cenario-valor-num" style={{ color: '#10b981' }}>{formatarPercentual(t.probSeVitoria)}</span>
+                                  </div>
+                                  <div className="cenario-valor">
+                                    <span className="cenario-valor-label">Empate</span>
+                                    <span className="cenario-valor-num" style={{ color: '#f59e0b' }}>{formatarPercentual(t.probSeEmpate)}</span>
+                                  </div>
+                                  <div className="cenario-valor">
+                                    <span className="cenario-valor-label">Derrota</span>
+                                    <span className="cenario-valor-num" style={{ color: '#ef4444' }}>{formatarPercentual(t.probSeDerrota)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </>
+                    )}
                   </div>
                 )}
 
