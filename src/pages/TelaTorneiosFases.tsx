@@ -15,7 +15,8 @@ import {
   Settings,
   CalendarSync,
   Plus,
-  ArrowLeft
+  ArrowLeft,
+  ArrowLeftRight
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -23,6 +24,7 @@ import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupNovaFase from '../components/PopupNovaFase';
 import PopupConcederTitulo from '../components/PopupConcederTitulo';
+import PopupTrocarJogadorTorneio from '../components/PopupTrocarJogadorTorneio';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
 interface FaseTorneioDTO {
@@ -99,6 +101,7 @@ export function TelaTorneiosFases() {
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [showNovaFasePopup, setShowNovaFasePopup] = useState(false);
   const [showConcederPopup, setShowConcederPopup] = useState(false);
+  const [showTrocarJogadorTorneioPopup, setShowTrocarJogadorTorneioPopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -137,6 +140,10 @@ export function TelaTorneiosFases() {
   };
 
   const handleNovaFaseSubmit = () => {
+    queryClient.invalidateQueries({ queryKey: ['fases', torneioId] });
+  };
+
+  const handleTrocarJogadorTorneioSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['fases', torneioId] });
   };
 
@@ -386,6 +393,23 @@ export function TelaTorneiosFases() {
                     {currentUser?.cargo === 'PROPRIETARIO' && (
                         <button 
                           className="t-btn" 
+                          onClick={() => setShowTrocarJogadorTorneioPopup(true)}
+                          style={{
+                              background: '#7c3aed', 
+                              color: 'white', 
+                              border: 'none', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '8px'
+                          }}
+                        >
+                            <ArrowLeftRight size={18} /> Substituir Jogador (neste torneio)
+                        </button>
+                    )}
+
+                    {currentUser?.cargo === 'PROPRIETARIO' && (
+                        <button 
+                          className="t-btn" 
                           onClick={() => setShowConcederPopup(true)}
                           style={{
                               background: '#d97706', 
@@ -490,6 +514,15 @@ export function TelaTorneiosFases() {
             onClose={() => setShowConcederPopup(false)}
             temporadaId={temporadaId || ''}
             nomeTemporada={temporadaId || ''}
+        />
+      )}
+
+      {showTrocarJogadorTorneioPopup && (
+        <PopupTrocarJogadorTorneio
+            temporadaId={temporadaId || ''}
+            torneioId={torneioId || ''}
+            onClose={() => setShowTrocarJogadorTorneioPopup(false)}
+            onSuccess={handleTrocarJogadorTorneioSuccess}
         />
       )}
     </div>
