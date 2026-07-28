@@ -133,6 +133,7 @@ export function TelaTitulos() {
           position: relative;
           overflow: hidden;
           height: 100%;
+          cursor: pointer;
         }
 
         .titulo-card:hover {
@@ -386,7 +387,7 @@ export function TelaTitulos() {
                         {titulosAtivos.length > 0 ? (
                             <div className="titulos-grid">
                                 {titulosAtivos.map((titulo: Titulo) => (
-                                    <div key={titulo.id} className="titulo-card">
+                                    <div key={titulo.id} className="titulo-card" onClick={() => navigate(`/titulo/${titulo.id}`)}>
                                         <div className="titulo-image-container">
                                             {titulo.imagem ? (
                                                 <img src={titulo.imagem} alt={titulo.nome} className="titulo-img" />
@@ -426,7 +427,7 @@ export function TelaTitulos() {
 
                         <div className="titulos-grid">
                             {titulosInativos.map((titulo: Titulo) => (
-                                <div key={titulo.id} className="titulo-card" style={{filter: 'grayscale(0.1)'}}>
+                                <div key={titulo.id} className="titulo-card" style={{filter: 'grayscale(0.1)'}} onClick={() => navigate(`/titulo/${titulo.id}`)}>
                                     <div className="badge-historico">Histórico</div>
                                     <div className="titulo-image-container">
                                         {titulo.imagem ? (
