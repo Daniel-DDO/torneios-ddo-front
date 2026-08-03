@@ -26,7 +26,8 @@ import {
   Newspaper,
   ChevronLeft,
   Megaphone,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -44,6 +45,7 @@ interface Conquista {
   imagemConquista: string;
   idJogador: string;
   nomeJogador: string;
+  discordJogador?: string | null;
   imagemJogador: string | null;
   idClube: string;
   nomeClube: string;
@@ -163,6 +165,7 @@ export function TorneiosPage() {
   const [showNotificacaoPopup, setShowNotificacaoPopup] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const newsScrollRef = useRef<HTMLDivElement>(null);
+  const conquistasScrollRef = useRef<HTMLDivElement>(null);
   
   const { data: avatars = [] } = useQuery({
     queryKey: ['avatares'],
@@ -222,6 +225,11 @@ export function TorneiosPage() {
     }
 
     return ultimaConquista;
+  }, [conquistas]);
+
+  // Ordenado da mais recente para a mais antiga (o back já retorna assim, mas garantimos aqui)
+  const conquistasOrdenadas = useMemo(() => {
+    return [...conquistas].sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
   }, [conquistas]);
 
   const avatarMap = useMemo(() => {
@@ -318,6 +326,17 @@ export function TorneiosPage() {
         newsScrollRef.current.scrollBy({ left: -cardWidth, behavior: 'smooth' });
       } else {
         newsScrollRef.current.scrollBy({ left: cardWidth, behavior: 'smooth' });
+      }
+    }
+  };
+
+  const scrollConquistas = (direction: 'left' | 'right') => {
+    if (conquistasScrollRef.current) {
+      const cardWidth = isMobile ? conquistasScrollRef.current.clientWidth * 0.8 : 220;
+      if (direction === 'left') {
+        conquistasScrollRef.current.scrollBy({ left: -cardWidth, behavior: 'smooth' });
+      } else {
+        conquistasScrollRef.current.scrollBy({ left: cardWidth, behavior: 'smooth' });
       }
     }
   };
@@ -955,6 +974,188 @@ export function TorneiosPage() {
                     </div>
                     <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', fontSize: '0.85rem', fontWeight: '500', color: 'var(--primary)' }}>
                       Ler completa <ChevronRight size={14} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Carrossel de Conquistas Recentes */}
+          {!isLoadingConquistas && conquistasOrdenadas.length > 0 && (
+            <div className="conquistas-carousel-section" style={{ marginTop: '24px', position: 'relative' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                marginBottom: '12px',
+                padding: '0 4px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '600', fontSize: '1.1rem', color: 'var(--text-dark)' }}>
+                  <Sparkles size={20} className="text-primary" />
+                  Conquistas Recentes
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button 
+                    onClick={() => navigate('/titulos')} 
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--primary)',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 8px',
+                      borderRadius: '6px',
+                      marginRight: '4px'
+                    }}
+                  >
+                    Ver todas
+                  </button>
+                  <button onClick={() => scrollConquistas('left')} style={{ 
+                    padding: '6px', borderRadius: '50%', border: '1px solid var(--border-color)', 
+                    background: 'var(--card-bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                  }}>
+                    <ChevronLeft size={18} color="var(--text-dark)" />
+                  </button>
+                  <button onClick={() => scrollConquistas('right')} style={{ 
+                    padding: '6px', borderRadius: '50%', border: '1px solid var(--border-color)', 
+                    background: 'var(--card-bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                  }}>
+                    <ChevronRight size={18} color="var(--text-dark)" />
+                  </button>
+                </div>
+              </div>
+
+              <div 
+                ref={conquistasScrollRef}
+                style={{ 
+                  display: 'flex', 
+                  gap: '16px', 
+                  overflowX: 'auto', 
+                  paddingBottom: '10px',
+                  scrollBehavior: 'smooth',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none'
+                }}
+              >
+                {conquistasOrdenadas.map((conquista) => (
+                  <div 
+                    key={conquista.idConquista}
+                    className="tp-card"
+                    onClick={() => navigate('/titulos')}
+                    style={{ 
+                      minWidth: isMobile ? '170px' : '190px', 
+                      maxWidth: isMobile ? '170px' : '190px',
+                      flexShrink: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      textAlign: 'center',
+                      padding: '20px 14px',
+                      cursor: 'pointer',
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                    onMouseOver={(e) => {
+                      if (!isMobile) {
+                        e.currentTarget.style.transform = 'translateY(-3px)';
+                        e.currentTarget.style.boxShadow = '0 6px 14px rgba(0,0,0,0.08)';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (!isMobile) {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }
+                    }}
+                  >
+                    <div style={{
+                      width: '100%',
+                      textAlign: 'center',
+                      fontSize: '0.8rem',
+                      color: 'var(--text-gray)',
+                      fontWeight: '500',
+                      marginBottom: '4px'
+                    }}>
+                      {formatTimeAgo(conquista.dataHora)}
+                    </div>
+
+                    <img 
+                      src={conquista.imagemConquista} 
+                      alt={conquista.nomeTitulo} 
+                      style={{
+                        width: '72px',
+                        height: '72px',
+                        objectFit: 'contain',
+                        marginBottom: '14px',
+                        marginTop: '8px',
+                        filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))'
+                      }}
+                    />
+
+                    <div style={{
+                      fontSize: '0.8rem',
+                      fontWeight: '700',
+                      color: 'var(--text-dark)',
+                      marginBottom: '4px',
+                      lineHeight: 1.3,
+                      display: '-webkit-box',
+                      WebkitLineClamp: '2',
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}>
+                      {conquista.nomeTitulo}
+                    </div>
+
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--text-gray)',
+                      marginBottom: '10px',
+                      lineHeight: 1.3,
+                      display: '-webkit-box',
+                      WebkitLineClamp: '1',
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}>
+                    </div>
+
+                    <div style={{
+                      width: '100%',
+                      borderTop: '1px solid var(--border-color)',
+                      paddingTop: '10px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '2px'
+                    }}>
+                      <div style={{
+                        fontSize: '0.85rem',
+                        fontWeight: '600',
+                        color: 'var(--primary)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '100%'
+                      }}>
+                        {conquista.nomeJogador}
+                      </div>
+                      {conquista.discordJogador && (
+                        <div style={{
+                          fontSize: '0.7rem',
+                          color: 'var(--text-gray)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '100%'
+                        }}>
+                          @{conquista.discordJogador}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
