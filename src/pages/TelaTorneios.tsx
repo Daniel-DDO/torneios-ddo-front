@@ -20,7 +20,13 @@ import {
   UserCheck,
   Gavel,
   RefreshCw,
-  Shuffle
+  Shuffle,
+  Award,
+  Target,
+  Crown,
+  ShieldCheck,
+  TrendingUp,
+  Loader2
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -72,6 +78,42 @@ interface Avatar {
   nome?: string;
 }
 
+interface Temporada {
+  id: string;
+  nome: string;
+  dataInicio: string;
+  dataFim: string;
+  ativa: boolean;
+}
+
+interface PremioTemporada {
+  id: string | null;
+  categoria: string;
+  jogadorId: string;
+  jogadorNome: string;
+  valorEstatistica: number;
+  dataApuracao: string | null;
+}
+
+const CATEGORIA_LABELS: Record<string, string> = {
+  ARTILHEIRO: 'Artilheiro',
+  FAIR_PLAY: 'Fair Play',
+  MELHOR_DEFESA: 'Melhor defesa',
+  MELHOR_JOGADOR: 'Melhor jogador',
+  MELHOR_RANKING: 'Melhor ranking',
+};
+
+const CATEGORIA_ICONS: Record<string, React.ElementType> = {
+  ARTILHEIRO: Target,
+  FAIR_PLAY: ShieldCheck,
+  MELHOR_DEFESA: Shield,
+  MELHOR_JOGADOR: Star,
+  MELHOR_RANKING: TrendingUp,
+};
+
+const normalizarCategoria = (categoria: string) =>
+  CATEGORIA_LABELS[categoria] ?? categoria.charAt(0) + categoria.slice(1).toLowerCase().replace(/_/g, ' ');
+
 const fetchAvatarsService = async () => {
   const response = await API.get('/api/avatares');
   if (Array.isArray(response)) return response;
@@ -87,6 +129,26 @@ const fetchTorneiosPorTemporadaService = async (temporadaId: string) => {
 const fetchCompeticoesSimplesService = async () => {
     const response = await API.get('/competicao/lista-simples');
     return response.data;
+};
+
+const fetchTemporadaService = async (temporadaId: string) => {
+  const response = await API.get(`/temporada/${temporadaId}`);
+  return response.data;
+};
+
+const fetchPremiosDefinitivosService = async (temporadaId: string) => {
+  const response = await API.get(`/api/premios-temporada/${temporadaId}`);
+  return response.data;
+};
+
+const fetchPremiosPreviewService = async (temporadaId: string) => {
+  const response = await API.get(`/api/premios-temporada/preview/${temporadaId}`);
+  return response.data;
+};
+
+const apurarPremiosService = async (temporadaId: string) => {
+  const response = await API.post(`/api/premios-temporada/apurar/${temporadaId}`);
+  return response.data;
 };
 
 export function TelaTorneios() {
@@ -127,6 +189,50 @@ export function TelaTorneios() {
     });
     return map;
   }, [competicoes]);
+
+  // ----- Temporada / Prêmios -----
+  const { data: temporada } = useQuery<Temporada>({
+    queryKey: ['temporada', temporadaId],
+    queryFn: () => fetchTemporadaService(temporadaId || ''),
+    enabled: !!temporadaId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const isPeriodoEncerrado = useMemo(() => {
+    if (!temporada?.dataFim) return false;
+    const hoje = new Date();
+    const dataFim = new Date(`${temporada.dataFim}T23:59:59`);
+    return hoje > dataFim;
+  }, [temporada]);
+
+  const { data: premios = [], isLoading: isLoadingPremios, isFetching: isFetchingPremios } = useQuery<PremioTemporada[]>({
+    queryKey: ['premios-temporada', temporadaId, isPeriodoEncerrado],
+    queryFn: () =>
+      isPeriodoEncerrado
+        ? fetchPremiosDefinitivosService(temporadaId || '')
+        : fetchPremiosPreviewService(temporadaId || ''),
+    enabled: !!temporadaId && !!temporada,
+    staleTime: 1000 * 60,
+  });
+
+  const [isApurando, setIsApurando] = useState(false);
+
+  const handleApurarPremios = async () => {
+    if (!temporadaId) return;
+    if (!window.confirm('Deseja apurar os prêmios definitivos desta temporada? Essa ação irá gravar o resultado final.')) return;
+
+    setIsApurando(true);
+    try {
+      await apurarPremiosService(temporadaId);
+      queryClient.invalidateQueries({ queryKey: ['premios-temporada', temporadaId] });
+    } catch (error) {
+      console.error('Erro ao apurar prêmios:', error);
+      window.alert('Não foi possível apurar os prêmios. Tente novamente.');
+    } finally {
+      setIsApurando(false);
+    }
+  };
+  // ----- Fim Temporada / Prêmios -----
 
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
@@ -213,6 +319,7 @@ export function TelaTorneios() {
 
   const hasAdminPrivileges = currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
   const canSwapPlayers = currentUser && ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
+  const isProprietario = currentUser && currentUser.cargo === 'PROPRIETARIO';
 
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
@@ -343,6 +450,56 @@ export function TelaTorneios() {
             background-color: var(--hover-bg);
             border-color: var(--primary);
             color: var(--primary);
+        }
+
+        .premio-card {
+          border: 1px solid var(--border-color);
+          border-radius: var(--radius);
+          padding: 16px;
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          background-color: var(--hover-bg);
+        }
+
+        .premio-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background-color: var(--bg-card);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          color: var(--primary);
+        }
+
+        .premio-categoria {
+          font-size: 0.8rem;
+          color: var(--text-gray);
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
+        .premio-jogador {
+          font-size: 1rem;
+          font-weight: 700;
+          margin-top: 2px;
+          color: var(--text-dark);
+        }
+
+        .premio-valor {
+          font-size: 0.85rem;
+          color: var(--text-gray);
+        }
+
+        .spin {
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
 
         @media (max-width: 768px) {
@@ -514,7 +671,28 @@ export function TelaTorneios() {
                     </button>
                 )}
 
-                {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
+                {isProprietario && (
+                    <button 
+                      className="t-btn" 
+                      onClick={handleApurarPremios}
+                      disabled={isApurando}
+                      style={{
+                          background: 'var(--bg-card)', 
+                          color: 'var(--text-primary)', 
+                          border: '1px solid var(--border-color)', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '8px',
+                          cursor: isApurando ? 'not-allowed' : 'pointer',
+                          opacity: isApurando ? 0.7 : 1,
+                      }}
+                    >
+                        {isApurando ? <Loader2 size={18} className="spin" /> : <Award size={18} />}
+                        Apurar prêmios
+                    </button>
+                )}
+
+                {isProprietario && (
                     <button 
                       className="t-btn" 
                       onClick={() => setShowNovoTorneioPopup(true)}
@@ -585,6 +763,55 @@ export function TelaTorneios() {
                     )}
                   </tbody>
                 </table>
+              )}
+            </div>
+
+            <div className="table-container">
+              <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Prêmios da Temporada</h3>
+                {!isPeriodoEncerrado && (
+                  <span className="status-badge status-andamento">Prévia — sujeito a alteração</span>
+                )}
+              </div>
+
+              {isLoadingPremios ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>
+                  Carregando prêmios...
+                </div>
+              ) : premios.length === 0 ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-gray)' }}>
+                  Nenhum prêmio disponível ainda.
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px', padding: '20px 24px' }}>
+                  {premios.map((premio) => {
+                    const Icone = CATEGORIA_ICONS[premio.categoria] ?? Crown;
+                    return (
+                      <div key={premio.categoria} className="premio-card">
+                        <div className="premio-icon">
+                          <Icone size={20} />
+                        </div>
+                        <div>
+                          <div className="premio-categoria">
+                            {normalizarCategoria(premio.categoria)}
+                          </div>
+                          <div className="premio-jogador">
+                            {premio.jogadorNome}
+                          </div>
+                          <div className="premio-valor">
+                            {premio.valorEstatistica}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {isFetchingPremios && !isLoadingPremios && (
+                <div style={{ padding: '8px 24px', fontSize: '0.75rem', color: 'var(--text-gray)' }}>
+                  Atualizando...
+                </div>
               )}
             </div>
 
