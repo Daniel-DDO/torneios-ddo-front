@@ -73,6 +73,10 @@ interface Player {
   saldoVirtual: number;
   pontosCoeficiente: number;
   insignias: PlayerInsignia[];
+  rankPoints: number;
+  rank: string | null;
+  partidasRankeadas: number;
+  strikesRebaixamento: number;
 }
 
 interface UserData {
@@ -121,6 +125,39 @@ interface VictimData {
   saldoGols: number;
   aproveitamento: string;
 }
+
+interface RankConfig {
+  nome: string;
+  min: number;
+  max: number;
+  cor: string;
+  corClara: string;
+}
+
+const RANKS_CONFIG: RankConfig[] = [
+  { nome: 'SEM_RANK', min: 0, max: 199, cor: '#94a3b8', corClara: 'rgba(148, 163, 184, 0.12)' },
+  { nome: 'BRONZE', min: 200, max: 499, cor: '#b45309', corClara: 'rgba(180, 83, 9, 0.12)' },
+  { nome: 'PRATA', min: 500, max: 899, cor: '#94a3b8', corClara: 'rgba(148, 163, 184, 0.15)' },
+  { nome: 'OURO', min: 900, max: 1399, cor: '#f59e0b', corClara: 'rgba(245, 158, 11, 0.12)' },
+  { nome: 'PLATINA', min: 1400, max: 1999, cor: '#0ea5e9', corClara: 'rgba(14, 165, 233, 0.12)' },
+  { nome: 'DIAMANTE', min: 2000, max: 2699, cor: '#8b5cf6', corClara: 'rgba(139, 92, 246, 0.12)' },
+  { nome: 'CHAMPION', min: 2700, max: Infinity, cor: '#ef4444', corClara: 'rgba(239, 68, 68, 0.12)' },
+];
+
+const RANKS_LABELS: Record<string, string> = {
+  SEM_RANK: 'Sem Ranking',
+  BRONZE: 'Bronze',
+  PRATA: 'Prata',
+  OURO: 'Ouro',
+  PLATINA: 'Platina',
+  DIAMANTE: 'Diamante',
+  CHAMPION: 'Champion',
+};
+
+const getRankConfig = (rankPoints: number): RankConfig => {
+  const pontos = Math.max(rankPoints || 0, 0);
+  return RANKS_CONFIG.find(r => pontos >= r.min && pontos <= r.max) || RANKS_CONFIG[RANKS_CONFIG.length - 1];
+};
 
 const fetchAvatarsService = async () => {
   const response = await API.get('/api/avatares');
@@ -267,7 +304,7 @@ export function TelaPerfilJogador() {
   const fetchPlayerDetails = async (playerId: string) => {
     try {
       setLoading(true);
-      const data = await API.get(`/jogador/${playerId}`);
+      const data = await API.get(`jogador/${playerId}`);
       const playerData = (data && (data as any).data) ? (data as any).data : data;
       setPlayer(playerData as Player);
     } catch (error) {
@@ -335,6 +372,36 @@ export function TelaPerfilJogador() {
     if (!currentUser || !player) return false;
     return currentUser.id === player.id;
   }, [currentUser, player]);
+
+  const rankInfo = useMemo(() => {
+    if (!player) return null;
+
+    const rankPoints = player.rankPoints || 0;
+    // se o back mandar rank null, tratamos como SEM_RANK, igual ao enum RankJogador
+    const rankKey = player.rank || 'SEM_RANK';
+    const config = getRankConfig(rankPoints);
+    const rankIndex = RANKS_CONFIG.findIndex(r => r.nome === config.nome);
+    const isMaxRank = config.nome === 'CHAMPION';
+
+    const range = isMaxRank ? 1 : (config.max - config.min + 1);
+    const progressoAtual = isMaxRank ? 100 : Math.min(100, Math.max(0, ((rankPoints - config.min) / range) * 100));
+
+    const pontosParaProximo = isMaxRank ? 0 : Math.max(0, (config.max + 1) - rankPoints);
+    const proximoRank = isMaxRank ? null : RANKS_CONFIG[rankIndex + 1];
+
+    return {
+        label: RANKS_LABELS[rankKey] || RANKS_LABELS[config.nome],
+        cor: config.cor,
+        corClara: config.corClara,
+        rankPoints,
+        progressoAtual,
+        pontosParaProximo,
+        proximoRankLabel: proximoRank ? RANKS_LABELS[proximoRank.nome] : null,
+        isMaxRank,
+        partidasRankeadas: player.partidasRankeadas || 0,
+        strikes: player.strikesRebaixamento || 0,
+    };
+  }, [player]);
 
   const handleDiscordChangeSuccess = (novoDiscord: string) => {
     setPlayer((prev) => prev ? { ...prev, discord: novoDiscord } : prev);
@@ -1223,6 +1290,103 @@ export function TelaPerfilJogador() {
             border-radius: 4px;
         }
 
+        .rank-card-content {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+        }
+
+        .rank-badge-visual {
+            width: 100px;
+            height: 100px;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            position: relative;
+            border: 2px solid;
+        }
+
+        .rank-badge-icon {
+            width: 48px;
+            height: 48px;
+        }
+
+        .rank-info-main {
+            flex: 1;
+        }
+
+        .rank-name-row {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        .rank-name {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+
+        .rank-points {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-gray);
+        }
+
+        .rank-progress-track {
+            height: 12px;
+            background: var(--hover-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 14px 0 8px 0;
+            border: 1px solid var(--border-color);
+        }
+
+        .rank-progress-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.4s ease;
+        }
+
+        .rank-progress-footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-gray);
+            font-weight: 600;
+        }
+
+        .rank-side-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding-left: 28px;
+            border-left: 1px dashed var(--border-color);
+        }
+
+        .rank-side-stat {
+            text-align: center;
+            min-width: 90px;
+        }
+
+        .rank-side-stat-val {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1;
+        }
+
+        .rank-side-stat-lbl {
+            font-size: 0.7rem;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
         @media (max-width: 768px) {
             .profile-hero { padding: 24px; }
             .hero-body { flex-direction: column; text-align: center; gap: 20px; }
@@ -1232,6 +1396,8 @@ export function TelaPerfilJogador() {
             .content-grid { grid-template-columns: 1fr; }
             .achievements-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
             .victims-grid { grid-template-columns: 1fr; }
+            .rank-card-content { flex-direction: column; align-items: stretch; }
+            .rank-side-stats { flex-direction: row; justify-content: space-around; padding-left: 0; border-left: none; border-top: 1px dashed var(--border-color); padding-top: 16px; }
         }
       `}</style>
 
@@ -1730,6 +1896,59 @@ export function TelaPerfilJogador() {
                             </div>
                         )}
                     </div>
+
+                    {rankInfo && (
+                        <div className="card-box" style={{ marginTop: '24px' }}>
+                            <div className="card-header">
+                                <div className="card-title"><Award size={20} style={{ color: rankInfo.cor }} /> Ranking Competitivo</div>
+                            </div>
+
+                            <div className="rank-card-content">
+                                <div
+                                    className="rank-badge-visual"
+                                    style={{ background: rankInfo.corClara, borderColor: rankInfo.cor }}
+                                >
+                                    <Trophy size={44} style={{ color: rankInfo.cor }} />
+                                </div>
+
+                                <div className="rank-info-main">
+                                    <div className="rank-name-row">
+                                        <span className="rank-name" style={{ color: rankInfo.cor }}>{rankInfo.label}</span>
+                                        <span className="rank-points">{rankInfo.rankPoints} pts</span>
+                                    </div>
+
+                                    <div className="rank-progress-track">
+                                        <div
+                                            className="rank-progress-fill"
+                                            style={{ width: `${rankInfo.progressoAtual}%`, background: rankInfo.cor }}
+                                        ></div>
+                                    </div>
+
+                                    <div className="rank-progress-footer">
+                                        {rankInfo.isMaxRank ? (
+                                            <span>Rank máximo alcançado</span>
+                                        ) : (
+                                            <span>Faltam <strong style={{ color: 'var(--text-dark)' }}>{rankInfo.pontosParaProximo} pts</strong> para {rankInfo.proximoRankLabel}</span>
+                                        )}
+                                        <span>{rankInfo.progressoAtual.toFixed(0)}%</span>
+                                    </div>
+                                </div>
+
+                                <div className="rank-side-stats">
+                                    <div className="rank-side-stat">
+                                        <div className="rank-side-stat-val">{rankInfo.partidasRankeadas}</div>
+                                        <div className="rank-side-stat-lbl">Partidas Rankeadas</div>
+                                    </div>
+                                    <div className="rank-side-stat">
+                                        <div className="rank-side-stat-val" style={{ color: rankInfo.strikes > 0 ? '#ef4444' : 'var(--text-dark)' }}>
+                                            {rankInfo.strikes}
+                                        </div>
+                                        <div className="rank-side-stat-lbl">Strikes Rebaix.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="card-box" style={{ marginTop: '24px' }}>
                          <div className="card-header">
