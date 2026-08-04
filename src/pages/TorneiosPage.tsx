@@ -399,6 +399,24 @@ export function TorneiosPage() {
       botao_texto: 'Ver Insígnias',
       link_destino: '/insignias'
     },
+    {
+      id: 5,
+      nome: 'Ranking de Jogadores',
+      descricao: 'Confira os melhores jogadores.',
+      status: 'em_andamento',
+      imagem: 'https://img.olympics.com/images/image/private/t_s_16_9_g_auto/t_s_w1460/f_auto/primary/akaaqgyedrsjk22tohzs?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      botao_texto: 'Ver Ranking',
+      link_destino: '/ranking'
+    },
+    {
+      id: 6,
+      nome: 'Hall da Fama',
+      descricao: 'Os maiores recordes da história.',
+      status: 'inscricoes_abertas',
+      imagem: 'https://a.espncdn.com/photo/2020/0828/r737639_1296x729_16-9.jpg?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      botao_texto: 'Ver Hall da Fama',
+      link_destino: '/hall-da-fama'
+    },
   ];
 
   const getStatusLabel = (status: string) => {
