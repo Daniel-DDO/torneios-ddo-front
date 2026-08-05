@@ -1,7 +1,7 @@
 import axios, { type AxiosRequestConfig, type AxiosError } from 'axios';
 
 const SERVERS = [
-  'https://torneios-ddo-backend.onrender.com',
+  'https://torneios-ddo-back-osyf.onrender.com',
   'https://torneios-ddo-599q.onrender.com'
   //'http://localhost:8080'
 ];
@@ -14,9 +14,9 @@ const MICROSERVICE_URL = 'https://backend2torneios.onrender.com';
 // porque o Render free tier "dorme" a instância e pode demorar pra acordar.
 const ANALISE_TORNEIOS_URL = 'https://analise-torneios.onrender.com';
 
-let currentServerIndex = Math.floor(Math.random() * SERVERS.length);
+const isDev = import.meta.env.DEV;
 
-console.log(`Iniciando conexão principal com: ${SERVERS[currentServerIndex]}`);
+let currentServerIndex = Math.floor(Math.random() * SERVERS.length);
 
 const axiosInstance = axios.create({
   baseURL: SERVERS[currentServerIndex],
@@ -80,10 +80,12 @@ axiosInstance.interceptors.response.use(
     }
 
     if (originalRequest && !originalRequest._retry && shouldSwitchServer(error)) {
-      originalRequest._retry = true; 
+      originalRequest._retry = true;
       currentServerIndex = (currentServerIndex + 1) % SERVERS.length;
       const newUrl = SERVERS[currentServerIndex];
-      console.warn(`Erro no servidor principal. Trocando rota para: ${newUrl}`);
+      if (isDev) {
+        console.warn(`Erro no servidor principal. Trocando rota para: ${newUrl}`);
+      }
       originalRequest.baseURL = newUrl;
       await new Promise(resolve => setTimeout(resolve, 1000));
       return axiosInstance(originalRequest);
@@ -113,13 +115,15 @@ analiseInstance.interceptors.response.use(
 );
 
 function handleLogout() {
-    console.warn('Sessão expirada. Logout...');
+    if (isDev) {
+      console.warn('Sessão expirada. Logout...');
+    }
     localStorage.removeItem('token');
     window.location.href = '/';
 }
 
 function shouldSwitchServer(error: AxiosError) {
-  if (!error.response) return true; 
+  if (!error.response) return true;
   const status = error.response.status;
   return status >= 500 && status < 600;
 }
