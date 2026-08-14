@@ -42,6 +42,7 @@ import PopupGeral from '../components/PopupGeral';
 import PopupGeralConf from '../components/PopupGeralConf';
 import '../styles/TorneiosPage.css';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
+import PopupAnularPartida from '../components/PopupAnularPartida';
 
 interface JogadorClubeDTO {
   id: string;
@@ -86,6 +87,9 @@ interface PartidaDTO {
   slotNaProxima: number | null;
   receitaMandante: number | null;
   receitaVisitante: number | null;
+  anulada: boolean;
+  motivoAnulacao: string | null;
+  anuladaEm: string | null;
 }
 
 interface ProbabilidadeDTO {
@@ -288,6 +292,7 @@ export function TelaPartidaSelecionada() {
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [showRegistrarPopup, setShowRegistrarPopup] = useState(false);
   const [showReportarPopup, setShowReportarPopup] = useState(false);
+  const [showAnularPopup, setShowAnularPopup] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
 
@@ -473,6 +478,11 @@ export function TelaPartidaSelecionada() {
   const hasReportPermission = () => {
     if (!currentUser) return false;
     return ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
+  };
+
+  const hasOwnerPermission = () => {
+    if (!currentUser) return false;
+    return currentUser.cargo === 'PROPRIETARIO';
   };
 
   const formatDate = (dateString: string | null) => {
@@ -1262,7 +1272,7 @@ export function TelaPartidaSelecionada() {
               <div className="match-grid">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-                  {probabilidade && !partida.realizada && (
+                  {probabilidade && !partida.realizada && !partida.anulada && (
                     <div className="detail-card">
                       <div className="card-header"><Percent size={20} /> Probabilidade de Vitória</div>
 
@@ -1305,6 +1315,25 @@ export function TelaPartidaSelecionada() {
 
                   <div className="detail-card">
                     <div className="card-header"><FileText size={20} /> Informações da Partida</div>
+                    {partida.anulada && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 10,
+                        padding: '12px 14px',
+                        background: 'rgba(239, 68, 68, 0.08)',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        borderRadius: 12,
+                        color: '#b91c1c',
+                        fontSize: '0.85rem',
+                        marginBottom: 16
+                      }}>
+                        <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+                        <span>
+                          <strong>Partida anulada.</strong> {partida.motivoAnulacao}
+                        </span>
+                      </div>
+                    )}
                     <div className="info-row">
                       <div className="info-label"><MapPin size={16} /> Estádio</div>
                       <div className="info-value">{partida.estadio || 'Não definido'}</div>
@@ -1378,9 +1407,35 @@ export function TelaPartidaSelecionada() {
                       )}
 
                       {hasEditPermission() && partida.mandante && partida.visitante && (
-                        <button className="btn-full btn-admin" onClick={() => setShowRegistrarPopup(true)}>
+                        <button
+                          className="btn-full btn-admin"
+                          onClick={() => setShowRegistrarPopup(true)}
+                          disabled={partida.anulada}
+                          title={partida.anulada ? 'Partida anulada — não é possível registrar resultado' : undefined}
+                          style={partida.anulada ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+                        >
                           <Edit3 size={18} /> Registrar Resultado
                         </button>
+                      )}
+
+                      {hasOwnerPermission() && partida.mandante && partida.visitante && (
+                        partida.anulada ? (
+                          <button
+                            className="btn-full"
+                            onClick={() => setShowAnularPopup(true)}
+                            style={{ background: '#10b981', color: 'white' }}
+                          >
+                            <ShieldCheck size={18} /> Desanular Partida
+                          </button>
+                        ) : (
+                          <button
+                            className="btn-full"
+                            onClick={() => setShowAnularPopup(true)}
+                            style={{ background: '#ef4444', color: 'white' }}
+                          >
+                            <AlertTriangle size={18} /> Anular Partida
+                          </button>
+                        )
                       )}
 
                       {hasReportPermission() && partida.mandante && partida.visitante && (
@@ -1644,6 +1699,14 @@ export function TelaPartidaSelecionada() {
           timeMandante={partida.mandante.clubeNome}
           visitante={partida.visitante.jogadorNome}
           timeVisitante={partida.visitante.clubeNome}
+        />
+      )}
+      {showAnularPopup && partida && (
+        <PopupAnularPartida
+          partidaId={partida.id}
+          modo={partida.anulada ? 'desanular' : 'anular'}
+          onClose={() => setShowAnularPopup(false)}
+          onSuccess={() => { refetch(); }}
         />
       )}
     </div>
