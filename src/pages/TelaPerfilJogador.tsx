@@ -624,6 +624,30 @@ export function TelaPerfilJogador() {
             transform: translateY(-2px);
         }
 
+        .btn-ver-partidas {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: var(--hover-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-dark);
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 14px;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn-ver-partidas:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
         .btn-change-discord {
             display: inline-flex;
             align-items: center;
@@ -1697,6 +1721,12 @@ export function TelaPerfilJogador() {
                                             <span>Suspenso até {formatDate(player.suspensoAte)}</span>
                                         </div>
                                     )}
+                                    <button
+                                        className="btn-ver-partidas"
+                                        onClick={() => navigate(`/jogador/${player.id}/partidas`)}
+                                    >
+                                        <Gamepad2 size={16} /> Ver Partidas
+                                    </button>
                                 </div>
                             </div>
                         </div>
