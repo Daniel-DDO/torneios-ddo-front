@@ -20,7 +20,9 @@ import {
   Crown,
   Target,
   Activity,
-  TrendingUp
+  TrendingUp,
+  History,
+  Ban
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -46,9 +48,48 @@ interface PlayerStats {
   pontosCoeficiente: number;
 }
 
+interface JogadorClubeResumo {
+  id: string;
+  jogadorId: string;
+  jogadorNome: string;
+  jogadorImagem: string | null;
+  clubeId: string;
+  clubeNome: string;
+  clubeImagem: string | null;
+  clubeSigla: string;
+}
+
+interface PartidaHistorico {
+  id: string;
+  faseId: string;
+  rodadaId: string | null;
+  numeroRodada: number | null;
+  dataHora: string;
+  estadio: string | null;
+  mandante: JogadorClubeResumo | null;
+  visitante: JogadorClubeResumo | null;
+  golsMandante: number | null;
+  golsVisitante: number | null;
+  realizada: boolean;
+  wo: boolean;
+  houvePenaltis: boolean;
+  penaltisMandante: number | null;
+  penaltisVisitante: number | null;
+  anulada: boolean;
+  motivoAnulacao: string | null;
+}
+
+interface ResumoConfrontoDireto {
+  vitoriasJogador1: number;
+  vitoriasJogador2: number;
+  empates: number;
+}
+
 interface ComparacaoResponse {
   jogador1: PlayerStats;
   jogador2: PlayerStats;
+  confrontosDiretos: PartidaHistorico[];
+  resumoConfrontoDireto: ResumoConfrontoDireto;
 }
 
 interface UserData {
@@ -179,6 +220,14 @@ export function TelaComparandoJogador() {
     }).format(value);
   };
 
+  const formatData = (iso: string) => {
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(new Date(iso));
+  };
+
   const parsePercentage = (val: string) => parseFloat(val.replace('%', ''));
 
   const getBarWidth = (val1: number, val2: number) => {
@@ -234,6 +283,42 @@ export function TelaComparandoJogador() {
         </div>
       </div>
     );
+  };
+
+  const getPlacarConfronto = (partida: PartidaHistorico, jogador1Id: string) => {
+    if (partida.wo) return 'W.O.';
+    if (partida.golsMandante === null || partida.golsVisitante === null) return '-';
+
+    const mandanteEhJogador1 = partida.mandante?.jogadorId === jogador1Id;
+    const golsJ1 = mandanteEhJogador1 ? partida.golsMandante : partida.golsVisitante;
+    const golsJ2 = mandanteEhJogador1 ? partida.golsVisitante : partida.golsMandante;
+
+    let placar = `${golsJ1} x ${golsJ2}`;
+
+    if (partida.houvePenaltis && partida.penaltisMandante !== null && partida.penaltisVisitante !== null) {
+      const penJ1 = mandanteEhJogador1 ? partida.penaltisMandante : partida.penaltisVisitante;
+      const penJ2 = mandanteEhJogador1 ? partida.penaltisVisitante : partida.penaltisMandante;
+      placar += ` (${penJ1} x ${penJ2} pên.)`;
+    }
+
+    return placar;
+  };
+
+  const getVencedorConfronto = (partida: PartidaHistorico, jogador1Id: string, jogador2Id: string) => {
+    if (partida.golsMandante === null || partida.golsVisitante === null) return null;
+
+    const mandanteEhJogador1 = partida.mandante?.jogadorId === jogador1Id;
+    let golsJ1 = mandanteEhJogador1 ? partida.golsMandante : partida.golsVisitante;
+    let golsJ2 = mandanteEhJogador1 ? partida.golsVisitante : partida.golsMandante;
+
+    if (golsJ1 === golsJ2 && partida.houvePenaltis && partida.penaltisMandante !== null && partida.penaltisVisitante !== null) {
+      golsJ1 = mandanteEhJogador1 ? partida.penaltisMandante : partida.penaltisVisitante;
+      golsJ2 = mandanteEhJogador1 ? partida.penaltisVisitante : partida.penaltisMandante;
+    }
+
+    if (golsJ1 > golsJ2) return jogador1Id;
+    if (golsJ2 > golsJ1) return jogador2Id;
+    return null;
   };
 
   return (
@@ -523,6 +608,108 @@ export function TelaComparandoJogador() {
                         <StatRow label="Saldo Virtual" val1={comparacao.jogador1.saldo} val2={comparacao.jogador2.saldo} type="currency" />
                     </div>
 
+                  </div>
+
+                  <div className="tp-card" style={{ padding: '24px' }}>
+                      <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-dark)', fontSize: '1.1rem' }}>
+                          <History size={20} color="var(--primary)" />
+                          Confronto Direto
+                      </h3>
+
+                      {comparacao.confrontosDiretos.length === 0 ? (
+                          <p style={{ color: 'var(--text-gray)', fontSize: '0.95rem', textAlign: 'center', padding: '20px 0' }}>
+                              Estes jogadores ainda não se enfrentaram.
+                          </p>
+                      ) : (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '32px', marginBottom: '28px', padding: '20px', background: 'var(--bg-body)', borderRadius: '12px' }}>
+                              <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--primary)' }}>{comparacao.resumoConfrontoDireto.vitoriasJogador1}</div>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '4px' }}>{comparacao.jogador1.nome}</div>
+                              </div>
+                              <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--text-gray)' }}>{comparacao.resumoConfrontoDireto.empates}</div>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '4px' }}>Empates</div>
+                              </div>
+                              <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '1.8rem', fontWeight: '800', color: '#ef4444' }}>{comparacao.resumoConfrontoDireto.vitoriasJogador2}</div>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-gray)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '4px' }}>{comparacao.jogador2.nome}</div>
+                              </div>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {comparacao.confrontosDiretos.map((partida) => {
+                                  const vencedorId = getVencedorConfronto(partida, comparacao.jogador1.id, comparacao.jogador2.id);
+                                  const clubeJ1 = partida.mandante?.jogadorId === comparacao.jogador1.id ? partida.mandante : partida.visitante;
+                                  const clubeJ2 = partida.mandante?.jogadorId === comparacao.jogador1.id ? partida.visitante : partida.mandante;
+
+                                  return (
+                                      <div
+                                          key={partida.id}
+                                          style={{
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'space-between',
+                                              padding: '14px 16px',
+                                              background: 'var(--bg-body)',
+                                              borderRadius: '10px',
+                                              border: partida.anulada ? '1px dashed var(--border-color)' : '1px solid transparent',
+                                              opacity: partida.anulada ? 0.6 : 1
+                                          }}
+                                      >
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '32%' }}>
+                                              {clubeJ1?.clubeImagem && (
+                                                  <img
+                                                      src={clubeJ1.clubeImagem}
+                                                      alt={clubeJ1.clubeSigla}
+                                                      style={{ width: '24px', height: '24px', objectFit: 'contain', flexShrink: 0 }}
+                                                  />
+                                              )}
+                                              <span style={{
+                                                  fontWeight: vencedorId === comparacao.jogador1.id ? '800' : '500',
+                                                  color: vencedorId === comparacao.jogador1.id ? 'var(--primary)' : 'var(--text-dark)',
+                                                  fontSize: '0.9rem'
+                                              }}>
+                                                  {clubeJ1?.clubeSigla || '-'}
+                                              </span>
+                                          </div>
+
+                                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '36%' }}>
+                                              <span style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-dark)' }}>
+                                                  {getPlacarConfronto(partida, comparacao.jogador1.id)}
+                                              </span>
+                                              <span style={{ fontSize: '0.7rem', color: 'var(--text-gray)', marginTop: '2px' }}>
+                                                  {formatData(partida.dataHora)}
+                                              </span>
+                                              {partida.anulada && (
+                                                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: '#ef4444', marginTop: '2px' }}>
+                                                      <Ban size={12} /> Anulada
+                                                  </span>
+                                              )}
+                                          </div>
+
+                                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', width: '32%' }}>
+                                              <span style={{
+                                                  fontWeight: vencedorId === comparacao.jogador2.id ? '800' : '500',
+                                                  color: vencedorId === comparacao.jogador2.id ? '#ef4444' : 'var(--text-dark)',
+                                                  fontSize: '0.9rem'
+                                              }}>
+                                                  {clubeJ2?.clubeSigla || '-'}
+                                              </span>
+                                              {clubeJ2?.clubeImagem && (
+                                                  <img
+                                                      src={clubeJ2.clubeImagem}
+                                                      alt={clubeJ2.clubeSigla}
+                                                      style={{ width: '24px', height: '24px', objectFit: 'contain', flexShrink: 0 }}
+                                                  />
+                                              )}
+                                          </div>
+                                      </div>
+                                  );
+                              })}
+                          </div>
+                        </>
+                      )}
                   </div>
 
               </div>
