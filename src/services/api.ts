@@ -172,3 +172,13 @@ export const API_ANALISE = {
         return analiseInstance.post(endpoint, data, config);
     }
 };
+
+// Usado pelo useLeilaoSocket para abrir o WS no mesmo servidor que o axios
+// está usando agora, e para poder rotacionar entre os 2 em caso de queda.
+export function getActiveHttpBaseURL(): string {
+  return SERVERS[currentServerIndex];
+}
+
+export function getAllHttpBaseURLs(): string[] {
+  return SERVERS;
+}

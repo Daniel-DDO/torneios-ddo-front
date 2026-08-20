@@ -31,6 +31,7 @@ import PopupUser from '../components/PopupUser';
 import PopupCriarLeilao from '../components/PopupCriarLeilao';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
+import { useLeilaoSocket, type FeedItemDTO } from '../hooks/useLeilaoSocket';
 
 interface Leilao {
   id: string;
@@ -39,6 +40,7 @@ interface Leilao {
   dataInicio: string;
   dataFim: string;
   ativo: boolean;
+  selecao?: boolean;
 }
 
 interface ClubeDTO {
@@ -55,16 +57,6 @@ interface ClubeDTO {
   titulos: number;
   valorAvaliado: number;
   lanceMinimo: number;
-}
-
-interface FeedItemDTO {
-  idJogador: string;
-  nomeJogador: string;
-  idClube: string;
-  nomeClube: string;
-  imagemClube: string;
-  valor: number;
-  dataHora: string;
 }
 
 interface ClubeDisputadoDTO {
@@ -216,25 +208,75 @@ export function TelaLeilao() {
     return () => clearInterval(timer);
   }, [activeLeilao]);
 
+  // Carga inicial só — as próximas entradas chegam via WebSocket (onFeed abaixo)
   const { data: feedData = [] } = useQuery<FeedItemDTO[]>({
     queryKey: ['leilao-feed', activeLeilao?.id],
     queryFn: () => fetchLeilaoFeed(activeLeilao!.id),
     enabled: !!activeLeilao?.id,
-    refetchInterval: 5000 
   });
 
+  // Esse aqui o back pediu pra manter em polling (é uma agregação cara pra rodar
+  // a cada lance de qualquer usuário), só espaçamos o intervalo.
   const { data: maisDisputados = [] } = useQuery<ClubeDisputadoDTO[]>({
     queryKey: ['leilao-disputados', activeLeilao?.id],
     queryFn: () => fetchMaisDisputados(activeLeilao!.id),
     enabled: !!activeLeilao?.id,
-    refetchInterval: 10000
+    refetchInterval: 25000
   });
 
-  const { data: meuStatus = [] } = useQuery<StatusLanceJogadorDTO[]>({
+  // Carga inicial + refetch sob demanda quando o WS avisa que algum clube
+  // que eu disputo mudou de líder (onAtualizacoesLances abaixo).
+  //
+  // IMPORTANTE: usamos o `refetch` retornado pelo próprio useQuery (via ref),
+  // e NÃO queryClient.invalidateQueries/refetchQueries por queryKey.
+  // Motivo: invalidate/refetch "por fora" (por key) depende do React Query
+  // considerar a query "ativa" no exato instante da chamada, e isso falha
+  // silenciosamente em fluxos orientados por evento externo (WS) como este —
+  // a call simplesmente não dispara nenhum GET. Chamar o `refetch` do próprio
+  // hook aponta direto pro observer certo e sempre dispara.
+  const {
+    data: meuStatus = [],
+    refetch: refetchMeuStatus,
+  } = useQuery<StatusLanceJogadorDTO[]>({
     queryKey: ['meu-status', activeLeilao?.id],
     queryFn: () => fetchMeuStatus(activeLeilao!.id),
     enabled: !!activeLeilao?.id && !!currentUser,
-    refetchInterval: 5000
+  });
+
+  // Mantém sempre a versão mais atual do refetch (evita closure velha dentro
+  // do handler do socket, já que o efeito do useLeilaoSocket só reconecta
+  // quando o leilaoId muda).
+  const refetchMeuStatusRef = useRef(refetchMeuStatus);
+  useEffect(() => {
+    refetchMeuStatusRef.current = refetchMeuStatus;
+  });
+
+  const currentUserRef = useRef(currentUser);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  });
+
+  const { connected: wsConnected } = useLeilaoSocket(activeLeilao?.id, {
+    onFeed: (item) => {
+      queryClient.setQueryData<FeedItemDTO[]>(['leilao-feed', activeLeilao?.id], (old = []) => {
+        return [item, ...old].slice(0, 20);
+      });
+    },
+    onAtualizacoesLances: () => {
+      // usa a ref pra não depender do valor de currentUser capturado
+      // quando o hook do socket foi montado
+      if (currentUserRef.current) {
+        refetchMeuStatusRef.current();
+      }
+    },
+    onStatus: (status) => {
+      // um leilão abriu ou fechou -> a lista de leilões da temporada mudou
+      queryClient.invalidateQueries({ queryKey: ['leiloes', temporadaId] });
+      if (status === 'FECHADO') setIsExpired(true);
+    },
+    onResultado: () => {
+      queryClient.invalidateQueries({ queryKey: ['leiloes', temporadaId] });
+    }
   });
 
   const {
@@ -439,6 +481,13 @@ export function TelaLeilao() {
             font-size: 1rem;
             font-weight: 700;
             color: var(--text-dark);
+        }
+
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            margin-left: auto;
         }
 
         .scroll-list {
@@ -773,6 +822,14 @@ export function TelaLeilao() {
                             <div className="panel-header">
                                 <Activity size={18} color="var(--primary)" />
                                 <span className="panel-title">Feed Ao Vivo</span>
+                                <div
+                                    className="live-dot"
+                                    title={wsConnected ? "Conectado em tempo real" : "Reconectando..."}
+                                    style={{
+                                        background: wsConnected ? '#10b981' : '#f59e0b',
+                                        boxShadow: wsConnected ? '0 0 6px #10b981' : 'none'
+                                    }}
+                                />
                             </div>
                             <div className="scroll-list">
                                 {feedData.length > 0 ? (

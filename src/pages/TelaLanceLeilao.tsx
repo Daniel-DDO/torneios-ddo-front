@@ -31,6 +31,7 @@ import PopupUser from '../components/PopupUser';
 import PopupGeral from '../components/PopupGeral';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
+import { useLeilaoSocket, type LanceResumoDTO } from '../hooks/useLeilaoSocket';
 
 interface ClubeDTO {
   id: string;
@@ -98,6 +99,10 @@ export function TelaLanceLeilao() {
   const [searchTerm, setSearchTerm] = useState('');
   const [meusLances, setMeusLances] = useState<ItemLanceLocal[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  // líder atual (em tempo real) dos clubes que estão no meu carrinho,
+  // alimentado pelo WS -> topic .../atualizacoes-lances
+  const [liderancaMercado, setLiderancaMercado] = useState<Record<string, LanceResumoDTO>>({});
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
@@ -188,6 +193,24 @@ export function TelaLanceLeilao() {
     };
     fetchMeusLances();
   }, [leilaoId, currentUser]);
+
+  // Real-time: status do leilão (encerrou enquanto eu tava aqui?) e líder
+  // atual dos clubes do meu carrinho.
+  useLeilaoSocket(leilaoId, {
+    onStatus: (status) => {
+      if (status === 'FECHADO') {
+        showPopup("Leilão Encerrado", "O leilão foi encerrado enquanto você dava lances. Seus lances confirmados até agora foram mantidos.", "warning");
+        setTimeout(() => navigate(`/${temporadaId}/torneios/leilao`), 2500);
+      }
+    },
+    onAtualizacoesLances: (items) => {
+      setLiderancaMercado(prev => {
+        const next = { ...prev };
+        items.forEach(item => { next[item.clubeId] = item; });
+        return next;
+      });
+    }
+  });
 
   useEffect(() => {
     if (isDarkMode) {
@@ -321,6 +344,9 @@ export function TelaLanceLeilao() {
 
     try {
         await API.post('/api/leiloes/lance', payload);
+        queryClient.invalidateQueries({ queryKey: ['meu-status', leilaoId] });
+        queryClient.invalidateQueries({ queryKey: ['leilao-feed', leilaoId] });
+        queryClient.invalidateQueries({ queryKey: ['leilao-disputados', leilaoId] });
         showPopup("Sucesso", "Seus lances foram registrados com sucesso!", "success");
         setTimeout(() => {
             navigate(`/${temporadaId}/torneios/leilao`);
@@ -557,6 +583,15 @@ export function TelaLanceLeilao() {
                 padding: 20px;
                 opacity: 0.7;
             }
+            .lider-mercado-tag {
+                font-size: 0.7rem;
+                color: #f59e0b;
+                font-weight: 600;
+                margin-top: 4px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
             @media (max-width: 1024px) {
                 .lance-layout {
                     grid-template-columns: 1fr;
@@ -743,6 +778,9 @@ export function TelaLanceLeilao() {
                     ) : (
                         meusLances.map((lance, index) => {
                             const isError = lance.valor > saldoDisponivel;
+                            const lider = liderancaMercado[lance.clube.id];
+                            const alguemNaFrente = !!lider && lider.jogadorId !== currentUser?.id;
+
                             return (
                                 <div key={lance.clube.id} className="cart-item">
                                     <div className="order-controls">
@@ -797,6 +835,11 @@ export function TelaLanceLeilao() {
                                                 </span>
                                             )}
                                         </div>
+                                        {alguemNaFrente && (
+                                            <div className="lider-mercado-tag">
+                                                ⚡ {lider!.nomeJogadorGanhando} está na frente com {formatMoney(lider!.valorAtual)}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );
