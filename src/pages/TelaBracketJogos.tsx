@@ -1,9 +1,12 @@
-import { useEffect, useState, useLayoutEffect } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Calendar, MapPin, Trophy, Moon, Sun, Shield } from 'lucide-react';
-import { API } from '../services/api';
+import { API, getActiveHttpBaseURL } from '../services/api';
 import '../styles/TorneiosPage.css';
 import '../styles/TelaBracket.css';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 interface TeamData {
   id: string;
@@ -64,9 +67,8 @@ const SkeletonCard = () => (
 export function TelaBracketJogos() {
   const { temporadaId, torneioId, faseId, etapa, chaveIndex } = useParams();
   const navigate = useNavigate();
-  const [matches, setMatches] = useState<MatchDetail[]>([]);
-  const [loading, setLoading] = useState(true);
-  
+  const queryClient = useQueryClient();
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -78,31 +80,40 @@ export function TelaBracketJogos() {
     localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
   }, [isDarkMode]);
 
+  const queryKey = ['bracket-jogos', faseId, etapa, chaveIndex];
+
+  const { data: matches = [], isLoading: loading } = useQuery<MatchDetail[]>({
+    queryKey,
+    queryFn: async () => {
+      const response = await API.get(`/api/bracket/${faseId}/chave/${etapa}/${chaveIndex}`);
+      const sorted = (response.data as MatchDetail[]).sort((a, b) => {
+        const orderA = MATCH_ORDER[a.tipoPartida] || 99;
+        const orderB = MATCH_ORDER[b.tipoPartida] || 99;
+        return orderA - orderB;
+      });
+      return sorted;
+    },
+    enabled: !!(faseId && etapa && chaveIndex),
+    staleTime: 1000 * 60,
+    refetchOnWindowFocus: false,
+    retry: 2
+  });
+
   useEffect(() => {
-    let isMounted = true;
-    if (faseId && etapa && chaveIndex) {
-      const loadMatches = async () => {
-        try {
-          setLoading(true);
-          const response = await API.get(`/api/bracket/${faseId}/chave/${etapa}/${chaveIndex}`);
-          if (isMounted && response.data) {
-            const sorted = (response.data as MatchDetail[]).sort((a, b) => {
-              const orderA = MATCH_ORDER[a.tipoPartida] || 99;
-              const orderB = MATCH_ORDER[b.tipoPartida] || 99;
-              return orderA - orderB;
-            });
-            setMatches(sorted);
-          }
-        } catch (error) {
-          console.error(error);
-        } finally {
-          if (isMounted) setTimeout(() => setLoading(false), 500);
-        }
-      };
-      loadMatches();
-    }
-    return () => { isMounted = false; };
-  }, [faseId, etapa, chaveIndex]);
+    if (!faseId || !etapa || !chaveIndex) return;
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${getActiveHttpBaseURL()}/ws-torneios`),
+      onConnect: () => {
+        client.subscribe(`/topic/bracket/${faseId}/chave/${etapa}/${chaveIndex}`, () => {
+          queryClient.invalidateQueries({ queryKey });
+        });
+      },
+    });
+    client.activate();
+    return () => {
+      client.deactivate();
+    };
+  }, [faseId, etapa, chaveIndex, queryClient]);
 
   const handlePartidaClick = (id: string) => {
     navigate(`/${temporadaId}/torneio/${torneioId}/fase/${faseId}/bracket/${etapa}/${chaveIndex}/partida/${id}`);

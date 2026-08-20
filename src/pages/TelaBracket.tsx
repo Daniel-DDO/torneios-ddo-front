@@ -1,9 +1,11 @@
-import { useMemo, useLayoutEffect, useState } from 'react';
+import { useMemo, useLayoutEffect, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Shield, Loader2, Trophy, AlertCircle, MapPin, Download } from 'lucide-react';
-import { API } from '../services/api';
+import { API, getActiveHttpBaseURL } from '../services/api';
 import '../styles/TelaBracket.css';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 interface TeamData {
   id: string;
@@ -102,6 +104,22 @@ export default function TelaBracket() {
     refetchOnWindowFocus: false,
     retry: 2
   });
+
+  useEffect(() => {
+    if (!faseId) return;
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${getActiveHttpBaseURL()}/ws-torneios`),
+      onConnect: () => {
+        client.subscribe(`/topic/bracket/${faseId}`, () => {
+          refetch();
+        });
+      },
+    });
+    client.activate();
+    return () => {
+      client.deactivate();
+    };
+  }, [faseId, refetch]);
 
   const processedStages = useMemo(() => {
     if (!bracketInfo?.partidas) return [];
