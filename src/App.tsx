@@ -39,6 +39,7 @@ import { TelaCompeticaoSelecionada } from './pages/TelaCompeticaoSelecionada';
 import { TelaHallDaFama } from './pages/TelaHallDaFama';
 import { TelaTabelaRanking } from './pages/TelaTabelaRanking';
 import { TelaPartidasJogador } from './pages/TelaPartidasJogador';
+import { TelaConquistasAdm } from './pages/TelaConquistasAdm';
 
 import './App.css';
 
@@ -97,6 +98,7 @@ function App() {
           <Route path="/transparencia" element={<TelaTransparencia />} />
           <Route path="/hall-da-fama" element={<TelaHallDaFama />} />
           <Route path="/ranking" element={<TelaTabelaRanking />} />
+          <Route path="/admin/conquistas" element={<TelaConquistasAdm />} />
         </Routes>
       </Router>
     </QueryClientProvider>
