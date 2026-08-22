@@ -4,7 +4,7 @@ import {
   Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search, 
   ArrowLeft, Gamepad2, Lightbulb, Settings, 
   CheckCircle, CalendarSync, Star, MapPin, DollarSign, 
-  Activity, Info, StarHalf, TrendingUp, Landmark
+  Activity, Info, StarHalf, TrendingUp, Landmark, Crown
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -48,6 +48,13 @@ interface Club {
   conquistas: ClubAchievement[];
 }
 
+interface JogadorDestaque {
+  jogadorId: string;
+  jogadorNome: string;
+  jogadorImagem: string;
+  totalConquistas: number;
+}
+
 interface UserData {
   id: string;
   nome: string;
@@ -66,6 +73,7 @@ export function TelaClubeSelecionado() {
   const { clubeId } = useParams();
 
   const [clube, setClube] = useState<Club | null>(null);
+  const [jogadorDestaque, setJogadorDestaque] = useState<JogadorDestaque | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
@@ -96,6 +104,7 @@ export function TelaClubeSelecionado() {
     
     if (clubeId) {
         fetchClubDetails(clubeId);
+        fetchJogadorDestaque(clubeId);
     } else {
         setLoading(false); 
     }
@@ -112,6 +121,16 @@ export function TelaClubeSelecionado() {
       navigate('/clubes');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchJogadorDestaque = async (id: string) => {
+    try {
+      const response = await API.get(`/conquistas/clube/${id}/jogador-destaque`);
+      const data = (response && (response as any).data) ? (response as any).data : response;
+      setJogadorDestaque(data as JogadorDestaque);
+    } catch (error) {
+      setJogadorDestaque(null);
     }
   };
 
@@ -389,6 +408,7 @@ export function TelaClubeSelecionado() {
             border-radius: 24px;
             border: 1px solid var(--border-color);
             padding: 30px;
+            margin-bottom: 24px;
         }
 
         .trophies-header {
@@ -463,11 +483,67 @@ export function TelaClubeSelecionado() {
             color: var(--text-gray);
         }
 
+        .highlight-player-section {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, var(--bg-card) 60%);
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            padding: 30px;
+        }
+
+        .highlight-player-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 24px;
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .highlight-player-body {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .highlight-player-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #f59e0b;
+            box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+            flex-shrink: 0;
+        }
+
+        .highlight-player-info {
+            flex: 1;
+        }
+
+        .highlight-player-name {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 6px;
+        }
+
+        .highlight-player-count {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
         @media (max-width: 900px) {
             .info-grid-3 { grid-template-columns: 1fr; }
             .financial-row { grid-template-columns: 1fr; }
             .hero-body { flex-direction: column; text-align: center; }
             .club-meta { justify-content: center; }
+            .highlight-player-body { flex-direction: column; text-align: center; }
         }
       `}</style>
 
@@ -772,6 +848,31 @@ export function TelaClubeSelecionado() {
                             </div>
                         )}
                     </div>
+
+                    {jogadorDestaque && (
+                        <div className="highlight-player-section">
+                            <div className="highlight-player-header">
+                                <Crown size={24} style={{color: '#f59e0b'}} />
+                                Jogador Destaque
+                            </div>
+                            <div className="highlight-player-body">
+                                <img
+                                    src={jogadorDestaque.jogadorImagem}
+                                    alt={jogadorDestaque.jogadorNome}
+                                    className="highlight-player-avatar"
+                                />
+                                <div className="highlight-player-info">
+                                    <div className="highlight-player-name">
+                                        {jogadorDestaque.jogadorNome}
+                                    </div>
+                                    <div className="highlight-player-count">
+                                        <Trophy size={16} />
+                                        {jogadorDestaque.totalConquistas} conquista{jogadorDestaque.totalConquistas !== 1 && 's'} com o clube
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                 </div>
             )}
