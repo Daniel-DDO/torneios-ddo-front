@@ -22,7 +22,13 @@ import {
   Activity,
   TrendingUp,
   History,
-  Ban
+  Ban,
+  Home,
+  Plane,
+  Sparkles,
+  Flame,
+  AlertTriangle,
+  Flag
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -32,6 +38,44 @@ import PopupUser from '../components/PopupUser';
 import PopupNotificacao from '../components/PopupNotificacao';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
 
+interface CasaForaStats {
+  jogadorId: string;
+  nome: string;
+  discord: string;
+  imagem: string | null;
+  vClubeCasa: number;
+  eClubeCasa: number;
+  dClubeCasa: number;
+  vSelecaoCasa: number;
+  eSelecaoCasa: number;
+  dSelecaoCasa: number;
+  vClubeFora: number;
+  eClubeFora: number;
+  dClubeFora: number;
+  vSelecaoFora: number;
+  eSelecaoFora: number;
+  dSelecaoFora: number;
+}
+
+interface EstiloJogador {
+  jogadorId: string;
+  partidasConsideradas: number;
+  mediaGolsMarcadosPorJogo: number;
+  mediaGolsSofridosPorJogo: number;
+  mediaEstrelasClubes: number;
+  mediaGolsMarcadosGlobal: number;
+  mediaGolsSofridosGlobal: number;
+  mediaEstrelasGlobal: number;
+  estiloProvavel: string;
+  caracteristicas: string[];
+}
+
+interface FormaRecente {
+  ultimosResultados: string[];
+  pontuacaoForma: number;
+  tendencia: string;
+}
+
 interface PlayerStats {
   id: string;
   nome: string;
@@ -39,13 +83,16 @@ interface PlayerStats {
   imagem: string | null;
   titulos: number;
   finais: number;
-  partidasJogadas: number;
+  jogos: number;
   vitorias: number;
   golsMarcados: number;
   golsSofridos: number;
   aproveitamento: string;
-  saldo: number;
+  saldoVirtual: number;
   pontosCoeficiente: number;
+  casaFora: CasaForaStats;
+  estilo: EstiloJogador;
+  formaRecente: FormaRecente;
 }
 
 interface JogadorClubeResumo {
@@ -85,11 +132,21 @@ interface ResumoConfrontoDireto {
   empates: number;
 }
 
+interface AnaliseComparativa {
+  vantagemMandoJogador1: number;
+  vantagemMandoJogador2: number;
+  favoritoGeral: string;
+  margemVantagem: number;
+  leituraEstilistica: string;
+  pontosDeAtencao: string[];
+}
+
 interface ComparacaoResponse {
   jogador1: PlayerStats;
   jogador2: PlayerStats;
   confrontosDiretos: PartidaHistorico[];
   resumoConfrontoDireto: ResumoConfrontoDireto;
+  analiseComparativa: AnaliseComparativa;
 }
 
 interface UserData {
@@ -143,7 +200,9 @@ export function TelaComparandoJogador() {
   const { data: comparacao, isLoading } = useQuery<ComparacaoResponse>({
     queryKey: ['comparacao', id1, id2],
     queryFn: () => fetchComparacaoService(id1!, id2!),
-    enabled: !!id1 && !!id2
+    enabled: !!id1 && !!id2,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 
   const avatarMap = useMemo(() => {
@@ -228,7 +287,7 @@ export function TelaComparandoJogador() {
     }).format(new Date(iso));
   };
 
-  const parsePercentage = (val: string) => parseFloat(val.replace('%', ''));
+  const parsePercentage = (val: string) => parseFloat(val.replace('%', '').replace(',', '.'));
 
   const getBarWidth = (val1: number, val2: number) => {
     const total = val1 + val2;
@@ -236,19 +295,24 @@ export function TelaComparandoJogador() {
     return (val1 / total) * 100;
   };
 
-  const generateAIAnalysis = (p1: PlayerStats, p2: PlayerStats) => {
-    let p1Score = 0;
-    let p2Score = 0;
+  // Casa/Fora somado (clube + seleção) para cada jogador
+  const getCasaForaResumo = (cf: CasaForaStats) => {
+    const vCasa = cf.vClubeCasa + cf.vSelecaoCasa;
+    const eCasa = cf.eClubeCasa + cf.eSelecaoCasa;
+    const dCasa = cf.dClubeCasa + cf.dSelecaoCasa;
+    const totalCasa = vCasa + eCasa + dCasa;
 
-    if (p1.titulos > p2.titulos) p1Score++; else if (p2.titulos > p1.titulos) p2Score++;
-    if (p1.vitorias > p2.vitorias) p1Score++; else if (p2.vitorias > p1.vitorias) p2Score++;
-    if (p1.golsMarcados > p2.golsMarcados) p1Score++; else if (p2.golsMarcados > p1.golsMarcados) p2Score++;
-    if (parsePercentage(p1.aproveitamento) > parsePercentage(p2.aproveitamento)) p1Score++; else if (parsePercentage(p2.aproveitamento) > parsePercentage(p1.aproveitamento)) p2Score++;
-    if (p1.pontosCoeficiente > p2.pontosCoeficiente) p1Score++; else if (p2.pontosCoeficiente > p1.pontosCoeficiente) p2Score++;
+    const vFora = cf.vClubeFora + cf.vSelecaoFora;
+    const eFora = cf.eClubeFora + cf.eSelecaoFora;
+    const dFora = cf.dClubeFora + cf.dSelecaoFora;
+    const totalFora = vFora + eFora + dFora;
 
-    if (p1Score > p2Score) return `Com base nos dados, ${p1.nome} apresenta um desempenho superior geral, dominando em ${p1Score} dos 5 principais quesitos analisados.`;
-    if (p2Score > p1Score) return `A análise indica que ${p2.nome} vive um momento melhor, superando o adversário em ${p2Score} métricas chave.`;
-    return `O confronto é extremamente equilibrado! Ambos os jogadores apresentam estatísticas muito próximas, prometendo um duelo imprevisível.`;
+    const pct = (v: number, total: number) => (total > 0 ? Math.round((v / total) * 100) : 0);
+
+    return {
+      casa: { v: vCasa, e: eCasa, d: dCasa, total: totalCasa, aproveitamento: pct(vCasa, totalCasa) },
+      fora: { v: vFora, e: eFora, d: dFora, total: totalFora, aproveitamento: pct(vFora, totalFora) },
+    };
   };
 
   const StatRow = ({ label, val1, val2, type = 'number', highlightBetter = true }: { label: string, val1: string | number, val2: string | number, type?: 'number' | 'currency' | 'percent', highlightBetter?: boolean }) => {
@@ -319,6 +383,12 @@ export function TelaComparandoJogador() {
     if (golsJ1 > golsJ2) return jogador1Id;
     if (golsJ2 > golsJ1) return jogador2Id;
     return null;
+  };
+
+  const resultBadgeColor: Record<string, string> = {
+    V: '#10b981',
+    E: '#94a3b8',
+    D: '#ef4444',
   };
 
   return (
@@ -505,6 +575,23 @@ export function TelaComparandoJogador() {
                           <span style={{ fontSize: '0.9rem', color: 'var(--primary)', fontWeight: '600', background: 'rgba(78, 62, 255, 0.1)', padding: '4px 12px', borderRadius: '20px' }}>
                             {comparacao.jogador1.discord}
                           </span>
+
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '14px' }}>
+                              {[...comparacao.jogador1.formaRecente.ultimosResultados].reverse().map((r, idx) => (
+                                  <div
+                                      key={idx}
+                                      title={r === 'V' ? 'Vitória' : r === 'E' ? 'Empate' : 'Derrota'}
+                                      style={{
+                                          width: '26px', height: '26px', borderRadius: '50%',
+                                          background: resultBadgeColor[r] || '#94a3b8',
+                                          color: 'white', fontWeight: 800, fontSize: '0.7rem',
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                      }}
+                                  >
+                                      {r}
+                                  </div>
+                              ))}
+                          </div>
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
@@ -553,9 +640,27 @@ export function TelaComparandoJogador() {
                           <span style={{ fontSize: '0.9rem', color: 'var(--text-gray)', fontWeight: '600', background: 'var(--bg-body)', padding: '4px 12px', borderRadius: '20px' }}>
                             {comparacao.jogador2.discord}
                           </span>
+
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '14px' }}>
+                              {[...comparacao.jogador2.formaRecente.ultimosResultados].reverse().map((r, idx) => (
+                                  <div
+                                      key={idx}
+                                      title={r === 'V' ? 'Vitória' : r === 'E' ? 'Empate' : 'Derrota'}
+                                      style={{
+                                          width: '26px', height: '26px', borderRadius: '50%',
+                                          background: resultBadgeColor[r] || '#94a3b8',
+                                          color: 'white', fontWeight: 800, fontSize: '0.7rem',
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                      }}
+                                  >
+                                      {r}
+                                  </div>
+                              ))}
+                          </div>
                       </div>
                   </div>
 
+                  {/* ===== Análise Inteligente (vinda do backend) ===== */}
                   <div className="tp-card" style={{ padding: '30px', borderLeft: '4px solid var(--primary)', background: 'linear-gradient(to right, var(--bg-card), var(--hover-bg))' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                           <div style={{ padding: '8px', background: 'rgba(78, 62, 255, 0.1)', borderRadius: '8px' }}>
@@ -563,9 +668,40 @@ export function TelaComparandoJogador() {
                           </div>
                           <h3 style={{ margin: 0, color: 'var(--primary)', fontSize: '1.1rem', fontWeight: '700' }}>Análise Inteligente</h3>
                       </div>
+
                       <p style={{ lineHeight: '1.7', fontSize: '1rem', color: 'var(--text-dark)', margin: 0 }}>
-                          {generateAIAnalysis(comparacao.jogador1, comparacao.jogador2)}
+                          {comparacao.analiseComparativa.favoritoGeral}
+                          {comparacao.analiseComparativa.margemVantagem > 0 && (
+                            <> &mdash; margem estimada de <strong>{comparacao.analiseComparativa.margemVantagem.toFixed(1)} pp</strong>.</>
+                          )}
                       </p>
+
+                      <p style={{ lineHeight: '1.7', fontSize: '0.95rem', color: 'var(--text-gray)', marginTop: '12px', marginBottom: 0 }}>
+                          {comparacao.analiseComparativa.leituraEstilistica}
+                      </p>
+
+                      {comparacao.analiseComparativa.pontosDeAtencao.length > 0 && (
+                          <div style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {comparacao.analiseComparativa.pontosDeAtencao.map((ponto, idx) => (
+                                  <div
+                                      key={idx}
+                                      style={{
+                                          display: 'flex', alignItems: 'flex-start', gap: '8px',
+                                          background: 'rgba(245, 158, 11, 0.1)',
+                                          border: '1px solid rgba(245, 158, 11, 0.2)',
+                                          borderRadius: '10px',
+                                          padding: '10px 14px',
+                                          fontSize: '0.85rem',
+                                          color: 'var(--text-dark)',
+                                          fontWeight: 600
+                                      }}
+                                  >
+                                      <AlertTriangle size={16} color="#f59e0b" style={{ flexShrink: 0, marginTop: '1px' }} />
+                                      {ponto}
+                                  </div>
+                              ))}
+                          </div>
+                      )}
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
@@ -587,7 +723,7 @@ export function TelaComparandoJogador() {
                         </h3>
                         <StatRow label="Aproveitamento" val1={comparacao.jogador1.aproveitamento} val2={comparacao.jogador2.aproveitamento} type="percent" />
                         <StatRow label="Vitórias" val1={comparacao.jogador1.vitorias} val2={comparacao.jogador2.vitorias} />
-                        <StatRow label="Partidas Jogadas" val1={comparacao.jogador1.partidasJogadas} val2={comparacao.jogador2.partidasJogadas} />
+                        <StatRow label="Partidas Jogadas" val1={comparacao.jogador1.jogos} val2={comparacao.jogador2.jogos} />
                     </div>
 
                     <div className="tp-card" style={{ padding: '24px' }}>
@@ -605,9 +741,145 @@ export function TelaComparandoJogador() {
                             <TrendingUp size={20} color="#3B82F6" />
                             Valor de Mercado
                         </h3>
-                        <StatRow label="Saldo Virtual" val1={comparacao.jogador1.saldo} val2={comparacao.jogador2.saldo} type="currency" />
+                        <StatRow label="Saldo Virtual" val1={comparacao.jogador1.saldoVirtual} val2={comparacao.jogador2.saldoVirtual} type="currency" />
                     </div>
 
+                  </div>
+
+                  {/* ===== Casa x Fora ===== */}
+                  <div className="tp-card" style={{ padding: '24px' }}>
+                      <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-dark)', fontSize: '1.1rem' }}>
+                          <Home size={20} color="#10B981" />
+                          Desempenho Casa x Fora
+                      </h3>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px' }}>
+                          {[comparacao.jogador1, comparacao.jogador2].map((jog, jIdx) => {
+                              const resumo = getCasaForaResumo(jog.casaFora);
+                              const accent = jIdx === 0 ? 'var(--primary)' : '#ef4444';
+                              return (
+                                  <div key={jog.id} style={{ background: 'var(--bg-body)', borderRadius: '14px', padding: '18px', border: '1px solid var(--border-color)' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', fontWeight: 800, color: accent }}>
+                                          {jog.nome}
+                                      </div>
+
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                          <div style={{ background: 'var(--bg-card)', borderRadius: '10px', padding: '12px', border: '1px solid var(--border-color)' }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', marginBottom: '8px' }}>
+                                                  <Home size={14} /> Casa · {resumo.casa.aproveitamento}%
+                                              </div>
+                                              <div style={{ display: 'flex', gap: '8px', fontSize: '0.85rem', fontWeight: 700 }}>
+                                                  <span style={{ color: '#10b981' }}>{resumo.casa.v}V</span>
+                                                  <span style={{ color: 'var(--text-gray)' }}>{resumo.casa.e}E</span>
+                                                  <span style={{ color: '#ef4444' }}>{resumo.casa.d}D</span>
+                                              </div>
+                                          </div>
+                                          <div style={{ background: 'var(--bg-card)', borderRadius: '10px', padding: '12px', border: '1px solid var(--border-color)' }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase', marginBottom: '8px' }}>
+                                                  <Plane size={14} /> Fora · {resumo.fora.aproveitamento}%
+                                              </div>
+                                              <div style={{ display: 'flex', gap: '8px', fontSize: '0.85rem', fontWeight: 700 }}>
+                                                  <span style={{ color: '#10b981' }}>{resumo.fora.v}V</span>
+                                                  <span style={{ color: 'var(--text-gray)' }}>{resumo.fora.e}E</span>
+                                                  <span style={{ color: '#ef4444' }}>{resumo.fora.d}D</span>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                              );
+                          })}
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '40px', marginTop: '20px', paddingTop: '18px', borderTop: '1px dashed var(--border-color)' }}>
+                          <div style={{ textAlign: 'center' }}>
+                              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: comparacao.analiseComparativa.vantagemMandoJogador1 >= 0 ? '#10b981' : '#ef4444' }}>
+                                  {comparacao.analiseComparativa.vantagemMandoJogador1 > 0 ? '+' : ''}{comparacao.analiseComparativa.vantagemMandoJogador1.toFixed(1)} pp
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: 'var(--text-gray)', textTransform: 'uppercase', fontWeight: 700, marginTop: '4px' }}>
+                                  Vantagem de mando · {comparacao.jogador1.nome}
+                              </div>
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: comparacao.analiseComparativa.vantagemMandoJogador2 >= 0 ? '#10b981' : '#ef4444' }}>
+                                  {comparacao.analiseComparativa.vantagemMandoJogador2 > 0 ? '+' : ''}{comparacao.analiseComparativa.vantagemMandoJogador2.toFixed(1)} pp
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: 'var(--text-gray)', textTransform: 'uppercase', fontWeight: 700, marginTop: '4px' }}>
+                                  Vantagem de mando · {comparacao.jogador2.nome}
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* ===== Estilo de Jogo & Forma Recente ===== */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '24px' }}>
+                      <div className="tp-card" style={{ padding: '24px' }}>
+                          <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-dark)', fontSize: '1.1rem' }}>
+                              <Sparkles size={20} color="#8b5cf6" />
+                              Estilo Provável
+                          </h3>
+
+                          {[comparacao.jogador1, comparacao.jogador2].map((jog, jIdx) => (
+                              <div key={jog.id} style={{ marginBottom: jIdx === 0 ? '18px' : 0, background: 'var(--bg-body)', borderRadius: '12px', padding: '14px 16px', border: '1px solid var(--border-color)' }}>
+                                  <div style={{ fontSize: '0.8rem', fontWeight: 800, color: jIdx === 0 ? 'var(--primary)' : '#ef4444', marginBottom: '6px' }}>
+                                      {jog.nome}
+                                  </div>
+                                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-dark)', marginBottom: '8px', lineHeight: 1.4 }}>
+                                      {jog.estilo.estiloProvavel}
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                      {jog.estilo.caracteristicas.map((c, idx) => (
+                                          <div key={idx} style={{ fontSize: '0.78rem', color: 'var(--text-gray)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                              <Sparkles size={12} style={{ color: '#8b5cf6', flexShrink: 0 }} /> {c}
+                                          </div>
+                                      ))}
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+
+                      <div className="tp-card" style={{ padding: '24px' }}>
+                          <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-dark)', fontSize: '1.1rem' }}>
+                              <Flame size={20} color="#f97316" />
+                              Forma Recente
+                          </h3>
+
+                          {[comparacao.jogador1, comparacao.jogador2].map((jog, jIdx) => (
+                              <div
+                                  key={jog.id}
+                                  style={{
+                                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                      background: 'var(--bg-body)', borderRadius: '12px', padding: '14px 16px',
+                                      border: '1px solid var(--border-color)',
+                                      marginBottom: jIdx === 0 ? '12px' : 0
+                                  }}
+                              >
+                                  <div>
+                                      <div style={{ fontSize: '0.8rem', fontWeight: 800, color: jIdx === 0 ? 'var(--primary)' : '#ef4444', marginBottom: '4px' }}>
+                                          {jog.nome}
+                                      </div>
+                                      <div style={{ display: 'flex', gap: '4px' }}>
+                                          {[...jog.formaRecente.ultimosResultados].reverse().map((r, idx) => (
+                                              <div
+                                                  key={idx}
+                                                  style={{
+                                                      width: '22px', height: '22px', borderRadius: '50%',
+                                                      background: resultBadgeColor[r] || '#94a3b8',
+                                                      color: 'white', fontWeight: 800, fontSize: '0.65rem',
+                                                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                                  }}
+                                              >
+                                                  {r}
+                                              </div>
+                                          ))}
+                                      </div>
+                                  </div>
+                                  <div style={{ textAlign: 'right' }}>
+                                      <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-dark)' }}>{jog.formaRecente.pontuacaoForma}</div>
+                                      <div style={{ fontSize: '0.7rem', color: 'var(--text-gray)', fontWeight: 700 }}>{jog.formaRecente.tendencia}</div>
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
                   </div>
 
                   <div className="tp-card" style={{ padding: '24px' }}>
