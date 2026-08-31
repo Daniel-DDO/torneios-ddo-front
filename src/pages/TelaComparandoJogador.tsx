@@ -27,8 +27,7 @@ import {
   Plane,
   Sparkles,
   Flame,
-  AlertTriangle,
-  Flag
+  AlertTriangle
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -170,6 +169,9 @@ const fetchAvatarsService = async () => {
 };
 
 const fetchComparacaoService = async (id1: string, id2: string): Promise<ComparacaoResponse> => {
+  // Propaga o erro (ex: 400 de validação) para o react-query em vez de
+  // engolir a exceção — assim a tela sai do estado de loading e mostra
+  // a mensagem correta, ao invés de ficar tentando novamente.
   const response = await API.get(`/jogador/comparar`, {
     params: { id1, id2 }
   });
@@ -197,13 +199,25 @@ export function TelaComparandoJogador() {
     staleTime: 1000 * 60 * 60,
   });
 
-  const { data: comparacao, isLoading } = useQuery<ComparacaoResponse>({
+  const { data: comparacao, isLoading, isError, error } = useQuery<ComparacaoResponse>({
     queryKey: ['comparacao', id1, id2],
     queryFn: () => fetchComparacaoService(id1!, id2!),
     enabled: !!id1 && !!id2,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
+
+  // O back retorna 400 com um payload de erro de validação (ex: jogador sem
+  // partidas suficientes para estimar estilo). Extraímos a mensagem amigável
+  // para exibir em vez de deixar a tela tentando renderizar dados inexistentes.
+  const comparacaoErrorMessage = useMemo(() => {
+    if (!isError) return null;
+    const respData = (error as any)?.response?.data;
+    if (respData?.message) return respData.message as string;
+    return 'Não foi possível carregar a comparação entre esses jogadores no momento.';
+  }, [isError, error]);
 
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -536,7 +550,50 @@ export function TelaComparandoJogador() {
                 </div>
             </div>
 
-            {isLoading || !comparacao ? (
+            {isError ? (
+              <div
+                className="tp-card"
+                style={{
+                  padding: '50px 30px',
+                  textAlign: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '16px'
+                }}
+              >
+                <div style={{
+                  width: '64px', height: '64px', borderRadius: '50%',
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <AlertTriangle size={30} color="#ef4444" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, color: 'var(--text-dark)', fontSize: '1.1rem', fontWeight: 700 }}>
+                    Não foi possível gerar a comparação
+                  </h3>
+                  <p style={{ margin: '8px 0 0 0', color: 'var(--text-gray)', fontSize: '0.9rem', maxWidth: '420px' }}>
+                    {comparacaoErrorMessage}
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate(-1)}
+                  style={{
+                    marginTop: '8px',
+                    background: 'var(--primary)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '10px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Voltar
+                </button>
+              </div>
+            ) : isLoading || !comparacao ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}>
                   <LoadingSpinner isLoading={true} />
               </div>
