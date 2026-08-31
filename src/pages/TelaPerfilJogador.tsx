@@ -6,7 +6,7 @@ import {
   ArrowLeft, Gamepad2, Lightbulb, Settings, 
   CheckCircle, Clock, Award, BarChart3, Target, CalendarSync,
   Flag, Ban, TrendingUp, Info, FileText, Star, Swords, Activity, Skull,
-  Pencil
+  Pencil, Home, Plane, CalendarClock, Sparkles, ShieldCheck, Zap
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { API } from '../services/api';
@@ -126,6 +126,57 @@ interface VictimData {
   aproveitamento: string;
 }
 
+interface EstatisticasCasaFora {
+  jogadorId: string;
+  nome: string;
+  discord: string;
+  imagem: string | null;
+  vClubeCasa: number;
+  eClubeCasa: number;
+  dClubeCasa: number;
+  vSelecaoCasa: number;
+  eSelecaoCasa: number;
+  dSelecaoCasa: number;
+  vClubeFora: number;
+  eClubeFora: number;
+  dClubeFora: number;
+  vSelecaoFora: number;
+  eSelecaoFora: number;
+  dSelecaoFora: number;
+}
+
+interface MelhorTemporada {
+  temporadaId: string;
+  temporadaNome: string;
+  dataInicio: string;
+  dataFim: string;
+  temporadaAtiva: boolean;
+  partidasJogadas: number;
+  vitorias: number;
+  empates: number;
+  derrotas: number;
+  golsMarcados: number;
+  golsSofridos: number;
+  saldoGols: number;
+  mediaGolsMarcadosPorJogo: number;
+  mediaGolsSofridosPorJogo: number;
+  aproveitamento: number;
+  score: number;
+}
+
+interface EstiloJogador {
+  jogadorId: string;
+  partidasConsideradas: number;
+  mediaGolsMarcadosPorJogo: number;
+  mediaGolsSofridosPorJogo: number;
+  mediaEstrelasClubes: number;
+  mediaGolsMarcadosGlobal: number;
+  mediaGolsSofridosGlobal: number;
+  mediaEstrelasGlobal: number;
+  estiloProvavel: string;
+  caracteristicas: string[];
+}
+
 interface RankConfig {
   nome: string;
   min: number;
@@ -209,6 +260,33 @@ const fetchPlayerMomentoService = async (playerId: string) => {
     }
 };
 
+const fetchPlayerCasaForaService = async (playerId: string): Promise<EstatisticasCasaFora | null> => {
+    try {
+        const response = await API.get(`/jogador/${playerId}/estatisticas-casa-fora`);
+        return response.data;
+    } catch (error) {
+        return null;
+    }
+};
+
+const fetchPlayerMelhorTemporadaService = async (playerId: string): Promise<MelhorTemporada | null> => {
+    try {
+        const response = await API.get(`/jogador/${playerId}/melhor-temporada`);
+        return response.data;
+    } catch (error) {
+        return null;
+    }
+};
+
+const fetchPlayerEstiloService = async (playerId: string): Promise<EstiloJogador | null> => {
+    try {
+        const response = await API.get(`/jogador/${playerId}/estilo-provavel`);
+        return response.data;
+    } catch (error) {
+        return null;
+    }
+};
+
 export function TelaPerfilJogador() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -258,6 +336,32 @@ export function TelaPerfilJogador() {
     queryKey: ['playerMomento', id],
     queryFn: () => fetchPlayerMomentoService(id!),
     enabled: !!id,
+  });
+
+  // Novos endpoints — não bloqueiam o carregamento da tela principal e ficam
+  // em cache por 5 minutos para não refazer a busca a cada visita/troca de aba.
+  const { data: casaFora, isLoading: isLoadingCasaFora } = useQuery<EstatisticasCasaFora | null>({
+    queryKey: ['playerCasaFora', id],
+    queryFn: () => fetchPlayerCasaForaService(id!),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+  });
+
+  const { data: melhorTemporada, isLoading: isLoadingMelhorTemporada } = useQuery<MelhorTemporada | null>({
+    queryKey: ['playerMelhorTemporada', id],
+    queryFn: () => fetchPlayerMelhorTemporadaService(id!),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+  });
+
+  const { data: estilo, isLoading: isLoadingEstilo } = useQuery<EstiloJogador | null>({
+    queryKey: ['playerEstilo', id],
+    queryFn: () => fetchPlayerEstiloService(id!),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 
   const avatarMap = useMemo(() => {
@@ -358,6 +462,11 @@ export function TelaPerfilJogador() {
     return new Date(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
   };
 
+  const formatDateShort = (dateString: string | null) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
   const formatCurrency = (value: number) => {
     return 'D$ ' + new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
   };
@@ -402,6 +511,36 @@ export function TelaPerfilJogador() {
         strikes: player.strikesRebaixamento || 0,
     };
   }, [player]);
+
+  // Panorama casa/fora consolidado (clube + seleção somados) e detalhado por modalidade
+  const casaForaInfo = useMemo(() => {
+    if (!casaFora) return null;
+
+    const vCasa = casaFora.vClubeCasa + casaFora.vSelecaoCasa;
+    const eCasa = casaFora.eClubeCasa + casaFora.eSelecaoCasa;
+    const dCasa = casaFora.dClubeCasa + casaFora.dSelecaoCasa;
+    const totalCasa = vCasa + eCasa + dCasa;
+
+    const vFora = casaFora.vClubeFora + casaFora.vSelecaoFora;
+    const eFora = casaFora.eClubeFora + casaFora.eSelecaoFora;
+    const dFora = casaFora.dClubeFora + casaFora.dSelecaoFora;
+    const totalFora = vFora + eFora + dFora;
+
+    const pct = (v: number, total: number) => total > 0 ? Math.round((v / total) * 100) : 0;
+
+    return {
+      casa: { v: vCasa, e: eCasa, d: dCasa, total: totalCasa, aproveitamento: pct(vCasa, totalCasa) },
+      fora: { v: vFora, e: eFora, d: dFora, total: totalFora, aproveitamento: pct(vFora, totalFora) },
+      clube: {
+        casa: { v: casaFora.vClubeCasa, e: casaFora.eClubeCasa, d: casaFora.dClubeCasa },
+        fora: { v: casaFora.vClubeFora, e: casaFora.eClubeFora, d: casaFora.dClubeFora },
+      },
+      selecao: {
+        casa: { v: casaFora.vSelecaoCasa, e: casaFora.eSelecaoCasa, d: casaFora.dSelecaoCasa },
+        fora: { v: casaFora.vSelecaoFora, e: casaFora.eSelecaoFora, d: casaFora.dSelecaoFora },
+      },
+    };
+  }, [casaFora]);
 
   const handleDiscordChangeSuccess = (novoDiscord: string) => {
     setPlayer((prev) => prev ? { ...prev, discord: novoDiscord } : prev);
@@ -1411,6 +1550,310 @@ export function TelaPerfilJogador() {
             margin-top: 4px;
         }
 
+        /* ===== Casa/Fora ===== */
+        .insight-loading {
+            padding: 40px;
+            text-align: center;
+            color: var(--text-gray);
+        }
+        .insight-loading .spin-dot {
+            width: 26px;
+            height: 26px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            margin: 0 auto 10px auto;
+            animation: spin 0.8s linear infinite;
+        }
+        .insight-empty {
+            padding: 30px;
+            text-align: center;
+            color: var(--text-gray);
+            font-size: 0.9rem;
+        }
+
+        .casa-fora-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .cf-panel {
+            border-radius: 18px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            background: var(--hover-bg);
+        }
+        .cf-panel-casa { border-left: 4px solid #10b981; }
+        .cf-panel-fora { border-left: 4px solid #3b82f6; }
+
+        .cf-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .cf-panel-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 800;
+            font-size: 1rem;
+            color: var(--text-dark);
+        }
+        .cf-panel-title.casa-color { color: #10b981; }
+        .cf-panel-title.fora-color { color: #3b82f6; }
+
+        .cf-aproveitamento-tag {
+            font-size: 0.85rem;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+        .cf-tag-casa { background: rgba(16,185,129,0.12); color: #10b981; }
+        .cf-tag-fora { background: rgba(59,130,246,0.12); color: #3b82f6; }
+
+        .cf-wdl-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .cf-wdl-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px;
+            text-align: center;
+        }
+        .cf-wdl-val { font-size: 1.4rem; font-weight: 800; line-height: 1; }
+        .cf-wdl-lbl { font-size: 0.68rem; color: var(--text-gray); text-transform: uppercase; font-weight: 700; margin-top: 4px; }
+
+        .cf-progress-track {
+            height: 10px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+        }
+
+        .cf-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .cf-breakdown-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+        }
+        .cf-breakdown-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+            color: var(--text-gray);
+        }
+        .cf-breakdown-vals {
+            display: flex;
+            gap: 10px;
+            font-weight: 700;
+        }
+        .cf-v { color: #10b981; }
+        .cf-e { color: var(--text-gray); }
+        .cf-d { color: #ef4444; }
+
+        /* ===== Melhor temporada ===== */
+        .season-card {
+            border-radius: 18px;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(78, 62, 255, 0.08) 100%);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+        .season-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .season-name {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .season-dates {
+            font-size: 0.8rem;
+            color: var(--text-gray);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .season-score-badge {
+            background: var(--primary);
+            color: white;
+            font-weight: 800;
+            font-size: 0.9rem;
+            padding: 8px 16px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .season-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .season-stat {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 14px;
+            text-align: center;
+        }
+        .season-stat-val {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1;
+        }
+        .season-stat-lbl {
+            font-size: 0.68rem;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+        .season-secondary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+        }
+        .season-secondary {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .season-secondary-lbl {
+            font-size: 0.7rem;
+            color: var(--text-gray);
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .season-secondary-val {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+
+        /* ===== Estilo provável ===== */
+        .style-card {
+            display: grid;
+            grid-template-columns: 1.1fr 1fr;
+            gap: 24px;
+            align-items: stretch;
+        }
+        .style-highlight {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(14, 165, 233, 0.08) 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .style-highlight-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--text-gray);
+            margin-bottom: 10px;
+        }
+        .style-highlight-text {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+        .style-tags {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .style-tag {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        .style-compare {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            justify-content: center;
+        }
+        .style-compare-item { display: flex; flex-direction: column; gap: 6px; }
+        .style-compare-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+        .style-compare-sub {
+            font-size: 0.72rem;
+            color: var(--text-gray);
+            font-weight: 600;
+        }
+        .style-compare-track {
+            position: relative;
+            height: 10px;
+            background: var(--hover-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        .style-compare-fill {
+            height: 100%;
+            border-radius: 8px;
+        }
+        .style-partidas-note {
+            font-size: 0.72rem;
+            color: var(--text-gray);
+            margin-top: 4px;
+            text-align: right;
+        }
+
         @media (max-width: 768px) {
             .profile-hero { padding: 24px; }
             .hero-body { flex-direction: column; text-align: center; gap: 20px; }
@@ -1422,6 +1865,10 @@ export function TelaPerfilJogador() {
             .victims-grid { grid-template-columns: 1fr; }
             .rank-card-content { flex-direction: column; align-items: stretch; }
             .rank-side-stats { flex-direction: row; justify-content: space-around; padding-left: 0; border-left: none; border-top: 1px dashed var(--border-color); padding-top: 16px; }
+            .casa-fora-grid { grid-template-columns: 1fr; }
+            .season-stats-grid { grid-template-columns: 1fr 1fr; }
+            .season-secondary-grid { grid-template-columns: 1fr; }
+            .style-card { grid-template-columns: 1fr; }
         }
       `}</style>
 
@@ -2044,6 +2491,275 @@ export function TelaPerfilJogador() {
                                         </div>
                                     </a>
                                 ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ===== Desempenho Casa x Fora ===== */}
+                    <div className="card-box" style={{ marginTop: '24px' }}>
+                        <div className="card-header">
+                            <div className="card-title"><Home size={20} style={{ color: '#10b981' }} /> Desempenho Casa x Fora</div>
+                        </div>
+
+                        {isLoadingCasaFora ? (
+                            <div className="insight-loading">
+                                <div className="spin-dot"></div>
+                                Carregando desempenho casa/fora...
+                            </div>
+                        ) : !casaForaInfo ? (
+                            <div className="insight-empty">Ainda não há dados suficientes para este panorama.</div>
+                        ) : (
+                            <div className="casa-fora-grid">
+                                <div className="cf-panel cf-panel-casa">
+                                    <div className="cf-panel-header">
+                                        <div className="cf-panel-title casa-color"><Home size={18} /> Em Casa</div>
+                                        <span className="cf-aproveitamento-tag cf-tag-casa">{casaForaInfo.casa.aproveitamento}%</span>
+                                    </div>
+
+                                    <div className="cf-wdl-row">
+                                        <div className="cf-wdl-item">
+                                            <div className="cf-wdl-val val-win">{casaForaInfo.casa.v}</div>
+                                            <div className="cf-wdl-lbl">Vitórias</div>
+                                        </div>
+                                        <div className="cf-wdl-item">
+                                            <div className="cf-wdl-val val-draw">{casaForaInfo.casa.e}</div>
+                                            <div className="cf-wdl-lbl">Empates</div>
+                                        </div>
+                                        <div className="cf-wdl-item">
+                                            <div className="cf-wdl-val val-loss">{casaForaInfo.casa.d}</div>
+                                            <div className="cf-wdl-lbl">Derrotas</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="cf-progress-track">
+                                        <div className="progress-bar bar-win" style={{ width: `${casaForaInfo.casa.total > 0 ? (casaForaInfo.casa.v / casaForaInfo.casa.total) * 100 : 0}%` }}></div>
+                                        <div className="progress-bar bar-draw" style={{ width: `${casaForaInfo.casa.total > 0 ? (casaForaInfo.casa.e / casaForaInfo.casa.total) * 100 : 0}%` }}></div>
+                                        <div className="progress-bar bar-loss" style={{ width: `${casaForaInfo.casa.total > 0 ? (casaForaInfo.casa.d / casaForaInfo.casa.total) * 100 : 0}%` }}></div>
+                                    </div>
+
+                                    <div className="cf-breakdown">
+                                        <div className="cf-breakdown-item">
+                                            <span className="cf-breakdown-label"><Shield size={14} /> Clube</span>
+                                            <span className="cf-breakdown-vals">
+                                                <span className="cf-v">{casaForaInfo.clube.casa.v}V</span>
+                                                <span className="cf-e">{casaForaInfo.clube.casa.e}E</span>
+                                                <span className="cf-d">{casaForaInfo.clube.casa.d}D</span>
+                                            </span>
+                                        </div>
+                                        <div className="cf-breakdown-item">
+                                            <span className="cf-breakdown-label"><Flag size={14} /> Seleção</span>
+                                            <span className="cf-breakdown-vals">
+                                                <span className="cf-v">{casaForaInfo.selecao.casa.v}V</span>
+                                                <span className="cf-e">{casaForaInfo.selecao.casa.e}E</span>
+                                                <span className="cf-d">{casaForaInfo.selecao.casa.d}D</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="cf-panel cf-panel-fora">
+                                    <div className="cf-panel-header">
+                                        <div className="cf-panel-title fora-color"><Plane size={18} /> Fora</div>
+                                        <span className="cf-aproveitamento-tag cf-tag-fora">{casaForaInfo.fora.aproveitamento}%</span>
+                                    </div>
+
+                                    <div className="cf-wdl-row">
+                                        <div className="cf-wdl-item">
+                                            <div className="cf-wdl-val val-win">{casaForaInfo.fora.v}</div>
+                                            <div className="cf-wdl-lbl">Vitórias</div>
+                                        </div>
+                                        <div className="cf-wdl-item">
+                                            <div className="cf-wdl-val val-draw">{casaForaInfo.fora.e}</div>
+                                            <div className="cf-wdl-lbl">Empates</div>
+                                        </div>
+                                        <div className="cf-wdl-item">
+                                            <div className="cf-wdl-val val-loss">{casaForaInfo.fora.d}</div>
+                                            <div className="cf-wdl-lbl">Derrotas</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="cf-progress-track">
+                                        <div className="progress-bar bar-win" style={{ width: `${casaForaInfo.fora.total > 0 ? (casaForaInfo.fora.v / casaForaInfo.fora.total) * 100 : 0}%` }}></div>
+                                        <div className="progress-bar bar-draw" style={{ width: `${casaForaInfo.fora.total > 0 ? (casaForaInfo.fora.e / casaForaInfo.fora.total) * 100 : 0}%` }}></div>
+                                        <div className="progress-bar bar-loss" style={{ width: `${casaForaInfo.fora.total > 0 ? (casaForaInfo.fora.d / casaForaInfo.fora.total) * 100 : 0}%` }}></div>
+                                    </div>
+
+                                    <div className="cf-breakdown">
+                                        <div className="cf-breakdown-item">
+                                            <span className="cf-breakdown-label"><Shield size={14} /> Clube</span>
+                                            <span className="cf-breakdown-vals">
+                                                <span className="cf-v">{casaForaInfo.clube.fora.v}V</span>
+                                                <span className="cf-e">{casaForaInfo.clube.fora.e}E</span>
+                                                <span className="cf-d">{casaForaInfo.clube.fora.d}D</span>
+                                            </span>
+                                        </div>
+                                        <div className="cf-breakdown-item">
+                                            <span className="cf-breakdown-label"><Flag size={14} /> Seleção</span>
+                                            <span className="cf-breakdown-vals">
+                                                <span className="cf-v">{casaForaInfo.selecao.fora.v}V</span>
+                                                <span className="cf-e">{casaForaInfo.selecao.fora.e}E</span>
+                                                <span className="cf-d">{casaForaInfo.selecao.fora.d}D</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ===== Melhor Temporada ===== */}
+                    <div className="card-box" style={{ marginTop: '24px' }}>
+                        <div className="card-header">
+                            <div className="card-title"><Star size={20} style={{ color: '#f59e0b' }} /> Melhor Temporada</div>
+                        </div>
+
+                        {isLoadingMelhorTemporada ? (
+                            <div className="insight-loading">
+                                <div className="spin-dot"></div>
+                                Carregando melhor temporada...
+                            </div>
+                        ) : !melhorTemporada ? (
+                            <div className="insight-empty">Este jogador ainda não possui temporadas registradas.</div>
+                        ) : (
+                            <div className="season-card">
+                                <div className="season-header">
+                                    <div className="season-name">
+                                        <Trophy size={20} style={{ color: '#f59e0b' }} />
+                                        {melhorTemporada.temporadaNome}
+                                    </div>
+                                    <div className="season-score-badge">
+                                        <Zap size={16} /> Score {melhorTemporada.score.toFixed(2)}
+                                    </div>
+                                </div>
+
+                                <div className="season-dates" style={{ marginBottom: '18px' }}>
+                                    <CalendarClock size={14} />
+                                    {formatDateShort(melhorTemporada.dataInicio)} — {formatDateShort(melhorTemporada.dataFim)}
+                                </div>
+
+                                <div className="season-stats-grid">
+                                    <div className="season-stat">
+                                        <div className="season-stat-val val-win">{melhorTemporada.vitorias}</div>
+                                        <div className="season-stat-lbl">Vitórias</div>
+                                    </div>
+                                    <div className="season-stat">
+                                        <div className="season-stat-val val-draw">{melhorTemporada.empates}</div>
+                                        <div className="season-stat-lbl">Empates</div>
+                                    </div>
+                                    <div className="season-stat">
+                                        <div className="season-stat-val val-loss">{melhorTemporada.derrotas}</div>
+                                        <div className="season-stat-lbl">Derrotas</div>
+                                    </div>
+                                    <div className="season-stat">
+                                        <div className="season-stat-val">{melhorTemporada.partidasJogadas}</div>
+                                        <div className="season-stat-lbl">Partidas</div>
+                                    </div>
+                                </div>
+
+                                <div className="season-secondary-grid">
+                                    <div className="season-secondary">
+                                        <span className="season-secondary-lbl">Gols (pró / contra)</span>
+                                        <span className="season-secondary-val">{melhorTemporada.golsMarcados} / {melhorTemporada.golsSofridos}</span>
+                                    </div>
+                                    <div className="season-secondary">
+                                        <span className="season-secondary-lbl">Saldo de Gols</span>
+                                        <span className="season-secondary-val" style={{ color: melhorTemporada.saldoGols >= 0 ? '#10b981' : '#ef4444' }}>
+                                            {melhorTemporada.saldoGols > 0 ? `+${melhorTemporada.saldoGols}` : melhorTemporada.saldoGols}
+                                        </span>
+                                    </div>
+                                    <div className="season-secondary">
+                                        <span className="season-secondary-lbl">Média Gols (pró / contra)</span>
+                                        <span className="season-secondary-val">
+                                            {melhorTemporada.mediaGolsMarcadosPorJogo.toFixed(2)} / {melhorTemporada.mediaGolsSofridosPorJogo.toFixed(2)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ===== Estilo Provável ===== */}
+                    <div className="card-box" style={{ marginTop: '24px' }}>
+                        <div className="card-header">
+                            <div className="card-title"><Sparkles size={20} style={{ color: '#8b5cf6' }} /> Estilo Provável de Jogo</div>
+                        </div>
+
+                        {isLoadingEstilo ? (
+                            <div className="insight-loading">
+                                <div className="spin-dot"></div>
+                                Analisando estilo de jogo...
+                            </div>
+                        ) : !estilo ? (
+                            <div className="insight-empty">Ainda não há partidas suficientes para estimar um estilo de jogo.</div>
+                        ) : (
+                            <div className="style-card">
+                                <div className="style-highlight">
+                                    <div className="style-highlight-title"><ShieldCheck size={14} /> Estilo identificado</div>
+                                    <div className="style-highlight-text">{estilo.estiloProvavel}</div>
+                                    <div className="style-tags">
+                                        {estilo.caracteristicas.map((c, idx) => (
+                                            <div key={idx} className="style-tag">
+                                                <Sparkles size={14} style={{ color: '#8b5cf6', flexShrink: 0 }} />
+                                                {c}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="style-compare">
+                                    <div className="style-compare-item">
+                                        <div className="style-compare-header">
+                                            <span>Gols marcados / jogo</span>
+                                            <span>{estilo.mediaGolsMarcadosPorJogo.toFixed(2)}</span>
+                                        </div>
+                                        <div className="style-compare-track">
+                                            <div
+                                                className="style-compare-fill"
+                                                style={{
+                                                    width: `${Math.min(100, (estilo.mediaGolsMarcadosPorJogo / Math.max(estilo.mediaGolsMarcadosPorJogo, estilo.mediaGolsMarcadosGlobal) ) * 100)}%`,
+                                                    background: '#10b981',
+                                                }}
+                                            ></div>
+                                        </div>
+                                        <div className="style-compare-sub">Média global: {estilo.mediaGolsMarcadosGlobal.toFixed(2)}</div>
+                                    </div>
+
+                                    <div className="style-compare-item">
+                                        <div className="style-compare-header">
+                                            <span>Gols sofridos / jogo</span>
+                                            <span>{estilo.mediaGolsSofridosPorJogo.toFixed(2)}</span>
+                                        </div>
+                                        <div className="style-compare-track">
+                                            <div
+                                                className="style-compare-fill"
+                                                style={{
+                                                    width: `${Math.min(100, (estilo.mediaGolsSofridosPorJogo / Math.max(estilo.mediaGolsSofridosPorJogo, estilo.mediaGolsSofridosGlobal)) * 100)}%`,
+                                                    background: '#ef4444',
+                                                }}
+                                            ></div>
+                                        </div>
+                                        <div className="style-compare-sub">Média global: {estilo.mediaGolsSofridosGlobal.toFixed(2)}</div>
+                                    </div>
+
+                                    <div className="style-compare-item">
+                                        <div className="style-compare-header">
+                                            <span>Nível médio dos clubes</span>
+                                            <span>{estilo.mediaEstrelasClubes.toFixed(2)} ★</span>
+                                        </div>
+                                        <div className="style-compare-track">
+                                            <div
+                                                className="style-compare-fill"
+                                                style={{
+                                                    width: `${Math.min(100, (estilo.mediaEstrelasClubes / Math.max(estilo.mediaEstrelasClubes, estilo.mediaEstrelasGlobal)) * 100)}%`,
+                                                    background: '#f59e0b',
+                                                }}
+                                            ></div>
+                                        </div>
+                                        <div className="style-compare-sub">Média global: {estilo.mediaEstrelasGlobal.toFixed(2)} ★</div>
+                                    </div>
+
+                                    <div className="style-partidas-note">Baseado em {estilo.partidasConsideradas} partidas</div>
+                                </div>
                             </div>
                         )}
                     </div>
