@@ -1,0 +1,394 @@
+/* ==========================================================
+   PopupSubstituirJogPartida — usa as mesmas variáveis de tema
+   (--pp-*) e classes-base (.popup-overlay, .popup-content,
+   .info-box, .classificados-list, etc.) definidas em
+   PopupSorteio.css. Este arquivo cobre apenas o que é
+   específico deste popup.
+   ========================================================== */
+
+.troca-popup-width {
+  max-width: 480px;
+}
+
+/* ---------- Badge do header ---------- */
+.troca-badge {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  box-shadow: 0 8px 16px rgba(124, 58, 237, 0.25);
+}
+
+/* ---------- Etapa 1: seleção de lado ---------- */
+.lado-selector-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lado-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  background-color: var(--pp-input-bg);
+  border: 1px solid var(--pp-border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s, background-color 0.15s;
+  text-align: left;
+  font-family: inherit;
+}
+
+.lado-card:hover {
+  border-color: var(--pp-input-focus-border);
+  transform: translateY(-2px);
+  background-color: color-mix(in srgb, var(--pp-input-focus-border) 6%, var(--pp-input-bg));
+}
+
+.lado-tag {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--pp-input-focus-border);
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  padding: 4px 10px;
+  border-radius: 20px;
+  writing-mode: horizontal-tb;
+}
+
+.lado-card-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.lado-clube-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.lado-clube-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--pp-border);
+  color: var(--pp-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lado-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.lado-clube-nome {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--pp-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lado-jogador-nome {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--pp-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lado-card-arrow {
+  flex-shrink: 0;
+  color: var(--pp-text-secondary);
+  transition: transform 0.15s, color 0.15s;
+}
+
+.lado-card:hover .lado-card-arrow {
+  transform: translateX(3px);
+  color: var(--pp-input-focus-border);
+}
+
+/* ---------- Etapa 2: busca ---------- */
+.busca-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.troca-atual-box {
+  background-color: var(--pp-input-bg);
+  border: 1px dashed var(--pp-border);
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+
+.troca-atual-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--pp-text-secondary);
+  margin-bottom: 8px;
+}
+
+.troca-atual-content {
+  display: flex;
+  align-items: center;
+}
+
+.busca-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.busca-input-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--pp-text-secondary);
+  pointer-events: none;
+}
+
+.busca-spinner-icon {
+  position: absolute;
+  right: 14px;
+  color: var(--pp-input-focus-border);
+  animation: spin 0.8s linear infinite;
+}
+
+.busca-input {
+  width: 100%;
+  background-color: var(--pp-input-bg);
+  border: 1px solid var(--pp-input-border);
+  border-radius: 12px;
+  padding: 12px 14px 12px 42px;
+  font-size: 0.95rem;
+  color: var(--pp-input-text);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.busca-input::placeholder {
+  color: var(--pp-input-placeholder);
+}
+
+.busca-input:focus {
+  outline: none;
+  border-color: var(--pp-input-focus-border);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.busca-empty-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--pp-text-secondary);
+  font-size: 0.85rem;
+  padding: 14px;
+  background-color: var(--pp-input-bg);
+  border: 1px dashed var(--pp-border);
+  border-radius: 12px;
+  justify-content: center;
+  text-align: center;
+}
+
+.resultado-busca-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.resultado-busca-item {
+  cursor: pointer;
+  justify-content: space-between;
+}
+
+.resultado-busca-item:hover {
+  background-color: color-mix(in srgb, var(--pp-input-focus-border) 8%, var(--pp-input-bg));
+  border-color: var(--pp-input-focus-border);
+}
+
+.resultado-busca-arrow {
+  margin-left: auto;
+  color: var(--pp-text-secondary);
+  flex-shrink: 0;
+}
+
+.resultado-busca-item:hover .resultado-busca-arrow {
+  color: var(--pp-input-focus-border);
+}
+
+/* ---------- Etapa 3: confirmação ---------- */
+.confirmar-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.troca-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 20px 10px;
+  margin-bottom: 6px;
+}
+
+.troca-visual-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.troca-visual-img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.troca-visual-img.saindo {
+  opacity: 0.55;
+  filter: grayscale(40%);
+}
+
+.troca-visual-img.entrando {
+  filter: drop-shadow(0 4px 10px rgba(16, 185, 129, 0.35));
+}
+
+.troca-visual-nome {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+
+.saindo-nome {
+  color: var(--pp-text-secondary);
+  text-decoration: line-through;
+}
+
+.entrando-nome {
+  color: var(--pp-text-primary);
+}
+
+.troca-visual-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+.saindo-tag {
+  color: #d63031;
+  background: rgba(214, 48, 49, 0.1);
+  border: 1px solid rgba(214, 48, 49, 0.2);
+}
+
+.entrando-tag {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.troca-visual-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.3);
+}
+
+/* ---------- Etapa 4: sucesso ---------- */
+.sucesso-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.success-box {
+  background-color: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.success-icon {
+  color: #10b981;
+}
+
+.partidas-atualizadas-box {
+  background-color: var(--pp-input-bg);
+  border: 1px solid var(--pp-border);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.partidas-atualizadas-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--pp-text-primary);
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+}
+
+.partidas-atualizadas-header svg {
+  color: #7c3aed;
+}
+
+.partidas-atualizadas-desc {
+  font-size: 0.82rem;
+  color: var(--pp-text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* ---------- Footer ---------- */
+.footer-btn-group {
+  display: flex;
+  gap: 10px;
+}
+
+.footer-btn-group .submit-season-btn {
+  flex: 1;
+}
+
+.secondary-btn {
+  background: var(--pp-btn-close-bg);
+  color: var(--pp-text-primary);
+  box-shadow: none;
+}
+
+.secondary-btn:hover:not(:disabled) {
+  filter: none;
+  background: var(--pp-border);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

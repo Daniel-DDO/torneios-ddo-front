@@ -31,7 +31,8 @@ import {
   Trash2,
   Lock,
   CheckCircle2,
-  ShieldCheck
+  ShieldCheck,
+  Repeat
 } from 'lucide-react';
 import { API, API_SECUNDARIA } from '../services/api';
 import PopupLogin from '../components/PopupLogin';
@@ -43,6 +44,7 @@ import PopupGeralConf from '../components/PopupGeralConf';
 import '../styles/TorneiosPage.css';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
 import PopupAnularPartida from '../components/PopupAnularPartida';
+import PopupSubstituirJogPartida from '../components/PopupSubstituirJogPartida';
 
 interface JogadorClubeDTO {
   id: string;
@@ -97,6 +99,30 @@ interface ProbabilidadeDTO {
   chanceEmpate: number;
   chanceVisitante: number;
   analisePreJogo: string;
+}
+
+interface FaseTorneioDTO {
+  id: string;
+  nome: string;
+  ordem: number;
+  torneioId: string;
+  torneioNome: string;
+  tipoTorneio: string;
+  numeroRodadas: number | null;
+  faseInicialMataMata: string | null;
+  temJogoVolta: boolean;
+  algoritmoLiga: string | null;
+  algoritmoMataMata: string | null;
+  estadioFinal: string | null;
+}
+
+interface TorneioDTO {
+  id: string;
+  nome: string;
+  temporadaId: string;
+  temporadaNome: string;
+  competicaoId: string;
+  competicaoNome: string;
 }
 
 interface UserData {
@@ -293,6 +319,7 @@ export function TelaPartidaSelecionada() {
   const [showRegistrarPopup, setShowRegistrarPopup] = useState(false);
   const [showReportarPopup, setShowReportarPopup] = useState(false);
   const [showAnularPopup, setShowAnularPopup] = useState(false);
+  const [showTrocarPopup, setShowTrocarPopup] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
 
@@ -335,6 +362,32 @@ export function TelaPartidaSelecionada() {
     enabled: !!partidaId && !!partida && !partida.realizada,
     staleTime: 1000 * 60 * 15
   });
+
+  // Cadeia partida -> fase -> torneio, apenas para descobrir o temporadaId
+  // (necessário para a busca de autocomplete do PopupSubstituirJogPartida).
+  // Só é disparada quando o usuário é PROPRIETARIO, já que é o único que
+  // enxerga o botão de trocar jogador.
+  const { data: faseTorneio } = useQuery<FaseTorneioDTO>({
+    queryKey: ['fase-torneio', partida?.faseId],
+    queryFn: async () => {
+      const response = await API.get(`/fase-torneio/${partida!.faseId}`);
+      return response.data;
+    },
+    enabled: !!partida?.faseId && currentUser?.cargo === 'PROPRIETARIO',
+    staleTime: 1000 * 60 * 30
+  });
+
+  const { data: torneio } = useQuery<TorneioDTO>({
+    queryKey: ['torneio', faseTorneio?.torneioId],
+    queryFn: async () => {
+      const response = await API.get(`/torneio/${faseTorneio!.torneioId}`);
+      return response.data;
+    },
+    enabled: !!faseTorneio?.torneioId,
+    staleTime: 1000 * 60 * 30
+  });
+
+  const temporadaId = torneio?.temporadaId;
 
   const { data: comentarios = [], isLoading: isLoadingComentarios, isError: isErrorComentarios } = useQuery<ComentarioBackend[]>({
     queryKey: ['comentarios', partidaId],
@@ -757,6 +810,8 @@ export function TelaPartidaSelecionada() {
         .btn-admin:hover { background: var(--primary-light); box-shadow: 0 4px 12px rgba(78, 62, 255, 0.3); }
         .btn-report { background: #f59e0b; color: white; }
         .btn-report:hover { background: #d97706; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
+        .btn-troca { background: #7c3aed; color: white; }
+        .btn-troca:hover { background: #6d28d9; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); }
         .skeleton-pulse {
           animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
           background: var(--hover-bg);
@@ -1419,6 +1474,18 @@ export function TelaPartidaSelecionada() {
                       )}
 
                       {hasOwnerPermission() && partida.mandante && partida.visitante && (
+                        <button
+                          className="btn-full btn-troca"
+                          onClick={() => setShowTrocarPopup(true)}
+                          disabled={!temporadaId}
+                          title={!temporadaId ? 'Carregando informações da temporada...' : undefined}
+                          style={!temporadaId ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+                        >
+                          <Repeat size={18} /> Trocar Jogador
+                        </button>
+                      )}
+
+                      {hasOwnerPermission() && partida.mandante && partida.visitante && (
                         partida.anulada ? (
                           <button
                             className="btn-full"
@@ -1707,6 +1774,16 @@ export function TelaPartidaSelecionada() {
           modo={partida.anulada ? 'desanular' : 'anular'}
           onClose={() => setShowAnularPopup(false)}
           onSuccess={() => { refetch(); }}
+        />
+      )}
+      {showTrocarPopup && partida && partida.mandante && partida.visitante && temporadaId && (
+        <PopupSubstituirJogPartida
+          partidaId={partida.id}
+          temporadaId={temporadaId}
+          mandante={partida.mandante}
+          visitante={partida.visitante}
+          onClose={() => setShowTrocarPopup(false)}
+          onSuccess={() => { setShowTrocarPopup(false); refetch(); }}
         />
       )}
     </div>
