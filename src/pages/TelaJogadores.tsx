@@ -17,7 +17,8 @@ import {
   TrendingUp,
   ArrowRight,
   Swords,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -72,6 +73,15 @@ const fetchAvatarsService = async () => {
   return [];
 };
 
+// Autocomplete do back — usado apenas quando a listagem completa ainda não
+// foi carregada localmente (ou seja, ainda existem páginas por vir).
+const fetchBuscaRapidaService = async (termo: string): Promise<Player[]> => {
+  const response = await API.get('/jogador/busca-rapida', {
+    params: { termo }
+  });
+  return Array.isArray(response.data) ? response.data : (Array.isArray(response) ? (response as any) : []);
+};
+
 export function TelaJogadores() {
   const navigate = useNavigate();
   const observerTarget = useRef(null);
@@ -101,10 +111,23 @@ export function TelaJogadores() {
     return data?.pages.flatMap(page => page.conteudo) || [];
   }, [data]);
 
+  // Enquanto ainda houver páginas para carregar, a listagem local está
+  // incompleta — nesse caso a busca precisa ir direto no back para não
+  // esconder jogadores que ainda não foram paginados até aqui.
+  const listagemCompleta = !hasNextPage;
+
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [showUserPopup, setShowUserPopup] = useState(false);
+  const [showCadastrarJogadorPopup, setShowCadastrarJogadorPopup] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage && !debouncedSearchTerm) {
           fetchNextPage();
         }
       },
@@ -116,7 +139,7 @@ export function TelaJogadores() {
     }
 
     return () => observer.disconnect();
-  }, [hasNextPage, fetchNextPage, isFetchingNextPage]);
+  }, [hasNextPage, fetchNextPage, isFetchingNextPage, debouncedSearchTerm]);
 
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -125,13 +148,6 @@ export function TelaJogadores() {
     });
     return map;
   }, [avatars]);
-
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [showCadastrarJogadorPopup, setShowCadastrarJogadorPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   
   const [isComparing, setIsComparing] = useState(false);
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
@@ -158,6 +174,24 @@ export function TelaJogadores() {
     }
   }, []);
 
+  // Debounce da busca — só dispara a query de autocomplete 350ms após o
+  // usuário parar de digitar, evitando martelar o back a cada tecla.
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 350);
+    return () => clearTimeout(timeout);
+  }, [searchTerm]);
+
+  const buscaRapidaHabilitada = !listagemCompleta && debouncedSearchTerm.length > 0;
+
+  const { data: resultadosBuscaRapida = [], isFetching: buscandoNoBack } = useQuery<Player[]>({
+    queryKey: ['jogadores-busca-rapida', debouncedSearchTerm],
+    queryFn: () => fetchBuscaRapidaService(debouncedSearchTerm),
+    enabled: buscaRapidaHabilitada,
+    staleTime: 1000 * 30,
+  });
+
   const handleLoginSuccess = (userData: UserData) => {
     setCurrentUser(userData);
   };
@@ -173,9 +207,23 @@ export function TelaJogadores() {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const filteredPlayers = allPlayers.filter(player =>
-    player.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Fonte da lista exibida:
+  // - sem termo de busca -> lista local (paginada normalmente)
+  // - com termo e listagem local já completa -> filtra localmente (sem custo de rede)
+  // - com termo e listagem local incompleta -> usa o autocomplete do back
+  const filteredPlayers = useMemo(() => {
+    if (!debouncedSearchTerm) return allPlayers;
+
+    if (listagemCompleta) {
+      return allPlayers.filter(player =>
+        player.nome.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+      );
+    }
+
+    return resultadosBuscaRapida;
+  }, [allPlayers, debouncedSearchTerm, listagemCompleta, resultadosBuscaRapida]);
+
+  const mostrandoLoaderBusca = buscaRapidaHabilitada && buscandoNoBack;
 
   const getCurrentUserAvatar = () => {
     if (!currentUser?.imagem) return null;
@@ -257,6 +305,9 @@ export function TelaJogadores() {
         .card-avatar-large {
           width: 80px;
           height: 80px;
+          min-width: 80px;
+          min-height: 80px;
+          flex-shrink: 0;
           border-radius: 50%;
           background: var(--hover-bg);
           display: flex;
@@ -326,6 +377,16 @@ export function TelaJogadores() {
           padding: 2rem;
           color: var(--text-gray);
         }
+
+        .search-loading-icon {
+          color: var(--text-gray);
+          animation: spin 0.8s linear infinite;
+          flex-shrink: 0;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
         
         .compare-bar {
           position: fixed;
@@ -359,11 +420,15 @@ export function TelaJogadores() {
           padding: 8px 16px;
           border-radius: 12px;
           flex: 1;
+          min-width: 0;
         }
 
         .mini-avatar {
           width: 32px;
           height: 32px;
+          min-width: 32px;
+          min-height: 32px;
+          flex-shrink: 0;
           border-radius: 50%;
           background-size: cover;
           background-position: center;
@@ -388,6 +453,7 @@ export function TelaJogadores() {
           align-items: center;
           gap: 8px;
           transition: transform 0.1s;
+          flex-shrink: 0;
         }
         
         .compare-btn-action:hover {
@@ -405,6 +471,7 @@ export function TelaJogadores() {
           color: var(--text-gray);
           cursor: pointer;
           padding: 4px;
+          flex-shrink: 0;
         }
 
         @media (max-width: 768px) {
@@ -486,6 +553,7 @@ export function TelaJogadores() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+              {mostrandoLoaderBusca && <Loader2 size={16} className="search-loading-icon" />}
             </div>
           </div>
           
@@ -710,10 +778,10 @@ export function TelaJogadores() {
             </div>
 
             <div ref={observerTarget} className="infinite-scroll-loader">
-              {isFetchingNextPage ? 'Carregando mais...' : ''}
+              {isFetchingNextPage && !debouncedSearchTerm ? 'Carregando mais...' : ''}
             </div>
 
-            {!loadingPlayers && filteredPlayers.length === 0 && (
+            {!loadingPlayers && !mostrandoLoaderBusca && filteredPlayers.length === 0 && (
               <div style={{textAlign: 'center', marginTop: '50px', color: 'var(--text-gray)'}}>
                 Nenhum resultado encontrado.
               </div>
