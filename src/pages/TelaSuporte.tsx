@@ -44,6 +44,10 @@ interface Message {
   time: string;
 }
 
+// O backend faz retry no Gemini (1s + 3s + 5s) antes de cair para o provedor reserva,
+// então essa chamada específica precisa de uma janela maior antes de considerar falha.
+const TIMEOUT_SUPORTE_MS = 40000;
+
 export function TelaSuporte() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -88,7 +92,7 @@ export function TelaSuporte() {
 
     setMessages([{
       id: 1,
-      text: "Sou o assistente virtual dos torneios DDO, pode me chamar para resolver qualquer problema. Seja direto ao ponto. Se possível, envie toda a história completa (em uma mensagem), para que eu possa te ajudar melhor.",
+      text: "Sou o assistente virtual dos torneios DDO, pode me chamar para resolver qualquer problema, ou tirar dúvidas sobre o regulamento. Seja direto ao ponto. Se possível, envie toda a história completa (em uma mensagem), para que eu possa te ajudar melhor.",
       sender: 'bot',
       time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     }]);
@@ -108,25 +112,46 @@ export function TelaSuporte() {
       time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     };
 
+    // Monta o histórico ANTES de adicionar a mensagem atual, no formato que o backend espera
+    const historicoParaEnvio = messages.map(m => ({
+      role: m.sender === 'user' ? 'user' : 'model',
+      texto: m.text
+    }));
+
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
     setIsTyping(true);
 
     try {
-      const response = await API.post('/suporte/chat', { novaPergunta: userMsg.text });
-      
+      const response = await API.post(
+        '/suporte/chat',
+        {
+          novaPergunta: userMsg.text,
+          historico: historicoParaEnvio
+        },
+        {
+          // Timeout maior só aqui: o backend pode levar até ~9s de retry no Gemini
+          // antes de cair pro provedor reserva. Não queremos desistir cedo demais.
+          timeout: TIMEOUT_SUPORTE_MS
+        }
+      );
+
       const botMsg: Message = {
         id: Date.now() + 1,
-        text: response.data.resposta || "Desculpe, não entendi. Pode reformular?",
+        text: response.data?.resposta || "Desculpe, não entendi. Pode reformular?",
         sender: 'bot',
         time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       };
-      
+
       setMessages(prev => [...prev, botMsg]);
-    } catch (error) {
+    } catch (error: any) {
+      const foiTimeout = error?.code === 'ECONNABORTED';
+
       const errorMsg: Message = {
         id: Date.now() + 1,
-        text: "Ocorreu um erro de conexão. Tente novamente mais tarde.",
+        text: foiTimeout
+          ? "O suporte está demorando mais que o normal para responder. Tente novamente em instantes."
+          : "O suporte está indisponível no momento. Tente novamente mais tarde ou contate um administrador.",
         sender: 'bot',
         time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       };
@@ -248,7 +273,6 @@ export function TelaSuporte() {
           box-shadow: 0 1px 2px rgba(0,0,0,0.05);
           font-size: 0.95rem;
           line-height: 1.5;
-          /* ADICIONADO: Faz respeitar as quebras de linha (\n) do backend */
           white-space: pre-wrap;
         }
 
@@ -302,6 +326,7 @@ export function TelaSuporte() {
         }
 
         .chat-input:focus { border-color: var(--primary); }
+        .chat-input:disabled { opacity: 0.6; cursor: not-allowed; }
 
         .send-btn {
           width: 46px;
@@ -318,7 +343,7 @@ export function TelaSuporte() {
         }
 
         .send-btn:hover { background: var(--primary-light); transform: scale(1.05); }
-        .send-btn:disabled { background: var(--text-gray); cursor: not-allowed; }
+        .send-btn:disabled { background: var(--text-gray); cursor: not-allowed; transform: none; }
 
         .typing-indicator {
           display: flex;
@@ -411,7 +436,7 @@ export function TelaSuporte() {
             
             <div className="chat-warning">
               <AlertTriangle size={14} /> 
-              <span>Histórico não salvo. Em caso de dúvidas persistentes, contate a administração.</span>
+              <span>Histórico não salvo entre sessões. Em caso de dúvidas persistentes, contate a administração.</span>
             </div>
 
             <div className="messages-area">
@@ -423,7 +448,6 @@ export function TelaSuporte() {
                     </div>
                   )}
                   <div className={`msg-bubble ${msg.sender === 'user' ? 'bubble-user' : 'bubble-bot'}`}>
-                    {/* USO DA FUNÇÃO DE FORMATAÇÃO AQUI */}
                     {formatMessage(msg.text)}
                     <span className="msg-time">{msg.time}</span>
                   </div>
@@ -448,11 +472,12 @@ export function TelaSuporte() {
             <div className="input-area">
               <textarea 
                 className="chat-input" 
-                placeholder="Digite sua mensagem..." 
+                placeholder={isTyping ? "Aguardando resposta..." : "Digite sua mensagem..."}
                 rows={inputRows}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyPress}
+                disabled={isTyping}
               />
               <button 
                 className="send-btn" 
