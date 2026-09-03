@@ -1,0 +1,305 @@
+/* ==========================================================
+   PopupMultiplicarMercado — usa as mesmas variáveis de tema
+   (--pp-*) e classes-base (.popup-overlay, .popup-content,
+   .info-box, .popup-spinner-small, .temporada-error-msg, etc.)
+   definidas em PopupSorteio.css.
+   ========================================================== */
+
+.multiplicar-popup-width {
+  max-width: 460px;
+}
+
+/* ---------- Badge do header ---------- */
+.multiplicar-badge {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 8px 16px rgba(16, 185, 129, 0.25);
+}
+
+/* ---------- Busca de clube ---------- */
+.busca-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.busca-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.busca-input-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--pp-text-secondary);
+  pointer-events: none;
+}
+
+.busca-spinner-icon {
+  position: absolute;
+  right: 14px;
+  color: var(--pp-input-focus-border);
+  animation: spin 0.8s linear infinite;
+}
+
+.busca-input {
+  width: 100%;
+  background-color: var(--pp-input-bg);
+  border: 1px solid var(--pp-input-border);
+  border-radius: 12px;
+  padding: 12px 14px 12px 42px;
+  font-size: 0.95rem;
+  color: var(--pp-input-text);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.busca-input::placeholder {
+  color: var(--pp-input-placeholder);
+}
+
+.busca-input:focus {
+  outline: none;
+  border-color: var(--pp-input-focus-border);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.busca-empty-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--pp-text-secondary);
+  font-size: 0.85rem;
+  padding: 14px;
+  background-color: var(--pp-input-bg);
+  border: 1px dashed var(--pp-border);
+  border-radius: 12px;
+  justify-content: center;
+  text-align: center;
+}
+
+.clube-resultado-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.clube-resultado-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--pp-input-bg);
+  border: 1px solid var(--pp-border);
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.clube-resultado-item:hover {
+  border-color: var(--pp-input-focus-border);
+  background-color: color-mix(in srgb, var(--pp-input-focus-border) 8%, var(--pp-input-bg));
+}
+
+.clube-resultado-item:hover .clube-resultado-arrow {
+  color: var(--pp-input-focus-border);
+}
+
+.clube-resultado-img {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.clube-resultado-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--pp-border);
+  color: var(--pp-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.clube-resultado-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+}
+
+.clube-resultado-nome {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--pp-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clube-resultado-valor {
+  font-size: 0.75rem;
+  color: var(--pp-text-secondary);
+}
+
+.clube-resultado-arrow {
+  flex-shrink: 0;
+  color: var(--pp-text-secondary);
+  transition: color 0.15s;
+}
+
+/* ---------- Etapa: multiplicador ---------- */
+.multiplicador-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.clube-atual-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--pp-input-bg);
+  border: 1px dashed var(--pp-border);
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+
+.clube-atual-img {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.multiplicador-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--pp-text-secondary);
+}
+
+.multiplicador-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.multiplicador-input {
+  width: 100%;
+  background-color: var(--pp-input-bg);
+  border: 1px solid var(--pp-input-border);
+  border-radius: 12px;
+  padding: 14px 40px 14px 16px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--pp-input-text);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.multiplicador-input::placeholder {
+  color: var(--pp-input-placeholder);
+  font-weight: 500;
+}
+
+.multiplicador-input:focus {
+  outline: none;
+  border-color: var(--pp-input-focus-border);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.multiplicador-suffix {
+  position: absolute;
+  right: 16px;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--pp-text-secondary);
+  pointer-events: none;
+}
+
+.preview-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.preview-valor-atual {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--pp-text-secondary);
+  text-decoration: line-through;
+}
+
+.preview-arrow {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.preview-valor-novo {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #10b981;
+}
+
+/* ---------- Etapa: sucesso ---------- */
+.sucesso-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.success-box {
+  background-color: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.success-icon {
+  color: #10b981;
+}
+
+/* ---------- Footer ---------- */
+.footer-btn-group {
+  display: flex;
+  gap: 10px;
+}
+
+.footer-btn-group .submit-season-btn {
+  flex: 1;
+}
+
+.multiplicar-confirm-btn {
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+}
+
+.secondary-btn {
+  background: var(--pp-btn-close-bg);
+  color: var(--pp-text-primary);
+  box-shadow: none;
+}
+
+.secondary-btn:hover:not(:disabled) {
+  filter: none;
+  background: var(--pp-border);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

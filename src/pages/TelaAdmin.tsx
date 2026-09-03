@@ -21,7 +21,8 @@ import {
   CalendarSync,
   Banknote,
   ShieldPlus,
-  Wand2
+  Wand2,
+  DollarSign
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -145,6 +146,11 @@ export function TelaAdmin() {
     if (!currentUser?.imagem) return null;
     return avatarMap[currentUser.imagem] || currentUser.imagem;
   };
+
+  // A tela de mercado só é acessível para DIRETOR e PROPRIETARIO (a própria
+  // TelaMercadoAdmin também bloqueia o acesso, mas evitamos mostrar o card
+  // para quem nem entraria na tela).
+  const podeAcessarMercado = currentUser && ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
 
   if (!isAuthorized) {
     return <LoadingSpinner isLoading={true} />;
@@ -363,6 +369,14 @@ export function TelaAdmin() {
                 <h4 className="action-title">Conquistas</h4>
                 <p className="action-desc">Gerencie as artes de campeão geradas para cada título</p>
             </div>
+
+            {podeAcessarMercado && (
+              <div className="action-card" onClick={() => navigate('/admin/mercado')}>
+                  <div className="action-icon"><DollarSign size={40} /></div>
+                  <h4 className="action-title">Mercado Financeiro</h4>
+                  <p className="action-desc">Status da cotação, IPCA e multiplicação do valor dos clubes</p>
+              </div>
+            )}
 
           </div>
         </div>

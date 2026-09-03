@@ -22,6 +22,7 @@ import { TelaTituloSelecionado } from './pages/TelaTituloSelecionado';
 import TelaBracket from './pages/TelaBracket';
 import { TelaBracketJogos } from './pages/TelaBracketJogos';
 import { TelaMercado } from './pages/TelaMercado';
+import { TelaMercadoAdmin } from './pages/TelaMercadoAdmin';
 import { TelaClubeSelecionado } from './pages/TelaClubeSelecionado';
 import { TelaTransparencia } from './pages/TelaTransparencia';
 import { TelaLeilao } from './pages/TelaLeilao';
@@ -67,6 +68,7 @@ function App() {
           <Route path="/minha-conta" element={<TelaMinhaConta />} />
           <Route path="/minha-conta/financeiro" element={<TelaMinhasTransacoes />} />
           <Route path="/admin" element={<TelaAdmin />} />
+          <Route path="/admin/mercado" element={<TelaMercadoAdmin />} />
           <Route path="/anuncios" element={<TelaAnuncios />} />
           <Route path="/anuncios/:anuncioId" element={<TelaAnuncioSelecionado />} />
           <Route path="/jogador/:id" element={<TelaPerfilJogador />} />

@@ -13,7 +13,8 @@ import {
   Gamepad2, 
   Star,
   Lightbulb,
-  CalendarSync
+  CalendarSync,
+  Loader2
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -82,6 +83,17 @@ const fetchAvatarsService = async () => {
   return [];
 };
 
+// Autocomplete do back — usado quando a listagem local (paginada) ainda
+// está incompleta, para não esconder clubes que ainda não foram carregados.
+const fetchBuscaAutocompleteService = async (termo: string): Promise<Clube[]> => {
+  const response = await API.get('/clube/buscar-autocomplete', {
+    params: { termo }
+  });
+  return Array.isArray(response.data) ? response.data : (Array.isArray(response) ? (response as any) : []);
+};
+
+const MIN_CARACTERES_BUSCA_BACK = 3;
+
 export function TelaClubes() {
   const navigate = useNavigate();
   const observerTarget = useRef(null);
@@ -112,10 +124,23 @@ export function TelaClubes() {
     return data?.pages.flatMap(page => page.conteudo) || [];
   }, [data]);
 
+  // Enquanto ainda houver páginas para carregar, a listagem local está
+  // incompleta — a busca precisa ir direto no back para não esconder
+  // clubes que ainda não foram paginados até aqui.
+  const listagemCompleta = !hasNextPage;
+
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [showUserPopup, setShowUserPopup] = useState(false);
+  const [showNovoClubePopup, setShowNovoClubePopup] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage && !debouncedSearchTerm) {
           fetchNextPage();
         }
       },
@@ -127,7 +152,7 @@ export function TelaClubes() {
     }
 
     return () => observer.disconnect();
-  }, [hasNextPage, fetchNextPage, isFetchingNextPage]);
+  }, [hasNextPage, fetchNextPage, isFetchingNextPage, debouncedSearchTerm]);
 
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -136,13 +161,6 @@ export function TelaClubes() {
     });
     return map;
   }, [avatars]);
-
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [showNovoClubePopup, setShowNovoClubePopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
@@ -165,6 +183,31 @@ export function TelaClubes() {
       setCurrentUser(JSON.parse(storedUser));
     }
   }, []);
+
+  // Debounce da busca — só dispara a query de autocomplete 350ms após o
+  // usuário parar de digitar.
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 350);
+    return () => clearTimeout(timeout);
+  }, [searchTerm]);
+
+  // Reseta a busca ao trocar de aba (clubes/seleções), já que os resultados
+  // do autocomplete não distinguem clube de seleção.
+  useEffect(() => {
+    setSearchTerm('');
+    setDebouncedSearchTerm('');
+  }, [activeTab]);
+
+  const buscaBackHabilitada = !listagemCompleta && debouncedSearchTerm.length >= MIN_CARACTERES_BUSCA_BACK;
+
+  const { data: resultadosBusca = [], isFetching: buscandoNoBack } = useQuery<Clube[]>({
+    queryKey: ['clubes-busca-autocomplete', debouncedSearchTerm],
+    queryFn: () => fetchBuscaAutocompleteService(debouncedSearchTerm),
+    enabled: buscaBackHabilitada,
+    staleTime: 1000 * 30,
+  });
 
   const handleVerClube = (id: string) => {
     navigate(`/clube/${id}`);
@@ -189,9 +232,25 @@ export function TelaClubes() {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  const filteredClubes = allClubes.filter(clube =>
-    clube.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Fonte da lista exibida:
+  // - sem termo -> lista local (paginada normalmente)
+  // - com termo e listagem local já completa -> filtra localmente (sem custo de rede)
+  // - com termo (3+ caracteres) e listagem local incompleta -> usa o autocomplete do back
+  // - com termo curto (<3) e listagem incompleta -> mantém o filtro local do que já carregou,
+  //   já que ainda não vale a pena chamar o back
+  const filteredClubes = useMemo(() => {
+    if (!debouncedSearchTerm) return allClubes;
+
+    if (listagemCompleta || debouncedSearchTerm.length < MIN_CARACTERES_BUSCA_BACK) {
+      return allClubes.filter(clube =>
+        clube.nome.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+      );
+    }
+
+    return resultadosBusca;
+  }, [allClubes, debouncedSearchTerm, listagemCompleta, resultadosBusca]);
+
+  const mostrandoLoaderBusca = buscaBackHabilitada && buscandoNoBack;
 
   const getCurrentUserAvatar = () => {
     if (!currentUser?.imagem) return null;
@@ -282,6 +341,9 @@ export function TelaClubes() {
         .card-avatar-large {
           width: 80px;
           height: 80px;
+          min-width: 80px;
+          min-height: 80px;
+          flex-shrink: 0;
           border-radius: 50%;
           background: var(--hover-bg);
           display: flex;
@@ -353,6 +415,16 @@ export function TelaClubes() {
           color: var(--text-gray);
         }
 
+        .search-loading-icon {
+          color: var(--text-gray);
+          animation: spin 0.8s linear infinite;
+          flex-shrink: 0;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
         @media (max-width: 768px) {
           .page-content { padding: 1rem; }
         }
@@ -419,6 +491,7 @@ export function TelaClubes() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+              {mostrandoLoaderBusca && <Loader2 size={16} className="search-loading-icon" />}
             </div>
           </div>
           
@@ -538,10 +611,10 @@ export function TelaClubes() {
             </div>
 
             <div ref={observerTarget} className="infinite-scroll-loader">
-              {isFetchingNextPage ? 'Carregando mais...' : ''}
+              {isFetchingNextPage && !debouncedSearchTerm ? 'Carregando mais...' : ''}
             </div>
 
-            {!loading && filteredClubes.length === 0 && (
+            {!loading && !mostrandoLoaderBusca && filteredClubes.length === 0 && (
               <div style={{textAlign: 'center', marginTop: '50px', color: 'var(--text-gray)'}}>
                 Nenhum resultado encontrado para esta categoria.
               </div>
