@@ -143,6 +143,10 @@ interface EstatisticasCasaFora {
   vSelecaoFora: number;
   eSelecaoFora: number;
   dSelecaoFora: number;
+  golsMarcadosCasa: number;
+  golsSofridosCasa: number;
+  golsMarcadosFora: number;
+  golsSofridosFora: number;
 }
 
 interface MelhorTemporada {
@@ -529,8 +533,18 @@ export function TelaPerfilJogador() {
     const pct = (v: number, total: number) => total > 0 ? Math.round((v / total) * 100) : 0;
 
     return {
-      casa: { v: vCasa, e: eCasa, d: dCasa, total: totalCasa, aproveitamento: pct(vCasa, totalCasa) },
-      fora: { v: vFora, e: eFora, d: dFora, total: totalFora, aproveitamento: pct(vFora, totalFora) },
+      casa: { 
+          v: vCasa, e: eCasa, d: dCasa, total: totalCasa, aproveitamento: pct(vCasa, totalCasa),
+          golsPro: casaFora.golsMarcadosCasa,
+          golsContra: casaFora.golsSofridosCasa,
+          saldo: casaFora.golsMarcadosCasa - casaFora.golsSofridosCasa
+      },
+      fora: { 
+          v: vFora, e: eFora, d: dFora, total: totalFora, aproveitamento: pct(vFora, totalFora),
+          golsPro: casaFora.golsMarcadosFora,
+          golsContra: casaFora.golsSofridosFora,
+          saldo: casaFora.golsMarcadosFora - casaFora.golsSofridosFora
+      },
       clube: {
         casa: { v: casaFora.vClubeCasa, e: casaFora.eClubeCasa, d: casaFora.dClubeCasa },
         fora: { v: casaFora.vClubeFora, e: casaFora.eClubeFora, d: casaFora.dClubeFora },
@@ -1666,6 +1680,32 @@ export function TelaPerfilJogador() {
             gap: 10px;
             font-weight: 700;
         }
+            .cf-goals-row {
+            display: flex;
+            justify-content: space-between;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-top: 8px;
+        }
+        .cf-goal-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .cf-goal-val {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+        .cf-goal-lbl {
+            font-size: 0.65rem;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-top: 2px;
+        }
         .cf-v { color: #10b981; }
         .cf-e { color: var(--text-gray); }
         .cf-d { color: #ef4444; }
@@ -2555,6 +2595,23 @@ export function TelaPerfilJogador() {
                                             </span>
                                         </div>
                                     </div>
+
+                                    <div className="cf-goals-row">
+                                        <div className="cf-goal-stat">
+                                            <span className="cf-goal-val">{casaForaInfo.casa.golsPro}</span>
+                                            <span className="cf-goal-lbl">Gols Pró</span>
+                                        </div>
+                                        <div className="cf-goal-stat">
+                                            <span className="cf-goal-val">{casaForaInfo.casa.golsContra}</span>
+                                            <span className="cf-goal-lbl">Gols Sofridos</span>
+                                        </div>
+                                        <div className="cf-goal-stat">
+                                            <span className="cf-goal-val" style={{ color: casaForaInfo.casa.saldo >= 0 ? '#10b981' : '#ef4444' }}>
+                                                {casaForaInfo.casa.saldo > 0 ? `+${casaForaInfo.casa.saldo}` : casaForaInfo.casa.saldo}
+                                            </span>
+                                            <span className="cf-goal-lbl">Saldo</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="cf-panel cf-panel-fora">
@@ -2600,6 +2657,23 @@ export function TelaPerfilJogador() {
                                                 <span className="cf-e">{casaForaInfo.selecao.fora.e}E</span>
                                                 <span className="cf-d">{casaForaInfo.selecao.fora.d}D</span>
                                             </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="cf-goals-row">
+                                        <div className="cf-goal-stat">
+                                            <span className="cf-goal-val">{casaForaInfo.fora.golsPro}</span>
+                                            <span className="cf-goal-lbl">Gols Pró</span>
+                                        </div>
+                                        <div className="cf-goal-stat">
+                                            <span className="cf-goal-val">{casaForaInfo.fora.golsContra}</span>
+                                            <span className="cf-goal-lbl">Gols Sofridos</span>
+                                        </div>
+                                        <div className="cf-goal-stat">
+                                            <span className="cf-goal-val" style={{ color: casaForaInfo.fora.saldo >= 0 ? '#10b981' : '#ef4444' }}>
+                                                {casaForaInfo.fora.saldo > 0 ? `+${casaForaInfo.fora.saldo}` : casaForaInfo.fora.saldo}
+                                            </span>
+                                            <span className="cf-goal-lbl">Saldo</span>
                                         </div>
                                     </div>
                                 </div>

@@ -54,6 +54,10 @@ interface CasaForaStats {
   vSelecaoFora: number;
   eSelecaoFora: number;
   dSelecaoFora: number;
+  golsMarcadosCasa: number;
+  golsSofridosCasa: number;
+  golsMarcadosFora: number;
+  golsSofridosFora: number;
 }
 
 interface EstiloJogador {
@@ -324,8 +328,18 @@ export function TelaComparandoJogador() {
     const pct = (v: number, total: number) => (total > 0 ? Math.round((v / total) * 100) : 0);
 
     return {
-      casa: { v: vCasa, e: eCasa, d: dCasa, total: totalCasa, aproveitamento: pct(vCasa, totalCasa) },
-      fora: { v: vFora, e: eFora, d: dFora, total: totalFora, aproveitamento: pct(vFora, totalFora) },
+      casa: { 
+        v: vCasa, e: eCasa, d: dCasa, total: totalCasa, aproveitamento: pct(vCasa, totalCasa),
+        golsPro: cf.golsMarcadosCasa,
+        golsContra: cf.golsSofridosCasa,
+        saldo: cf.golsMarcadosCasa - cf.golsSofridosCasa
+      },
+      fora: { 
+        v: vFora, e: eFora, d: dFora, total: totalFora, aproveitamento: pct(vFora, totalFora),
+        golsPro: cf.golsMarcadosFora,
+        golsContra: cf.golsSofridosFora,
+        saldo: cf.golsMarcadosFora - cf.golsSofridosFora
+      },
     };
   };
 
@@ -821,6 +835,7 @@ export function TelaComparandoJogador() {
                                       </div>
 
                                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                          {/* Bloco Casa */}
                                           <div style={{ background: 'var(--bg-card)', borderRadius: '10px', padding: '12px', border: '1px solid var(--border-color)' }}>
                                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', marginBottom: '8px' }}>
                                                   <Home size={14} /> Casa · {resumo.casa.aproveitamento}%
@@ -830,7 +845,26 @@ export function TelaComparandoJogador() {
                                                   <span style={{ color: 'var(--text-gray)' }}>{resumo.casa.e}E</span>
                                                   <span style={{ color: '#ef4444' }}>{resumo.casa.d}D</span>
                                               </div>
+                                              {/* Adição dos Gols Casa */}
+                                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--border-color)' }}>
+                                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                      <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-dark)' }}>{resumo.casa.golsPro}</span>
+                                                      <span style={{ fontSize: '0.65rem', color: 'var(--text-gray)', textTransform: 'uppercase', fontWeight: 700 }}>GP</span>
+                                                  </div>
+                                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                      <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-dark)' }}>{resumo.casa.golsContra}</span>
+                                                      <span style={{ fontSize: '0.65rem', color: 'var(--text-gray)', textTransform: 'uppercase', fontWeight: 700 }}>GC</span>
+                                                  </div>
+                                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                      <span style={{ fontSize: '0.9rem', fontWeight: 800, color: resumo.casa.saldo >= 0 ? '#10b981' : '#ef4444' }}>
+                                                          {resumo.casa.saldo > 0 ? `+${resumo.casa.saldo}` : resumo.casa.saldo}
+                                                      </span>
+                                                      <span style={{ fontSize: '0.65rem', color: 'var(--text-gray)', textTransform: 'uppercase', fontWeight: 700 }}>SG</span>
+                                                  </div>
+                                              </div>
                                           </div>
+                                          
+                                          {/* Bloco Fora */}
                                           <div style={{ background: 'var(--bg-card)', borderRadius: '10px', padding: '12px', border: '1px solid var(--border-color)' }}>
                                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase', marginBottom: '8px' }}>
                                                   <Plane size={14} /> Fora · {resumo.fora.aproveitamento}%
@@ -839,6 +873,23 @@ export function TelaComparandoJogador() {
                                                   <span style={{ color: '#10b981' }}>{resumo.fora.v}V</span>
                                                   <span style={{ color: 'var(--text-gray)' }}>{resumo.fora.e}E</span>
                                                   <span style={{ color: '#ef4444' }}>{resumo.fora.d}D</span>
+                                              </div>
+                                              {/* Adição dos Gols Fora */}
+                                              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--border-color)' }}>
+                                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                      <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-dark)' }}>{resumo.fora.golsPro}</span>
+                                                      <span style={{ fontSize: '0.65rem', color: 'var(--text-gray)', textTransform: 'uppercase', fontWeight: 700 }}>GP</span>
+                                                  </div>
+                                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                      <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-dark)' }}>{resumo.fora.golsContra}</span>
+                                                      <span style={{ fontSize: '0.65rem', color: 'var(--text-gray)', textTransform: 'uppercase', fontWeight: 700 }}>GC</span>
+                                                  </div>
+                                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                      <span style={{ fontSize: '0.9rem', fontWeight: 800, color: resumo.fora.saldo >= 0 ? '#10b981' : '#ef4444' }}>
+                                                          {resumo.fora.saldo > 0 ? `+${resumo.fora.saldo}` : resumo.fora.saldo}
+                                                      </span>
+                                                      <span style={{ fontSize: '0.65rem', color: 'var(--text-gray)', textTransform: 'uppercase', fontWeight: 700 }}>SG</span>
+                                                  </div>
                                               </div>
                                           </div>
                                       </div>
