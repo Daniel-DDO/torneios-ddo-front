@@ -36,6 +36,7 @@ import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupNotificacao from '../components/PopupNotificacao';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, Legend } from 'recharts';
 
 interface CasaForaStats {
   jogadorId: string;
@@ -165,6 +166,35 @@ interface UserData {
   partidasJogadas?: number;
 }
 
+interface AtributosRadar {
+  ataque: number;
+  defesa: number;
+  eficiencia: number;
+  disciplina: number;
+  experiencia: number;
+}
+
+interface RadarJogadorData {
+  jogadorId: string;
+  nome: string;
+  imagem: string | null;
+  atributos: AtributosRadar;
+}
+
+interface RadarComparacaoResponse {
+  jogador1: RadarJogadorData;
+  jogador2: RadarJogadorData | null;
+}
+
+const fetchRadarComparacaoService = async (id1: string, id2: string): Promise<RadarComparacaoResponse | null> => {
+    try {
+        const response = await API.get(`/jogador/radar`, { params: { id1, id2 } });
+        return response.data;
+    } catch (error) {
+        return null;
+    }
+};
+
 const fetchAvatarsService = async () => {
   const response = await API.get('/api/avatares');
   if (Array.isArray(response)) return response;
@@ -211,6 +241,13 @@ export function TelaComparandoJogador() {
     gcTime: 1000 * 60 * 30,
     retry: false,
     refetchOnWindowFocus: false,
+  });
+
+  const { data: radarComp, isLoading: isLoadingRadarComp } = useQuery<RadarComparacaoResponse | null>({
+    queryKey: ['comparacaoRadar', id1, id2],
+    queryFn: () => fetchRadarComparacaoService(id1!, id2!),
+    enabled: !!id1 && !!id2,
+    staleTime: 1000 * 60 * 5,
   });
 
   // O back retorna 400 com um payload de erro de validação (ex: jogador sem
@@ -917,6 +954,44 @@ export function TelaComparandoJogador() {
                           </div>
                       </div>
                   </div>
+
+                  <div className="tp-card" style={{ padding: '24px' }}>
+                    <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-dark)', fontSize: '1.1rem' }}>
+                        <Sparkles size={20} color="#8b5cf6" />
+                        Comparativo de Atributos (Radar)
+                    </h3>
+
+                    {isLoadingRadarComp ? (
+                        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-gray)' }}>Carregando radar comparativo...</div>
+                    ) : !radarComp?.jogador1 || !radarComp?.jogador2 ? (
+                        <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-gray)' }}>Dados insuficientes para gerar o gráfico comparativo.</div>
+                    ) : (() => {
+                        const a1 = radarComp.jogador1.atributos;
+                        const a2 = radarComp.jogador2.atributos;
+
+                        const chartData = [
+                            { subject: 'Ataque', J1: a1.ataque, J2: a2.ataque, fullMark: 100 },
+                            { subject: 'Defesa', J1: a1.defesa, J2: a2.defesa, fullMark: 100 },
+                            { subject: 'Eficiência', J1: a1.eficiencia, J2: a2.eficiencia, fullMark: 100 },
+                            { subject: 'Disciplina', J1: a1.disciplina, J2: a2.disciplina, fullMark: 100 },
+                            { subject: 'Experiência', J1: a1.experiencia, J2: a2.experiencia, fullMark: 100 },
+                        ];
+
+                        return (
+                            <div style={{ width: '100%', height: '360px' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
+                                        <PolarGrid stroke="var(--border-color)" />
+                                        <PolarAngleAxis dataKey="subject" stroke="var(--text-gray)" tick={{ fill: 'var(--text-gray)', fontSize: 12 }} />
+                                        <Radar name={radarComp.jogador1.nome} dataKey="J1" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.3} />
+                                        <Radar name={radarComp.jogador2.nome} dataKey="J2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
+                                        <Legend />
+                                    </RadarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        );
+                    })()}
+                </div>
 
                   {/* ===== Estilo de Jogo & Forma Recente ===== */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '24px' }}>

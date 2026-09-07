@@ -16,6 +16,7 @@ import PopupLogin from '../components/PopupLogin';
 import PopupUser from '../components/PopupUser';
 import PopupMudarDiscord from '../components/PopupMudarDiscord';
 import { BotaoNotificacao } from '../components/BotaoNotificacao';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 
 interface InsigniaDefinition {
   id: string;
@@ -189,6 +190,35 @@ interface RankConfig {
   corClara: string;
 }
 
+interface AtributosRadar {
+  ataque: number;
+  defesa: number;
+  eficiencia: number;
+  disciplina: number;
+  experiencia: number;
+}
+
+interface RadarJogadorData {
+  jogadorId: string;
+  nome: string;
+  imagem: string | null;
+  atributos: AtributosRadar;
+}
+
+interface RadarComparacaoResponse {
+  jogador1: RadarJogadorData;
+  jogador2: RadarJogadorData | null;
+}
+
+const fetchPlayerRadarService = async (playerId: string): Promise<RadarComparacaoResponse | null> => {
+    try {
+        const response = await API.get(`/jogador/radar`, { params: { id1: playerId } });
+        return response.data;
+    } catch (error) {
+        return null;
+    }
+};
+
 const RANKS_CONFIG: RankConfig[] = [
   { nome: 'SEM_RANK', min: 0, max: 199, cor: '#94a3b8', corClara: 'rgba(148, 163, 184, 0.12)' },
   { nome: 'BRONZE', min: 200, max: 499, cor: '#b45309', corClara: 'rgba(180, 83, 9, 0.12)' },
@@ -322,6 +352,13 @@ export function TelaPerfilJogador() {
     queryKey: ['playerAchievements', id],
     queryFn: () => fetchPlayerAchievementsService(id!),
     enabled: !!id,
+  });
+
+  const { data: radarData, isLoading: isLoadingRadar } = useQuery<RadarComparacaoResponse | null>({
+    queryKey: ['playerRadar', id],
+    queryFn: () => fetchPlayerRadarService(id!),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: victims = [], isLoading: isLoadingVictims } = useQuery<VictimData[]>({
@@ -2836,6 +2873,42 @@ export function TelaPerfilJogador() {
                                 </div>
                             </div>
                         )}
+                    </div>
+
+                    <div className="card-box" style={{ marginTop: '24px' }}>
+                        <div className="card-header">
+                            <div className="card-title"><Sparkles size={20} style={{ color: '#8b5cf6' }} /> Radar de Atributos</div>
+                        </div>
+
+                        {isLoadingRadar ? (
+                            <div className="insight-loading">
+                                <div className="spin-dot"></div>
+                                Carregando radar de atributos...
+                            </div>
+                        ) : !radarData?.jogador1 ? (
+                            <div className="insight-empty">Dados indisponíveis para o radar.</div>
+                        ) : (() => {
+                            const atrs = radarData.jogador1.atributos;
+                            const chartData = [
+                                { subject: 'Ataque', A: atrs.ataque, fullMark: 100 },
+                                { subject: 'Defesa', A: atrs.defesa, fullMark: 100 },
+                                { subject: 'Eficiência', A: atrs.eficiencia, fullMark: 100 },
+                                { subject: 'Disciplina', A: atrs.disciplina, fullMark: 100 },
+                                { subject: 'Experiência', A: atrs.experiencia, fullMark: 100 },
+                            ];
+
+                            return (
+                                <div style={{ width: '100%', height: '300px' }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
+                                            <PolarGrid stroke="var(--border-color)" />
+                                            <PolarAngleAxis dataKey="subject" stroke="var(--text-gray)" tick={{ fill: 'var(--text-gray)', fontSize: 12 }} />
+                                            <Radar name={radarData.jogador1.nome} dataKey="A" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.4} />
+                                        </RadarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
             )}
