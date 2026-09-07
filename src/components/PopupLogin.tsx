@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { API } from '../services/api';
 import './PopupLogin.css';
 
@@ -15,6 +15,17 @@ const PopupLogin: React.FC<PopupLoginProps> = ({ onClose, onLoginSuccess }) => {
   const [error, setError] = useState('');
   const [fadeout, setFadeout] = useState(false);
 
+  // Estado específico para conta aposentada: mensagem + contagem regressiva antes de recarregar
+  const [avisoAposentado, setAvisoAposentado] = useState<string | null>(null);
+  const [contagemRegressiva, setContagemRegressiva] = useState(5);
+  const intervaloRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (intervaloRef.current) clearInterval(intervaloRef.current);
+    };
+  }, []);
+
   const handleClose = () => {
     setFadeout(true);
     setTimeout(() => {
@@ -22,9 +33,25 @@ const PopupLogin: React.FC<PopupLoginProps> = ({ onClose, onLoginSuccess }) => {
     }, 300);
   };
 
+  const iniciarContagemAposentado = (mensagem: string) => {
+    setAvisoAposentado(mensagem);
+    setContagemRegressiva(5);
+
+    intervaloRef.current = setInterval(() => {
+      setContagemRegressiva((prev) => {
+        if (prev <= 1) {
+          if (intervaloRef.current) clearInterval(intervaloRef.current);
+          window.location.reload();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   const handleSubmit = async () => {
     setError('');
-    
+
     if (!login || !senha) {
       setError('Preencha todos os campos.');
       return;
@@ -50,8 +77,14 @@ const PopupLogin: React.FC<PopupLoginProps> = ({ onClose, onLoginSuccess }) => {
       }, 300);
 
     } catch (err: any) {
+      const codigo = err.response?.data?.codigo;
       const msg = err.response?.data?.message || 'Erro ao realizar login.';
-      setError(msg);
+
+      if (codigo === 'CONTA_APOSENTADA') {
+        iniciarContagemAposentado(msg);
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -74,75 +107,101 @@ const PopupLogin: React.FC<PopupLoginProps> = ({ onClose, onLoginSuccess }) => {
           </svg>
         </button>
 
-        <div className="popup-header-fixed">
-          <div className="icon-badge-wrapper">
-             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="32" height="32">
-               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-               <circle cx="12" cy="7" r="4"></circle>
-             </svg>
-          </div>
-          <h2 className="popup-title">Bem-vindo</h2>
-          <p className="popup-subtitle">Faça login para gerenciar sua carreira</p>
-        </div>
-
-        <div className="popup-body-scroll custom-scrollbar">
-          <div className="reivindicar-form" onKeyDown={handleKeyDown}>
-            
-            <div className="form-group">
-                <label htmlFor="login">Login <span className="required-star">*</span></label>
-                <div className="input-icon-wrap">
-                  <input 
-                    className="reivindicar-input"
-                    type="text" 
-                    id="login"
-                    placeholder="Discord ou E-mail"
-                    value={login}
-                    onChange={(e) => setLogin(e.target.value)}
-                    autoFocus
-                  />
-                </div>
+        {avisoAposentado ? (
+          <>
+            <div className="popup-header-fixed">
+              <div className="icon-badge-wrapper" style={{ color: '#d63031' }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="32" height="32">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+              </div>
+              <h2 className="popup-title">Conta Aposentada</h2>
             </div>
 
-            <div className="form-group">
-                <label htmlFor="senha">Senha <span className="required-star">*</span></label>
-                <div className="password-wrapper">
-                    <input 
-                      className="reivindicar-input password-field"
-                      type={showPassword ? 'text' : 'password'}
-                      id="senha"
-                      placeholder="Sua senha"
-                      value={senha}
-                      onChange={(e) => setSenha(e.target.value)}
-                    />
-                    <button 
-                      type="button" 
-                      className="password-toggle-btn" 
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                          <line x1="1" y1="1" x2="23" y2="23"></line>
-                        </svg>
-                      ) : (
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                          <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                      )}
-                    </button>
-                </div>
+            <div className="popup-body-scroll custom-scrollbar">
+              <div className="reivindicar-error-msg" style={{ marginBottom: 0 }}>
+                {avisoAposentado}
+              </div>
+              <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '0.9rem', opacity: 0.7 }}>
+                Esta página será recarregada em {contagemRegressiva}s...
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="popup-header-fixed">
+              <div className="icon-badge-wrapper">
+                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="32" height="32">
+                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                   <circle cx="12" cy="7" r="4"></circle>
+                 </svg>
+              </div>
+              <h2 className="popup-title">Bem-vindo</h2>
+              <p className="popup-subtitle">Faça login para gerenciar sua carreira</p>
             </div>
 
-            {error && <div className="reivindicar-error-msg">{error}</div>}
-          </div>
-        </div>
+            <div className="popup-body-scroll custom-scrollbar">
+              <div className="reivindicar-form" onKeyDown={handleKeyDown}>
+                
+                <div className="form-group">
+                    <label htmlFor="login">Login <span className="required-star">*</span></label>
+                    <div className="input-icon-wrap">
+                      <input 
+                        className="reivindicar-input"
+                        type="text" 
+                        id="login"
+                        placeholder="Discord ou E-mail"
+                        value={login}
+                        onChange={(e) => setLogin(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                </div>
 
-        <div className="popup-footer-fixed">
-           <button type="button" className="submit-claim-btn" onClick={handleSubmit} disabled={loading}>
-             {loading ? <div className="popup-spinner-small"></div> : 'ENTRAR NA CONTA'}
-           </button>
-        </div>
+                <div className="form-group">
+                    <label htmlFor="senha">Senha <span className="required-star">*</span></label>
+                    <div className="password-wrapper">
+                        <input 
+                          className="reivindicar-input password-field"
+                          type={showPassword ? 'text' : 'password'}
+                          id="senha"
+                          placeholder="Sua senha"
+                          value={senha}
+                          onChange={(e) => setSenha(e.target.value)}
+                        />
+                        <button 
+                          type="button" 
+                          className="password-toggle-btn" 
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                              <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
+                          ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                              <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                          )}
+                        </button>
+                    </div>
+                </div>
+
+                {error && <div className="reivindicar-error-msg">{error}</div>}
+              </div>
+            </div>
+
+            <div className="popup-footer-fixed">
+               <button type="button" className="submit-claim-btn" onClick={handleSubmit} disabled={loading}>
+                 {loading ? <div className="popup-spinner-small"></div> : 'ENTRAR NA CONTA'}
+               </button>
+            </div>
+          </>
+        )}
 
       </div>
     </div>
