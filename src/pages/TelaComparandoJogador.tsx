@@ -978,18 +978,53 @@ export function TelaComparandoJogador() {
                         ];
 
                         return (
-                            <div style={{ width: '100%', height: '360px' }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
-                                        <PolarGrid stroke="var(--border-color)" />
-                                        <PolarAngleAxis dataKey="subject" stroke="var(--text-gray)" tick={{ fill: 'var(--text-gray)', fontSize: 12 }} />
-                                        <Radar name={radarComp.jogador1.nome} dataKey="J1" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.3} />
-                                        <Radar name={radarComp.jogador2.nome} dataKey="J2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
-                                        <Legend />
-                                    </RadarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        );
+                              <div>
+                                  <div style={{ width: '100%', height: '300px' }}>
+                                      <ResponsiveContainer width="100%" height="100%">
+                                          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
+                                              <PolarGrid stroke="var(--border-color)" />
+                                              <PolarAngleAxis dataKey="subject" stroke="var(--text-gray)" tick={{ fill: 'var(--text-gray)', fontSize: 12 }} />
+                                              <Radar name={radarComp.jogador1.nome} dataKey="J1" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.3} />
+                                              <Radar name={radarComp.jogador2.nome} dataKey="J2" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
+                                              <Legend />
+                                          </RadarChart>
+                                      </ResponsiveContainer>
+                                  </div>
+
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '20px' }}>
+                                      {[
+                                          { label: 'Ataque', v1: a1.ataque, v2: a2.ataque },
+                                          { label: 'Defesa', v1: a1.defesa, v2: a2.defesa },
+                                          { label: 'Eficiência', v1: a1.eficiencia, v2: a2.eficiencia },
+                                          { label: 'Disciplina', v1: a1.disciplina, v2: a2.disciplina },
+                                          { label: 'Experiência', v1: a1.experiencia, v2: a2.experiencia },
+                                      ].map((item, idx) => {
+                                          const better1 = item.v1 > item.v2;
+                                          const better2 = item.v2 > item.v1;
+                                          return (
+                                              <div 
+                                                  key={idx} 
+                                                  style={{ 
+                                                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+                                                      background: 'var(--bg-body)', padding: '10px 18px', borderRadius: '10px', 
+                                                      border: '1px solid var(--border-color)' 
+                                                  }}
+                                              >
+                                                  <span style={{ fontWeight: better1 ? 800 : 600, color: better1 ? 'var(--primary)' : 'var(--text-dark)', fontSize: '0.95rem', width: '60px' }}>
+                                                      {item.v1}
+                                                  </span>
+                                                  <span style={{ fontSize: '0.75rem', color: 'var(--text-gray)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '1px' }}>
+                                                      {item.label}
+                                                  </span>
+                                                  <span style={{ fontWeight: better2 ? 800 : 600, color: better2 ? '#ef4444' : 'var(--text-dark)', fontSize: '0.95rem', width: '60px', textAlign: 'right' }}>
+                                                      {item.v2}
+                                                  </span>
+                                              </div>
+                                          );
+                                      })}
+                                  </div>
+                              </div>
+                          );
                     })()}
                 </div>
 

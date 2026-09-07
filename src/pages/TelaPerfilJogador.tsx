@@ -2898,7 +2898,8 @@ export function TelaPerfilJogador() {
                             ];
 
                             return (
-                                <div style={{ width: '100%', height: '300px' }}>
+                            <div>
+                                <div style={{ width: '100%', height: '260px' }}>
                                     <ResponsiveContainer width="100%" height="100%">
                                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
                                             <PolarGrid stroke="var(--border-color)" />
@@ -2907,7 +2908,23 @@ export function TelaPerfilJogador() {
                                         </RadarChart>
                                     </ResponsiveContainer>
                                 </div>
-                            );
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', marginTop: '16px', textAlign: 'center' }}>
+                                    {[
+                                        { label: 'Ataque', val: atrs.ataque },
+                                        { label: 'Defesa', val: atrs.defesa },
+                                        { label: 'Eficiência', val: atrs.eficiencia },
+                                        { label: 'Disciplina', val: atrs.disciplina },
+                                        { label: 'Experiência', val: atrs.experiencia },
+                                    ].map((item, idx) => (
+                                        <div key={idx} style={{ background: 'var(--hover-bg)', padding: '10px 6px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                                            <div style={{ fontSize: '0.65rem', color: 'var(--text-gray)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '2px' }}>{item.label}</div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-dark)' }}>{item.val}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
                         })()}
                     </div>
                 </div>
