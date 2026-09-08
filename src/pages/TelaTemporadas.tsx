@@ -34,13 +34,17 @@ interface Season {
   ativa: boolean;
 }
 
+// Segue o mesmo formato de paginação usado nas demais telas (ex: clubes,
+// jogadores): conteudo/paginaAtual/totalPaginas/ultimaPagina — e não
+// conteudo/numero/ultima como estava antes, o que fazia "ultima" nunca
+// bater com o campo real do back e travava a paginação sempre na página 1.
 interface PaginacaoResponse<T> {
   conteudo: T[];
-  numero: number;
+  paginaAtual: number;
   totalPaginas: number;
   totalElementos: number;
   tamanho: number;
-  ultima: boolean;
+  ultimaPagina: boolean;
 }
 
 interface UserData {
@@ -111,7 +115,7 @@ export function TelaTemporadas() {
 
   const seasons = seasonsPage?.conteudo ?? [];
   const totalPaginas = seasonsPage?.totalPaginas ?? 0;
-  const ultima = seasonsPage?.ultima ?? true;
+  const ultima = seasonsPage?.ultimaPagina ?? true;
 
   const avatarMap = useMemo(() => {
     const map: Record<string, string> = {};

@@ -32,7 +32,8 @@ import {
   Lock,
   CheckCircle2,
   ShieldCheck,
-  Repeat
+  Repeat,
+  Target
 } from 'lucide-react';
 import { API, API_SECUNDARIA } from '../services/api';
 import PopupLogin from '../components/PopupLogin';
@@ -94,11 +95,30 @@ interface PartidaDTO {
   anuladaEm: string | null;
 }
 
+interface PlacarProvavelDTO {
+  golsMandante: number;
+  golsVisitante: number;
+  probabilidade: number;
+}
+
+interface PlacarCotadoDTO {
+  golsMandante: number;
+  golsVisitante: number;
+  probabilidadeDessePlacar: number;
+  expectativaGolsMandante: number;
+  expectativaGolsVisitante: number;
+  probabilidadeAmbosMarcam: number;
+  probabilidadeMaisDe2Meio: number;
+  top3PlacaresMaisProvaveis: PlacarProvavelDTO[];
+  observacao: string;
+}
+
 interface ProbabilidadeDTO {
   chanceMandante: number;
   chanceEmpate: number;
   chanceVisitante: number;
   analisePreJogo: string;
+  placarCotado: PlacarCotadoDTO | null;
 }
 
 interface FaseTorneioDTO {
@@ -549,6 +569,12 @@ export function TelaPartidaSelecionada() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
   };
 
+  const formatPercent = (val: number) => {
+    // Aceita tanto frações (0.42) quanto valores já em % (42) vindos do back.
+    const pct = val <= 1 ? val * 100 : val;
+    return `${pct.toFixed(0)}%`;
+  };
+
   const handleShare = async () => {
     if (!partida) return;
     const shareData = {
@@ -812,6 +838,124 @@ export function TelaPartidaSelecionada() {
         .btn-report:hover { background: #d97706; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
         .btn-troca { background: #7c3aed; color: white; }
         .btn-troca:hover { background: #6d28d9; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); }
+
+        .placar-cotado-box {
+          margin-top: 20px;
+          padding: 18px;
+          background: var(--bg-body);
+          border: 1px solid var(--border-color);
+          border-radius: 14px;
+        }
+        .placar-cotado-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.78rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: var(--text-gray);
+          margin-bottom: 14px;
+        }
+        .placar-cotado-main {
+          display: flex;
+          align-items: baseline;
+          justify-content: center;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        .placar-cotado-score {
+          font-size: 2.2rem;
+          font-weight: 900;
+          color: var(--text-dark);
+          line-height: 1;
+        }
+        .placar-cotado-prob {
+          font-size: 0.85rem;
+          font-weight: 700;
+          color: var(--primary);
+        }
+        .placar-cotado-expectativas {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          margin-bottom: 14px;
+        }
+        .expectativa-item {
+          background: var(--bg-card);
+          border: 1px solid var(--border-color);
+          border-radius: 10px;
+          padding: 10px;
+          text-align: center;
+        }
+        .expectativa-label {
+          display: block;
+          font-size: 0.7rem;
+          font-weight: 800;
+          color: var(--text-gray);
+          text-transform: uppercase;
+          margin-bottom: 4px;
+        }
+        .expectativa-value {
+          font-size: 0.9rem;
+          font-weight: 700;
+          color: var(--text-dark);
+        }
+        .placar-cotado-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+        .placar-tag {
+          font-size: 0.78rem;
+          color: var(--text-gray);
+          background: var(--bg-card);
+          border: 1px solid var(--border-color);
+          padding: 6px 12px;
+          border-radius: 20px;
+        }
+        .placar-tag strong {
+          color: var(--text-dark);
+        }
+        .top-placares-label {
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: var(--text-gray);
+          text-transform: uppercase;
+          margin-bottom: 8px;
+        }
+        .top-placares-list {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .top-placar-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: var(--bg-card);
+          border: 1px solid var(--border-color);
+          border-radius: 8px;
+          padding: 8px 12px;
+        }
+        .top-placar-score {
+          font-weight: 700;
+          color: var(--text-dark);
+          font-size: 0.9rem;
+        }
+        .top-placar-prob {
+          font-weight: 700;
+          color: var(--primary);
+          font-size: 0.85rem;
+        }
+        .placar-cotado-obs {
+          margin-top: 14px;
+          font-size: 0.82rem;
+          color: var(--text-gray);
+          font-style: italic;
+          line-height: 1.5;
+        }
         .skeleton-pulse {
           animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
           background: var(--hover-bg);
@@ -1364,6 +1508,65 @@ export function TelaPartidaSelecionada() {
                         }}>
                           "{probabilidade.analisePreJogo}"
                         </p>
+
+                        {probabilidade.placarCotado && (
+                          <div className="placar-cotado-box">
+                            <div className="placar-cotado-header">
+                              <Target size={16} /> Placar Cotado
+                            </div>
+
+                            <div className="placar-cotado-main">
+                              <span className="placar-cotado-score">
+                                {probabilidade.placarCotado.golsMandante} - {probabilidade.placarCotado.golsVisitante}
+                              </span>
+                              <span className="placar-cotado-prob">
+                                {formatPercent(probabilidade.placarCotado.probabilidadeDessePlacar)} de chance
+                              </span>
+                            </div>
+
+                            <div className="placar-cotado-expectativas">
+                              <div className="expectativa-item">
+                                <span className="expectativa-label">{partida.mandante?.clubeSigla}</span>
+                                <span className="expectativa-value">
+                                  {probabilidade.placarCotado.expectativaGolsMandante.toFixed(2)} gols (xG)
+                                </span>
+                              </div>
+                              <div className="expectativa-item">
+                                <span className="expectativa-label">{partida.visitante?.clubeSigla}</span>
+                                <span className="expectativa-value">
+                                  {probabilidade.placarCotado.expectativaGolsVisitante.toFixed(2)} gols (xG)
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="placar-cotado-tags">
+                              <span className="placar-tag">
+                                Ambos marcam: <strong>{formatPercent(probabilidade.placarCotado.probabilidadeAmbosMarcam)}</strong>
+                              </span>
+                              <span className="placar-tag">
+                                +2.5 gols: <strong>{formatPercent(probabilidade.placarCotado.probabilidadeMaisDe2Meio)}</strong>
+                              </span>
+                            </div>
+
+                            {probabilidade.placarCotado.top3PlacaresMaisProvaveis?.length > 0 && (
+                              <div className="top-placares">
+                                <div className="top-placares-label">Placares mais prováveis</div>
+                                <div className="top-placares-list">
+                                  {probabilidade.placarCotado.top3PlacaresMaisProvaveis.map((p, idx) => (
+                                    <div key={idx} className="top-placar-item">
+                                      <span className="top-placar-score">{p.golsMandante} - {p.golsVisitante}</span>
+                                      <span className="top-placar-prob">{formatPercent(p.probabilidade)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {probabilidade.placarCotado.observacao && (
+                              <p className="placar-cotado-obs">{probabilidade.placarCotado.observacao}</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

@@ -41,6 +41,7 @@ import { TelaHallDaFama } from './pages/TelaHallDaFama';
 import { TelaTabelaRanking } from './pages/TelaTabelaRanking';
 import { TelaPartidasJogador } from './pages/TelaPartidasJogador';
 import { TelaConquistasAdm } from './pages/TelaConquistasAdm';
+import { TelaPremiosJogadorSelecionado } from './pages/TelaPremiosJogadorSelecionado';
 
 import './App.css';
 
@@ -72,6 +73,7 @@ function App() {
           <Route path="/anuncios" element={<TelaAnuncios />} />
           <Route path="/anuncios/:anuncioId" element={<TelaAnuncioSelecionado />} />
           <Route path="/jogador/:id" element={<TelaPerfilJogador />} />
+          <Route path="/jogador/:id/premios" element={<TelaPremiosJogadorSelecionado />} />
           <Route path="/jogador/:id/partidas" element={<TelaPartidasJogador />} />
           <Route path="/temporadas" element={<TelaTemporadas />} />
           <Route path="/noticias/:noticiaId" element={<TelaNoticiaSelecionada />} />

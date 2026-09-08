@@ -2319,6 +2319,14 @@ export function TelaPerfilJogador() {
                                         </span>
                                     </div>
                                 </div>
+
+                                <button
+                                    className="btn-ver-partidas"
+                                    onClick={() => navigate(`/jogador/${player.id}/premios`)}
+                                    style={{ marginTop: '24px' }}
+                                >
+                                    <Award size={16} /> Ver Prêmios
+                                </button>
                             </div>
                         </div>
                     </div>
