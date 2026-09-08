@@ -566,7 +566,12 @@ export function TelaPartidaSelecionada() {
   };
 
   const formatCurrency = (val: number | null) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
+    const valorFormatado = new Intl.NumberFormat('pt-BR', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    }).format(val || 0);
+    
+    return `D$ ${valorFormatado}`;
   };
 
   const formatPercent = (val: number) => {
