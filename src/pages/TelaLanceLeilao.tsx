@@ -49,6 +49,21 @@ interface ClubeDTO {
   lanceMinimo: number;
 }
 
+// Retorno do endpoint otimizado /api/leiloes/{leilaoId}/clubes/buscar.
+// É um subconjunto de ClubeDTO (projeção direta do banco), então
+// normalizamos pro mesmo shape antes de renderizar no grid.
+interface ClubeLeilaoBuscaDTO {
+  id: string;
+  nome: string;
+  nomeExtenso: string;
+  imagem: string;
+  sigla: string;
+  lanceMinimo: number;
+  valorAvaliado: number;
+  ligaClube: string;
+  estrelas: number;
+}
+
 interface PageResponse<T> {
   conteudo: T[];
   paginaAtual: number;
@@ -89,16 +104,44 @@ interface PopupState {
     type: 'success' | 'error' | 'warning' | 'info';
 }
 
+const TERMO_BUSCA_MIN = 2;
+const DEBOUNCE_BUSCA_MS = 350;
+
+function mapBuscaParaClubeDTO(dto: ClubeLeilaoBuscaDTO): ClubeDTO {
+  return {
+    id: dto.id,
+    nome: dto.nome,
+    imagem: dto.imagem,
+    sigla: dto.sigla,
+    lanceMinimo: dto.lanceMinimo,
+    valorAvaliado: dto.valorAvaliado,
+    ligaClube: dto.ligaClube,
+    estrelas: dto.estrelas,
+    estadio: '',
+    corPrimaria: '',
+    corSecundaria: '',
+    ativo: true,
+    titulos: 0,
+  };
+}
+
 export function TelaLanceLeilao() {
   const navigate = useNavigate();
   const { temporadaId } = useParams();
   const queryClient = useQueryClient();
   const observerTarget = useRef<HTMLDivElement>(null);
-  
+  const buscaTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const buscaRequestIdRef = useRef(0);
+
   const [leilaoId, setLeilaoId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [meusLances, setMeusLances] = useState<ItemLanceLocal[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [retirandoTodos, setRetirandoTodos] = useState(false);
+
+  // resultado da busca otimizada (/api/leiloes/{leilaoId}/clubes/buscar),
+  // usada quando o termo digitado tem 2+ caracteres
+  const [searchResults, setSearchResults] = useState<ClubeDTO[]>([]);
 
   // líder atual (em tempo real) dos clubes que estão no meu carrinho,
   // alimentado pelo WS -> topic .../atualizacoes-lances
@@ -194,6 +237,48 @@ export function TelaLanceLeilao() {
     fetchMeusLances();
   }, [leilaoId, currentUser]);
 
+  // Busca otimizada de clubes para o leilão. Só dispara com 2+ caracteres
+  // (contando espaços já removidos) e com debounce, pra não bater na API
+  // a cada tecla. Um requestId evita que uma resposta antiga e lenta
+  // sobrescreva o resultado de uma busca mais nova.
+  useEffect(() => {
+    const termo = searchTerm.trim();
+
+    if (buscaTimeoutRef.current) {
+      clearTimeout(buscaTimeoutRef.current);
+      buscaTimeoutRef.current = null;
+    }
+
+    if (!leilaoId || termo.length < TERMO_BUSCA_MIN) {
+        setSearchResults([]);
+        return;
+    }
+
+    const requestId = ++buscaRequestIdRef.current;
+
+    buscaTimeoutRef.current = setTimeout(async () => {
+        try {
+            const response = await API.get(`/api/leiloes/${leilaoId}/clubes/buscar`, {
+                params: { termo }
+            });
+            if (requestId !== buscaRequestIdRef.current) return; // resposta obsoleta
+            const resultados: ClubeLeilaoBuscaDTO[] = response.data ?? [];
+            setSearchResults(resultados.map(mapBuscaParaClubeDTO));
+        } catch (error) {
+            console.error(error);
+            if (requestId === buscaRequestIdRef.current) {
+                setSearchResults([]);
+            }
+        }
+    }, DEBOUNCE_BUSCA_MS);
+
+    return () => {
+      if (buscaTimeoutRef.current) {
+        clearTimeout(buscaTimeoutRef.current);
+      }
+    };
+  }, [searchTerm, leilaoId]);
+
   // Real-time: status do leilão (encerrou enquanto eu tava aqui?) e líder
   // atual dos clubes do meu carrinho.
   useLeilaoSocket(leilaoId, {
@@ -237,18 +322,24 @@ export function TelaLanceLeilao() {
     getNextPageParam: (lastPage) => lastPage.ultimaPagina ? undefined : lastPage.paginaAtual + 1,
   });
 
+  // Enquanto o usuário está buscando (2+ caracteres), usamos o resultado
+  // do endpoint otimizado do leilão. Fora disso, mostramos o scroll
+  // infinito normal do mercado.
+  const buscandoAtivo = searchTerm.trim().length >= TERMO_BUSCA_MIN;
+
   const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
     const [target] = entries;
-    if (target.isIntersecting && hasNextPage) {
+    if (target.isIntersecting && hasNextPage && !buscandoAtivo) {
       fetchNextPage();
     }
-  }, [fetchNextPage, hasNextPage]);
+  }, [fetchNextPage, hasNextPage, buscandoAtivo]);
 
   useEffect(() => {
     const element = observerTarget.current;
+    if (!element) return;
     const observer = new IntersectionObserver(handleObserver, { threshold: 0 });
-    if (element) observer.observe(element);
-    return () => { if (element) observer.unobserve(element); };
+    observer.observe(element);
+    return () => { observer.unobserve(element); };
   }, [handleObserver]);
 
   const handleAddClube = (clube: ClubeDTO) => {
@@ -369,6 +460,32 @@ export function TelaLanceLeilao() {
     }
   };
 
+  const handleRetirarTodosLances = async () => {
+    if (!leilaoId || meusLances.length === 0) return;
+
+    setRetirandoTodos(true);
+    try {
+        await API.delete(`/api/leiloes/${leilaoId}/meus-lances`);
+        setMeusLances([]);
+        queryClient.invalidateQueries({ queryKey: ['meu-status', leilaoId] });
+        queryClient.invalidateQueries({ queryKey: ['leilao-feed', leilaoId] });
+        queryClient.invalidateQueries({ queryKey: ['leilao-disputados', leilaoId] });
+        showPopup("Lances retirados", "Todos os seus lances foram removidos deste leilão.", "success");
+    } catch (error: any) {
+        let msg = "Erro ao retirar os lances.";
+        if (error.response) {
+            if (error.response.data && error.response.data.message) {
+                msg = error.response.data.message;
+            } else if (typeof error.response.data === 'string') {
+                msg = error.response.data;
+            }
+        }
+        showPopup("Erro", msg, "error");
+    } finally {
+        setRetirandoTodos(false);
+    }
+  };
+
   const formatMoney = (value: number) => {
     return `D$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
@@ -397,6 +514,10 @@ export function TelaLanceLeilao() {
 
   const saldoDisponivel = currentUser?.saldoVirtual || 0;
 
+  const clubesExibidos: ClubeDTO[] = buscandoAtivo
+    ? searchResults
+    : (clubesData?.pages.flatMap(page => page.conteudo) ?? []);
+
   return (
     <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
         <style>{`
@@ -422,6 +543,13 @@ export function TelaLanceLeilao() {
                 padding-right: 8px;
                 padding-bottom: 40px;
                 flex: 1;
+                align-content: start;
+            }
+            .market-grid-empty {
+                grid-column: 1 / -1;
+                text-align: center;
+                padding: 32px;
+                color: var(--text-gray);
             }
             .clube-card {
                 background: var(--bg-card);
@@ -592,6 +720,13 @@ export function TelaLanceLeilao() {
                 align-items: center;
                 gap: 4px;
             }
+            .retirar-todos-btn {
+                border-radius: 12px;
+            }
+            .retirar-todos-btn:disabled {
+                opacity: 0.6;
+                cursor: default;
+            }
             @media (max-width: 1024px) {
                 .lance-layout {
                     grid-template-columns: 1fr;
@@ -705,47 +840,50 @@ export function TelaLanceLeilao() {
                 </div>
 
                 <div className="market-grid custom-scrollbar">
-                    {clubesData?.pages.map((page) => (
-                        page.conteudo
-                            .filter(clube => clube.nome.toLowerCase().includes(searchTerm.toLowerCase()))
-                            .map((clube) => {
-                                const isSelected = meusLances.some(l => l.clube.id === clube.id);
-                                return (
-                                    <div key={clube.id} className={`clube-card ${isSelected ? 'selected' : ''}`}>
-                                        {isSelected && (
-                                            <div style={{ position: 'absolute', top: 10, right: 10, background: '#10b981', borderRadius: '50%', padding: '2px' }}>
-                                                <CheckCircle2 size={16} color="white" />
-                                            </div>
-                                        )}
-                                        <img src={clube.imagem} alt={clube.nome} className="clube-img" />
-                                        <div style={{ textAlign: 'center', width: '100%' }}>
-                                            <h4 style={{ margin: '0 0 4px 0', fontSize: '1rem', fontWeight: 600, color: 'var(--text-dark)' }}>{clube.nome}</h4>
-                                            
-                                            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-                                                {renderStars(clube.estrelas)}
-                                            </div>
-
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-gray)', background: 'var(--bg-body)', padding: '4px 8px', borderRadius: '6px', display: 'inline-block' }}>
-                                                Min: <span style={{fontWeight: 700}}>{formatMoney(clube.lanceMinimo)}</span>
-                                            </div>
-                                        </div>
-                                        {!isSelected && (
-                                            <button 
-                                                className="t-btn" 
-                                                style={{ width: '100%', marginTop: '8px', fontSize: '0.85rem', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                                                onClick={() => handleAddClube(clube)}
-                                                disabled={meusLances.length >= 5}
-                                            >
-                                                <Plus size={16} /> Dar Lance
-                                            </button>
-                                        )}
+                    {buscandoAtivo && clubesExibidos.length === 0 && (
+                        <div className="market-grid-empty">
+                            Nenhum clube encontrado para "{searchTerm.trim()}".
+                        </div>
+                    )}
+                    {clubesExibidos.map((clube) => {
+                        const isSelected = meusLances.some(l => l.clube.id === clube.id);
+                        return (
+                            <div key={clube.id} className={`clube-card ${isSelected ? 'selected' : ''}`}>
+                                {isSelected && (
+                                    <div style={{ position: 'absolute', top: 10, right: 10, background: '#10b981', borderRadius: '50%', padding: '2px' }}>
+                                        <CheckCircle2 size={16} color="white" />
                                     </div>
-                                );
-                            })
-                    ))}
-                    <div ref={observerTarget} style={{ height: '40px', width: '100%' }}>
-                        {isFetchingNextPage && <LoadingSpinner isLoading={true} />}
-                    </div>
+                                )}
+                                <img src={clube.imagem} alt={clube.nome} className="clube-img" />
+                                <div style={{ textAlign: 'center', width: '100%' }}>
+                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '1rem', fontWeight: 600, color: 'var(--text-dark)' }}>{clube.nome}</h4>
+                                    
+                                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                                        {renderStars(clube.estrelas)}
+                                    </div>
+
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-gray)', background: 'var(--bg-body)', padding: '4px 8px', borderRadius: '6px', display: 'inline-block' }}>
+                                        Min: <span style={{fontWeight: 700}}>{formatMoney(clube.lanceMinimo)}</span>
+                                    </div>
+                                </div>
+                                {!isSelected && (
+                                    <button 
+                                        className="t-btn" 
+                                        style={{ width: '100%', marginTop: '8px', fontSize: '0.85rem', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                        onClick={() => handleAddClube(clube)}
+                                        disabled={meusLances.length >= 5}
+                                    >
+                                        <Plus size={16} /> Dar Lance
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
+                    {!buscandoAtivo && (
+                        <div ref={observerTarget} style={{ height: '40px', width: '100%', gridColumn: '1 / -1' }}>
+                            {isFetchingNextPage && <LoadingSpinner isLoading={true} />}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -853,10 +991,21 @@ export function TelaLanceLeilao() {
                         <span style={{fontWeight: 700, color: 'var(--text-dark)'}}>{meusLances.length}</span>
                     </div>
 
+                    {meusLances.length > 0 && (
+                        <button
+                            className="t-btn retirar-todos-btn"
+                            style={{ width: '100%', justifyContent: 'center', height: '40px', marginBottom: '8px', background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            disabled={submitting || retirandoTodos}
+                            onClick={handleRetirarTodosLances}
+                        >
+                            {retirandoTodos ? <LoadingSpinner isLoading={true} /> : (<><Trash2 size={16} /> Retirar todos os lances</>)}
+                        </button>
+                    )}
+
                     <button 
                         className="t-btn" 
                         style={{ width: '100%', justifyContent: 'center', height: '48px', background: 'var(--primary)', color: 'white', border: 'none', fontSize: '1rem' }}
-                        disabled={meusLances.length === 0 || submitting || meusLances.some(l => l.valor > saldoDisponivel)}
+                        disabled={meusLances.length === 0 || submitting || retirandoTodos || meusLances.some(l => l.valor > saldoDisponivel)}
                         onClick={handleSubmitLances}
                     >
                         {submitting ? <LoadingSpinner isLoading={true} /> : 'Confirmar Lances'}
