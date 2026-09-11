@@ -1,6 +1,7 @@
 import axios, { type AxiosRequestConfig, type AxiosError } from 'axios';
 
 const SERVERS = [
+  
   'https://torneios-ddo-back-osyf.onrender.com',
   'https://torneios-ddo-599q.onrender.com',
   'https://torneios-ddo-back3.onrender.com'

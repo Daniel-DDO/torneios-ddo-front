@@ -107,6 +107,18 @@ interface PopupState {
 const TERMO_BUSCA_MIN = 2;
 const DEBOUNCE_BUSCA_MS = 350;
 
+// Máscara de valor: guardamos e enviamos pro back SEMPRE como number puro
+// (ex: 389756.34). Só a exibição no input do carrinho é formatada em
+// pt-BR (389.756,34) enquanto a pessoa digita.
+function digitosParaNumero(digitos: string): number {
+  if (!digitos) return 0;
+  return parseInt(digitos, 10) / 100;
+}
+
+function numeroParaTextoMascarado(valor: number): string {
+  return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function mapBuscaParaClubeDTO(dto: ClubeLeilaoBuscaDTO): ClubeDTO {
   return {
     id: dto.id,
@@ -390,6 +402,13 @@ export function TelaLanceLeilao() {
     setMeusLances(prev => prev.map(l => 
         l.clube.id === clubeId ? { ...l, valor: novoValor } : l
     ));
+  };
+
+  // Chamado a cada tecla no input mascarado do carrinho: pega só os
+  // dígitos que a pessoa digitou e recalcula o valor puro (centavos).
+  const handleValorInputChange = (clubeId: string, textoDigitado: string) => {
+    const digitos = textoDigitado.replace(/\D/g, '');
+    handleUpdateValor(clubeId, digitosParaNumero(digitos));
   };
 
   const handleBlurValor = (clubeId: string, valorAtual: number, valorMinimo: number) => {
@@ -850,8 +869,8 @@ export function TelaLanceLeilao() {
                         return (
                             <div key={clube.id} className={`clube-card ${isSelected ? 'selected' : ''}`}>
                                 {isSelected && (
-                                    <div style={{ position: 'absolute', top: 10, right: 10, background: '#10b981', borderRadius: '50%', padding: '2px' }}>
-                                        <CheckCircle2 size={16} color="white" />
+                                    <div className="tl-lance-leilao-badge-selecionado">
+                                        <CheckCircle2 size={14} color="white" />
                                     </div>
                                 )}
                                 <img src={clube.imagem} alt={clube.nome} className="clube-img" />
@@ -956,12 +975,12 @@ export function TelaLanceLeilao() {
                                         <div className="cart-input-wrapper">
                                             <DollarSign size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-gray)', zIndex: 1 }} />
                                             <input 
-                                                type="number" 
+                                                type="text" 
+                                                inputMode="numeric"
                                                 className={`cart-input ${isError ? 'error' : ''}`}
-                                                value={lance.valor}
-                                                onChange={(e) => handleUpdateValor(lance.clube.id, Number(e.target.value))}
-                                                onBlur={(e) => handleBlurValor(lance.clube.id, Number(e.target.value), lance.clube.lanceMinimo)}
-                                                min={lance.clube.lanceMinimo}
+                                                value={numeroParaTextoMascarado(lance.valor)}
+                                                onChange={(e) => handleValorInputChange(lance.clube.id, e.target.value)}
+                                                onBlur={() => handleBlurValor(lance.clube.id, lance.valor, lance.clube.lanceMinimo)}
                                                 placeholder="Valor do lance"
                                             />
                                         </div>
