@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
   Star,
@@ -89,7 +88,6 @@ const formatLeagueName = (liga: string) => {
 };
 
 export function TelaMercado() {
-  const navigate = useNavigate();
   useAppContext();
   const observerTarget = useRef<HTMLDivElement>(null);
   
