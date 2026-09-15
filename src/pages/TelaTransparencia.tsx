@@ -1,27 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search, 
-  ArrowLeft, Gamepad2, Lightbulb, Settings, 
-  CalendarSync, Star, Calculator, 
+import {
+  ArrowLeft, Calculator,
   Info, Banknote, Percent,
-  Activity, Scale
+  Activity, Scale, Star
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
-
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-}
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 interface ParametrosEconomicos {
     cotaTvFixa: number;
@@ -61,11 +48,6 @@ export function TelaTransparencia() {
 
   const [loading, setLoading] = useState(true);
   const [dados, setDados] = useState<TransparenciaResponse | null>(null);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const [simulacao, setSimulacao] = useState({
       nomeMandante: 'Meu Time',
@@ -79,26 +61,7 @@ export function TelaTransparencia() {
       pesoCompeticao: 100,
   });
 
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
-
   useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
     fetchParametros();
   }, []);
 
@@ -115,29 +78,13 @@ export function TelaTransparencia() {
     }
   };
 
-  const handleLoginSuccess = (userData: any) => {
-    setCurrentUser(userData);
-    localStorage.setItem('user_data', JSON.stringify(userData));
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        setCurrentUser(null);
-        setShowUserPopup(false);
-    }
-  };
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
   const formatCurrency = (value: number) => {
     return 'D$ ' + new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
   };
 
   const resultados = useMemo(() => {
     if (!dados?.economico || !dados?.coeficiente) return null;
-    
+
     const eco = dados.economico;
     const coef = dados.coeficiente;
     const s = simulacao;
@@ -175,18 +122,18 @@ export function TelaTransparencia() {
     const lucroLiquido = lucroBruto * pesoEfetivoEco;
 
     const pontosGols = Math.min(s.golsPro, coef.tetoGols);
-    
+
     let pontosResultado = 0;
     if (resultadoJogo === 'VITORIA') pontosResultado = coef.pontosVitoria;
     else if (resultadoJogo === 'EMPATE') pontosResultado = coef.pontosEmpate;
-    
+
     const pontosGoleada = (s.golsPro - s.golsContra > 3) ? coef.pontosGoleada : 0;
     const pontosCleanSheet = (s.golsContra === 0) ? coef.pontosCleanSheet : 0;
 
     const positivos = pontosGols + pontosResultado + pontosGoleada + pontosCleanSheet;
 
     const pontosDerrota = (resultadoJogo === 'DERROTA') ? coef.pontosDerrota : 0;
-    
+
     const excessoAmarelos = Math.max(0, s.cartoesAmarelos - coef.limiteAmarelosSemPunicao);
     const punicaoAmarelos = excessoAmarelos * coef.penalidadePorAmarelo;
     const punicaoVermelhos = s.cartoesVermelhos * coef.penalidadePorVermelho;
@@ -198,7 +145,7 @@ export function TelaTransparencia() {
     const negativosAjustados = negativos * multiplicadorNegativos;
 
     const pesoTorneio = s.pesoCompeticao / 100.0;
-    
+
     let pontosTotais = (positivos + negativosAjustados) * pesoTorneio;
 
     pontosTotais = Math.max(pontosTotais, coef.pontuacaoMinima);
@@ -232,8 +179,7 @@ export function TelaTransparencia() {
   }, [dados, simulacao]);
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
-      
+    <DashboardLayout esconderBusca contentStyle={{ padding: '1rem 2rem' }}>
       <LoadingSpinner isLoading={loading} />
 
       <style>{`
@@ -513,449 +459,309 @@ export function TelaTransparencia() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-               <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
-            </svg>
+      <div className="transparency-wrapper">
+          <button onClick={() => navigate('/')} className="btn-back" style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px',
+              background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '50px',
+              color: 'var(--text-gray)', fontWeight: 500, marginBottom: '24px', cursor: 'pointer'
+          }}>
+              <ArrowLeft size={18} /> Voltar ao Dashboard
+          </button>
+
+          <div className="hero-banner">
+              <Scale className="hero-icon-bg" />
+              <h1 className="page-title">Central de Transparência</h1>
+              <p className="page-desc">
+                  Consulte as tabelas oficiais de regras e utilize nosso simulador integrado para projetar os resultados financeiros e técnicos do seu clube.
+              </p>
           </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
 
-        <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => navigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-           <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
+          {dados?.economico && dados?.coeficiente && (
+              <>
+                  <div className="section-header">
+                      <Info size={24} className="text-primary" /> Parâmetros do Sistema
+                  </div>
 
-      <main className="main-content">
-        
-        <header className="top-header compact">
-          <div className="left-header">
-            <button 
-              className="toggle-btn menu-toggle" 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input 
-                type="text" 
-                placeholder="Buscar jogador..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
-            </button>
-            <BotaoNotificacao user={currentUser} />
-            
-            {currentUser ? (
-              <div 
-                className="user-avatar-mini" 
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!currentUser.imagem && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <button 
-                className="login-btn-header" 
-                onClick={() => setShowLoginPopup(true)}
-                style={{
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginLeft: '10px'
-                }}
-              >
-                Login
-              </button>
-            )}
-          </div>
-        </header>
+                  <div className="table-container">
+                      <table className="custom-table">
+                          <thead>
+                              <tr>
+                                  <th colSpan={3} style={{fontSize: '1rem', borderBottom: '2px solid var(--border-color)'}}>
+                                      <Banknote size={18} style={{display: 'inline', verticalAlign: 'middle', marginRight: '8px'}} />
+                                      Regras Econômicas
+                                  </th>
+                              </tr>
+                              <tr>
+                                  <th>Item</th>
+                                  <th>Valor</th>
+                                  <th>Detalhes</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              <tr>
+                                  <td>Cota de TV Fixa</td>
+                                  <td className="val-highlight">{formatCurrency(dados.economico.cotaTvFixa)}</td>
+                                  <td>Valor garantido por partida realizada.</td>
+                              </tr>
+                              <tr>
+                                  <td>Bilheteria</td>
+                                  <td className="val-highlight">{formatCurrency(dados.economico.valorPorEstrelaBilheteria)}</td>
+                                  <td>Multiplicado pela soma das estrelas em campo.</td>
+                              </tr>
+                              <tr>
+                                  <td>Prêmio Vitória</td>
+                                  <td className="val-highlight">{formatCurrency(dados.economico.premioVitoria)}</td>
+                                  <td>Empate rende {formatCurrency(dados.economico.premioEmpate)}.</td>
+                              </tr>
+                              <tr>
+                                  <td>Custo Operacional</td>
+                                  <td className="val-highlight negative">{formatCurrency(dados.economico.custoBaseEstrela)}</td>
+                                  <td>Base de custo por estrela ao quadrado.</td>
+                              </tr>
+                              <tr>
+                                  <td>Bônus Zebra</td>
+                                  <td className="val-highlight">{formatCurrency(dados.economico.bonusZebraPorEstrela)}</td>
+                                  <td>Por diferença de estrela (se vencer/empatar).</td>
+                              </tr>
+                          </tbody>
+                      </table>
+                  </div>
 
-        <div className="page-content">
-            <div className="transparency-wrapper">
-                <button onClick={() => navigate('/')} className="btn-back" style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px',
-                    background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '50px',
-                    color: 'var(--text-gray)', fontWeight: 500, marginBottom: '24px', cursor: 'pointer'
-                }}>
-                    <ArrowLeft size={18} /> Voltar ao Dashboard
-                </button>
+                  <div className="table-container">
+                      <table className="custom-table">
+                          <thead>
+                              <tr>
+                                  <th colSpan={3} style={{fontSize: '1rem', borderBottom: '2px solid var(--border-color)'}}>
+                                      <Activity size={18} style={{display: 'inline', verticalAlign: 'middle', marginRight: '8px'}} />
+                                      Regras de Ranking (Coeficiente)
+                                  </th>
+                              </tr>
+                              <tr>
+                                  <th>Critério</th>
+                                  <th>Pontos</th>
+                                  <th>Regra</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              <tr>
+                                  <td>Vitória / Empate</td>
+                                  <td className="val-highlight">+{dados.coeficiente.pontosVitoria} / +{dados.coeficiente.pontosEmpate}</td>
+                                  <td>Resultado base da partida.</td>
+                              </tr>
+                              <tr>
+                                  <td>Gols Pró</td>
+                                  <td className="val-highlight">Até {dados.coeficiente.tetoGols}</td>
+                                  <td>1 ponto por gol (limitado ao teto).</td>
+                              </tr>
+                              <tr>
+                                  <td>Bônus Performance</td>
+                                  <td className="val-highlight">+{dados.coeficiente.pontosGoleada} / +{dados.coeficiente.pontosCleanSheet}</td>
+                                  <td>Para Goleada (dif &gt; 3) e Clean Sheet.</td>
+                              </tr>
+                              <tr>
+                                  <td>Derrota</td>
+                                  <td className="val-highlight negative">{dados.coeficiente.pontosDerrota}</td>
+                                  <td>Penalidade fixa por derrota.</td>
+                              </tr>
+                              <tr>
+                                  <td>Punição Cartões</td>
+                                  <td className="val-highlight negative">{dados.coeficiente.penalidadePorVermelho} / {dados.coeficiente.penalidadePorAmarelo}</td>
+                                  <td>Por Vermelho / Por Amarelo (acima de {dados.coeficiente.limiteAmarelosSemPunicao}).</td>
+                              </tr>
+                          </tbody>
+                      </table>
+                  </div>
 
-                <div className="hero-banner">
-                    <Scale className="hero-icon-bg" />
-                    <h1 className="page-title">Central de Transparência</h1>
-                    <p className="page-desc">
-                        Consulte as tabelas oficiais de regras e utilize nosso simulador integrado para projetar os resultados financeiros e técnicos do seu clube.
-                    </p>
-                </div>
+                  <div className="section-header">
+                      <Calculator size={24} className="text-primary" /> Simulador de Partida
+                  </div>
 
-                {dados?.economico && dados?.coeficiente && (
-                    <>
-                        <div className="section-header">
-                            <Info size={24} className="text-primary" /> Parâmetros do Sistema
-                        </div>
+                  <div className="simulator-grid">
+                      {/* AREA DE INPUTS */}
+                      <div className="sim-input-card">
+                          <div className="input-block">
+                              <div className="input-label">Peso da Competição: {simulacao.pesoCompeticao}%</div>
+                              <div className="range-block">
+                                  <Percent size={18} className="text-gray" />
+                                  <input
+                                      type="range" min="0" max="100" step="5" style={{flex: 1}}
+                                      value={simulacao.pesoCompeticao}
+                                      onChange={(e) => setSimulacao({...simulacao, pesoCompeticao: Number(e.target.value)})}
+                                  />
+                              </div>
+                          </div>
 
-                        <div className="table-container">
-                            <table className="custom-table">
-                                <thead>
-                                    <tr>
-                                        <th colSpan={3} style={{fontSize: '1rem', borderBottom: '2px solid var(--border-color)'}}>
-                                            <Banknote size={18} style={{display: 'inline', verticalAlign: 'middle', marginRight: '8px'}} />
-                                            Regras Econômicas
-                                        </th>
-                                    </tr>
-                                    <tr>
-                                        <th>Item</th>
-                                        <th>Valor</th>
-                                        <th>Detalhes</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Cota de TV Fixa</td>
-                                        <td className="val-highlight">{formatCurrency(dados.economico.cotaTvFixa)}</td>
-                                        <td>Valor garantido por partida realizada.</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Bilheteria</td>
-                                        <td className="val-highlight">{formatCurrency(dados.economico.valorPorEstrelaBilheteria)}</td>
-                                        <td>Multiplicado pela soma das estrelas em campo.</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Prêmio Vitória</td>
-                                        <td className="val-highlight">{formatCurrency(dados.economico.premioVitoria)}</td>
-                                        <td>Empate rende {formatCurrency(dados.economico.premioEmpate)}.</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Custo Operacional</td>
-                                        <td className="val-highlight negative">{formatCurrency(dados.economico.custoBaseEstrela)}</td>
-                                        <td>Base de custo por estrela ao quadrado.</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Bônus Zebra</td>
-                                        <td className="val-highlight">{formatCurrency(dados.economico.bonusZebraPorEstrela)}</td>
-                                        <td>Por diferença de estrela (se vencer/empatar).</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                          <div className="teams-comparison">
+                              {/* COLUNA MEU TIME */}
+                              <div className="team-col">
+                                  <div className="input-block">
+                                      <div className="input-label">Seu Time</div>
+                                      <input
+                                          type="text"
+                                          className="big-input"
+                                          value={simulacao.nomeMandante}
+                                          onChange={(e) => setSimulacao({...simulacao, nomeMandante: e.target.value})}
+                                      />
+                                  </div>
 
-                        <div className="table-container">
-                            <table className="custom-table">
-                                <thead>
-                                    <tr>
-                                        <th colSpan={3} style={{fontSize: '1rem', borderBottom: '2px solid var(--border-color)'}}>
-                                            <Activity size={18} style={{display: 'inline', verticalAlign: 'middle', marginRight: '8px'}} />
-                                            Regras de Ranking (Coeficiente)
-                                        </th>
-                                    </tr>
-                                    <tr>
-                                        <th>Critério</th>
-                                        <th>Pontos</th>
-                                        <th>Regra</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>Vitória / Empate</td>
-                                        <td className="val-highlight">+{dados.coeficiente.pontosVitoria} / +{dados.coeficiente.pontosEmpate}</td>
-                                        <td>Resultado base da partida.</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Gols Pró</td>
-                                        <td className="val-highlight">Até {dados.coeficiente.tetoGols}</td>
-                                        <td>1 ponto por gol (limitado ao teto).</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Bônus Performance</td>
-                                        <td className="val-highlight">+{dados.coeficiente.pontosGoleada} / +{dados.coeficiente.pontosCleanSheet}</td>
-                                        <td>Para Goleada (dif &gt; 3) e Clean Sheet.</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Derrota</td>
-                                        <td className="val-highlight negative">{dados.coeficiente.pontosDerrota}</td>
-                                        <td>Penalidade fixa por derrota.</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Punição Cartões</td>
-                                        <td className="val-highlight negative">{dados.coeficiente.penalidadePorVermelho} / {dados.coeficiente.penalidadePorAmarelo}</td>
-                                        <td>Por Vermelho / Por Amarelo (acima de {dados.coeficiente.limiteAmarelosSemPunicao}).</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                                  <div className="input-block">
+                                      <div className="input-label">Gols</div>
+                                      <input
+                                          type="number" min="0"
+                                          className="score-display"
+                                          value={simulacao.golsPro}
+                                          onChange={(e) => setSimulacao({...simulacao, golsPro: Math.max(0, Number(e.target.value))})}
+                                      />
+                                  </div>
 
-                        <div className="section-header">
-                            <Calculator size={24} className="text-primary" /> Simulador de Partida
-                        </div>
+                                  <div className="input-block">
+                                      <div className="input-label">Estrelas: {simulacao.minhasEstrelas.toFixed(1)}</div>
+                                      <div className="range-block">
+                                          <Star size={18} className="text-gray" />
+                                          <input
+                                              type="range" min="0.5" max="5" step="0.5" style={{flex: 1}}
+                                              value={simulacao.minhasEstrelas}
+                                              onChange={(e) => setSimulacao({...simulacao, minhasEstrelas: Number(e.target.value)})}
+                                          />
+                                      </div>
+                                  </div>
 
-                        <div className="simulator-grid">
-                            {/* AREA DE INPUTS */}
-                            <div className="sim-input-card">
-                                <div className="input-block">
-                                    <div className="input-label">Peso da Competição: {simulacao.pesoCompeticao}%</div>
-                                    <div className="range-block">
-                                        <Percent size={18} className="text-gray" />
-                                        <input 
-                                            type="range" min="0" max="100" step="5" style={{flex: 1}}
-                                            value={simulacao.pesoCompeticao}
-                                            onChange={(e) => setSimulacao({...simulacao, pesoCompeticao: Number(e.target.value)})}
-                                        />
-                                    </div>
-                                </div>
+                                  <div style={{display: 'flex', gap: '15px'}}>
+                                      <div className="input-block" style={{flex: 1}}>
+                                          <div className="input-label" style={{color: '#f59e0b'}}>Amarelos</div>
+                                          <div className="range-block" style={{padding: '8px'}}>
+                                              <input
+                                                  type="number" min="0" style={{width: '100%', background: 'transparent', border: 'none', textAlign: 'center', fontWeight: 'bold'}}
+                                                  value={simulacao.cartoesAmarelos}
+                                                  onChange={(e) => setSimulacao({...simulacao, cartoesAmarelos: Math.max(0, Number(e.target.value))})}
+                                              />
+                                          </div>
+                                      </div>
+                                      <div className="input-block" style={{flex: 1}}>
+                                          <div className="input-label" style={{color: '#ef4444'}}>Vermelhos</div>
+                                          <div className="range-block" style={{padding: '8px'}}>
+                                              <input
+                                                  type="number" min="0" style={{width: '100%', background: 'transparent', border: 'none', textAlign: 'center', fontWeight: 'bold'}}
+                                                  value={simulacao.cartoesVermelhos}
+                                                  onChange={(e) => setSimulacao({...simulacao, cartoesVermelhos: Math.max(0, Number(e.target.value))})}
+                                              />
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
 
-                                <div className="teams-comparison">
-                                    {/* COLUNA MEU TIME */}
-                                    <div className="team-col">
-                                        <div className="input-block">
-                                            <div className="input-label">Seu Time</div>
-                                            <input 
-                                                type="text" 
-                                                className="big-input" 
-                                                value={simulacao.nomeMandante}
-                                                onChange={(e) => setSimulacao({...simulacao, nomeMandante: e.target.value})}
-                                            />
-                                        </div>
+                              <div className="vs-divider">X</div>
 
-                                        <div className="input-block">
-                                            <div className="input-label">Gols</div>
-                                            <input 
-                                                type="number" min="0"
-                                                className="score-display"
-                                                value={simulacao.golsPro}
-                                                onChange={(e) => setSimulacao({...simulacao, golsPro: Math.max(0, Number(e.target.value))})}
-                                            />
-                                        </div>
+                              {/* COLUNA ADVERSÁRIO */}
+                              <div className="team-col">
+                                  <div className="input-block">
+                                      <div className="input-label">Adversário</div>
+                                      <input
+                                          type="text"
+                                          className="big-input"
+                                          value={simulacao.nomeVisitante}
+                                          onChange={(e) => setSimulacao({...simulacao, nomeVisitante: e.target.value})}
+                                      />
+                                  </div>
 
-                                        <div className="input-block">
-                                            <div className="input-label">Estrelas: {simulacao.minhasEstrelas.toFixed(1)}</div>
-                                            <div className="range-block">
-                                                <Star size={18} className="text-gray" />
-                                                <input 
-                                                    type="range" min="0.5" max="5" step="0.5" style={{flex: 1}}
-                                                    value={simulacao.minhasEstrelas}
-                                                    onChange={(e) => setSimulacao({...simulacao, minhasEstrelas: Number(e.target.value)})}
-                                                />
-                                            </div>
-                                        </div>
+                                  <div className="input-block">
+                                      <div className="input-label">Gols</div>
+                                      <input
+                                          type="number" min="0"
+                                          className="score-display"
+                                          value={simulacao.golsContra}
+                                          onChange={(e) => setSimulacao({...simulacao, golsContra: Math.max(0, Number(e.target.value))})}
+                                      />
+                                  </div>
 
-                                        <div style={{display: 'flex', gap: '15px'}}>
-                                            <div className="input-block" style={{flex: 1}}>
-                                                <div className="input-label" style={{color: '#f59e0b'}}>Amarelos</div>
-                                                <div className="range-block" style={{padding: '8px'}}>
-                                                    <input 
-                                                        type="number" min="0" style={{width: '100%', background: 'transparent', border: 'none', textAlign: 'center', fontWeight: 'bold'}}
-                                                        value={simulacao.cartoesAmarelos}
-                                                        onChange={(e) => setSimulacao({...simulacao, cartoesAmarelos: Math.max(0, Number(e.target.value))})}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="input-block" style={{flex: 1}}>
-                                                <div className="input-label" style={{color: '#ef4444'}}>Vermelhos</div>
-                                                <div className="range-block" style={{padding: '8px'}}>
-                                                    <input 
-                                                        type="number" min="0" style={{width: '100%', background: 'transparent', border: 'none', textAlign: 'center', fontWeight: 'bold'}}
-                                                        value={simulacao.cartoesVermelhos}
-                                                        onChange={(e) => setSimulacao({...simulacao, cartoesVermelhos: Math.max(0, Number(e.target.value))})}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                  <div className="input-block">
+                                      <div className="input-label">Estrelas: {simulacao.estrelasAdversario.toFixed(1)}</div>
+                                      <div className="range-block">
+                                          <Star size={18} className="text-gray" />
+                                          <input
+                                              type="range" min="0.5" max="5" step="0.5" style={{flex: 1}}
+                                              value={simulacao.estrelasAdversario}
+                                              onChange={(e) => setSimulacao({...simulacao, estrelasAdversario: Number(e.target.value)})}
+                                          />
+                                      </div>
+                                  </div>
 
-                                    <div className="vs-divider">X</div>
+                                  <div style={{marginTop: 'auto', padding: '15px', background: 'var(--hover-bg)', borderRadius: '12px', fontSize: '0.8rem', color: 'var(--text-gray)', textAlign: 'center'}}>
+                                      Configure apenas os dados do seu time para ver os resultados.
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
 
-                                    {/* COLUNA ADVERSÁRIO */}
-                                    <div className="team-col">
-                                        <div className="input-block">
-                                            <div className="input-label">Adversário</div>
-                                            <input 
-                                                type="text" 
-                                                className="big-input" 
-                                                value={simulacao.nomeVisitante}
-                                                onChange={(e) => setSimulacao({...simulacao, nomeVisitante: e.target.value})}
-                                            />
-                                        </div>
+                      {/* AREA DE RESULTADOS */}
+                      <div className="results-panel">
+                          {resultados && (
+                              <>
+                                  <div className="res-card eco">
+                                      <div className="res-header" style={{color: '#10b981'}}>
+                                          <Banknote size={24} /> Financeiro
+                                      </div>
+                                      <div className="res-main-value" style={{color: resultados.economia.lucroLiquido >= 0 ? '#10b981' : '#ef4444'}}>
+                                          {formatCurrency(resultados.economia.lucroLiquido)}
+                                      </div>
 
-                                        <div className="input-block">
-                                            <div className="input-label">Gols</div>
-                                            <input 
-                                                type="number" min="0"
-                                                className="score-display"
-                                                value={simulacao.golsContra}
-                                                onChange={(e) => setSimulacao({...simulacao, golsContra: Math.max(0, Number(e.target.value))})}
-                                            />
-                                        </div>
+                                      <div style={{borderTop: '1px solid var(--border-color)', paddingTop: '15px'}}>
+                                          <div className="breakdown-row">
+                                              <span>Receita Bruta</span>
+                                              <span className="breakdown-val positive">
+                                                  +{formatCurrency(resultados.economia.detalhes.cotaTv + resultados.economia.detalhes.bilheteria + resultados.economia.detalhes.premiacao + resultados.economia.detalhes.zebra)}
+                                              </span>
+                                          </div>
+                                          <div className="breakdown-row">
+                                              <span>Custo Operacional</span>
+                                              <span className="breakdown-val negative">-{formatCurrency(resultados.economia.detalhes.custo)}</span>
+                                          </div>
+                                          {resultados.economia.detalhes.punicao > 0 && (
+                                              <div className="breakdown-row">
+                                                  <span>Punição Goleada</span>
+                                                  <span className="breakdown-val negative">-{formatCurrency(resultados.economia.detalhes.punicao)}</span>
+                                              </div>
+                                          )}
+                                          <div style={{marginTop: '10px', fontSize: '0.8rem', color: 'var(--text-gray)', textAlign: 'right'}}>
+                                              Fator Peso: {(resultados.economia.detalhes.pesoAplicado * 100).toFixed(0)}%
+                                          </div>
+                                      </div>
+                                  </div>
 
-                                        <div className="input-block">
-                                            <div className="input-label">Estrelas: {simulacao.estrelasAdversario.toFixed(1)}</div>
-                                            <div className="range-block">
-                                                <Star size={18} className="text-gray" />
-                                                <input 
-                                                    type="range" min="0.5" max="5" step="0.5" style={{flex: 1}}
-                                                    value={simulacao.estrelasAdversario}
-                                                    onChange={(e) => setSimulacao({...simulacao, estrelasAdversario: Number(e.target.value)})}
-                                                />
-                                            </div>
-                                        </div>
-                                        
-                                        <div style={{marginTop: 'auto', padding: '15px', background: 'var(--hover-bg)', borderRadius: '12px', fontSize: '0.8rem', color: 'var(--text-gray)', textAlign: 'center'}}>
-                                            Configure apenas os dados do seu time para ver os resultados.
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                                  <div className="res-card rank">
+                                      <div className="res-header" style={{color: '#3b82f6'}}>
+                                          <Activity size={24} /> Ranking
+                                      </div>
+                                      <div className="res-main-value" style={{color: resultados.coeficiente.final >= 0 ? '#3b82f6' : '#ef4444'}}>
+                                          {resultados.coeficiente.final.toFixed(2)} <span style={{fontSize: '1rem', fontWeight: 400}}>pts</span>
+                                      </div>
 
-                            {/* AREA DE RESULTADOS */}
-                            <div className="results-panel">
-                                {resultados && (
-                                    <>
-                                        <div className="res-card eco">
-                                            <div className="res-header" style={{color: '#10b981'}}>
-                                                <Banknote size={24} /> Financeiro
-                                            </div>
-                                            <div className="res-main-value" style={{color: resultados.economia.lucroLiquido >= 0 ? '#10b981' : '#ef4444'}}>
-                                                {formatCurrency(resultados.economia.lucroLiquido)}
-                                            </div>
-                                            
-                                            <div style={{borderTop: '1px solid var(--border-color)', paddingTop: '15px'}}>
-                                                <div className="breakdown-row">
-                                                    <span>Receita Bruta</span>
-                                                    <span className="breakdown-val positive">
-                                                        +{formatCurrency(resultados.economia.detalhes.cotaTv + resultados.economia.detalhes.bilheteria + resultados.economia.detalhes.premiacao + resultados.economia.detalhes.zebra)}
-                                                    </span>
-                                                </div>
-                                                <div className="breakdown-row">
-                                                    <span>Custo Operacional</span>
-                                                    <span className="breakdown-val negative">-{formatCurrency(resultados.economia.detalhes.custo)}</span>
-                                                </div>
-                                                {resultados.economia.detalhes.punicao > 0 && (
-                                                    <div className="breakdown-row">
-                                                        <span>Punição Goleada</span>
-                                                        <span className="breakdown-val negative">-{formatCurrency(resultados.economia.detalhes.punicao)}</span>
-                                                    </div>
-                                                )}
-                                                <div style={{marginTop: '10px', fontSize: '0.8rem', color: 'var(--text-gray)', textAlign: 'right'}}>
-                                                    Fator Peso: {(resultados.economia.detalhes.pesoAplicado * 100).toFixed(0)}%
-                                                </div>
-                                            </div>
-                                        </div>
+                                      <div style={{borderTop: '1px solid var(--border-color)', paddingTop: '15px'}}>
+                                          <div className="breakdown-row">
+                                              <span>Pontos Positivos</span>
+                                              <span className="breakdown-val positive">+{resultados.coeficiente.positivos.toFixed(1)}</span>
+                                          </div>
+                                          <div className="breakdown-row">
+                                              <span>Penalidades (Ajustadas)</span>
+                                              <span className="breakdown-val negative">{resultados.coeficiente.negativos.toFixed(1)}</span>
+                                          </div>
+                                          <div style={{fontSize: '0.75rem', marginTop: '10px', color: 'var(--text-gray)', textAlign: 'center'}}>
+                                              Limites: {dados?.coeficiente.pontuacaoMinima} a {dados?.coeficiente.pontuacaoMaxima}
+                                          </div>
+                                      </div>
+                                  </div>
 
-                                        <div className="res-card rank">
-                                            <div className="res-header" style={{color: '#3b82f6'}}>
-                                                <Activity size={24} /> Ranking
-                                            </div>
-                                            <div className="res-main-value" style={{color: resultados.coeficiente.final >= 0 ? '#3b82f6' : '#ef4444'}}>
-                                                {resultados.coeficiente.final.toFixed(2)} <span style={{fontSize: '1rem', fontWeight: 400}}>pts</span>
-                                            </div>
-
-                                            <div style={{borderTop: '1px solid var(--border-color)', paddingTop: '15px'}}>
-                                                <div className="breakdown-row">
-                                                    <span>Pontos Positivos</span>
-                                                    <span className="breakdown-val positive">+{resultados.coeficiente.positivos.toFixed(1)}</span>
-                                                </div>
-                                                <div className="breakdown-row">
-                                                    <span>Penalidades (Ajustadas)</span>
-                                                    <span className="breakdown-val negative">{resultados.coeficiente.negativos.toFixed(1)}</span>
-                                                </div>
-                                                <div style={{fontSize: '0.75rem', marginTop: '10px', color: 'var(--text-gray)', textAlign: 'center'}}>
-                                                    Limites: {dados?.coeficiente.pontuacaoMinima} a {dados?.coeficiente.pontuacaoMaxima}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div style={{padding: '15px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px dashed var(--border-color)', fontSize: '0.85rem', color: 'var(--text-gray)'}}>
-                                            <Info size={16} style={{display: 'inline', marginRight: '5px', verticalAlign: 'text-bottom'}} />
-                                            <strong>Nota:</strong> {dados.economico.explicacaoFatorCompeticao}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                    </>
-                )}
-            </div>
-        </div>
-
-      </main>
-
-      {showLoginPopup && (
-        <PopupLogin 
-          onClose={() => setShowLoginPopup(false)} 
-          onLoginSuccess={handleLoginSuccess} 
-        />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser 
-          user={{
-            id: currentUser.id,
-            nome: currentUser.nome,
-            discord: currentUser.discord,
-            imagem: currentUser.imagem,
-            cargo: currentUser.cargo,
-            saldoVirtual: currentUser.saldoVirtual,
-            finais: 0,
-            titulos: 0,
-            golsMarcados: 0,
-            partidasJogadas: 0
-          }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
-    </div>
+                                  <div style={{padding: '15px', background: 'var(--bg-card)', borderRadius: '12px', border: '1px dashed var(--border-color)', fontSize: '0.85rem', color: 'var(--text-gray)'}}>
+                                      <Info size={16} style={{display: 'inline', marginRight: '5px', verticalAlign: 'text-bottom'}} />
+                                      <strong>Nota:</strong> {dados.economico.explicacaoFatorCompeticao}
+                                  </div>
+                              </>
+                          )}
+                      </div>
+                  </div>
+              </>
+          )}
+      </div>
+    </DashboardLayout>
   );
 }

@@ -1,42 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Menu,
-  LayoutDashboard,
-  Users,
   Trophy,
-  Shield,
-  Wallet,
-  Search,
-  Gamepad2,
-  Star,
-  Settings,
-  CalendarSync,
-  Lightbulb,
   Coins,
   ArrowLeft,
   Crown,
   Medal
 } from 'lucide-react';
 import { API } from '../services/api';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
 import '../styles/TorneiosPage.css';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
-
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-  titulos: number;
-  finais: number;
-  partidasJogadas: number;
-  golsMarcados: number;
-}
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 interface Titulo {
   id: string;
@@ -68,21 +42,7 @@ const fetchTop3CampeoesService = async (tituloId: string) => {
 export function TelaTituloSelecionado() {
   const navigate = useNavigate();
   const { tituloId } = useParams();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
-
-  const { data: avatars = [] } = useQuery({
-    queryKey: ['avatares'],
-    queryFn: async () => {
-      const response = await API.get('/api/avatares');
-      return Array.isArray(response.data) ? response.data : [];
-    },
-    staleTime: 1000 * 60 * 30,
-    enabled: !!currentUser
-  });
+  const { getAvatarUrl } = useAppContext();
 
   const { data: titulo, isLoading: isLoadingTitulo } = useQuery<Titulo>({
     queryKey: ['titulo', tituloId],
@@ -96,27 +56,6 @@ export function TelaTituloSelecionado() {
     enabled: !!tituloId
   });
 
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((a: any) => (map[a.id] = a.url));
-    return map;
-  }, [avatars]);
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) setCurrentUser(JSON.parse(storedUser));
-  }, []);
-
   const getMedalColor = (posicao: number) => {
     if (posicao === 0) return '#eab308';
     if (posicao === 1) return '#9ca3af';
@@ -124,7 +63,7 @@ export function TelaTituloSelecionado() {
   };
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+    <DashboardLayout esconderBusca>
       <style>{`
         .titulo-detalhe-container {
           background: var(--bg-card);
@@ -303,79 +242,7 @@ export function TelaTituloSelecionado() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z" />
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-        <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item"><LayoutDashboard size={20} /> Dashboard</a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item"><Users size={20} /> Jogadores</a>
-          <a onClick={() => navigate('/clubes')} className="nav-item"><Shield size={20} /> Clubes</a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item"><Trophy size={20} /> Competições</a>
-          <a onClick={() => navigate('/titulos')} className="nav-item active"><Star size={20} /> Títulos</a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item"><CalendarSync size={20} /> Temporadas</a>
-          <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item"><Gamepad2 size={20} /> Partidas</a>
-          <a onClick={() => navigate('/minha-conta')} className="nav-item"><Wallet size={20} /> Minha conta</a>
-          <a onClick={() => navigate('/suporte')} className="nav-item"><Settings size={20} /> Suporte</a>
-        </nav>
-      </aside>
-
-      <main className="main-content">
-        <header className="top-header">
-          <div className="left-header">
-            <button className="toggle-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={18} />
-              <input placeholder="Buscar títulos..." disabled />
-            </div>
-          </div>
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={() => setIsDarkMode(!isDarkMode)}>
-              <Lightbulb size={20} />
-            </button>
-            <BotaoNotificacao user={currentUser} />
-            {currentUser ? (
-              <div
-                className="user-avatar-mini"
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: currentUser.imagem
-                    ? `url(${avatarMap[currentUser.imagem] || currentUser.imagem})`
-                    : 'none',
-                  backgroundSize: 'cover',
-                  cursor: 'pointer'
-                }}
-              >
-                {!currentUser.imagem && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <button
-                className="login-btn-header"
-                onClick={() => setShowLoginPopup(true)}
-                style={{
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  fontWeight: 600
-                }}
-              >
-                Login
-              </button>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content">
+      <div className="page-content">
           <button onClick={() => navigate('/titulos')} className="back-button">
             <ArrowLeft size={16} /> Voltar para Títulos
           </button>
@@ -438,7 +305,7 @@ export function TelaTituloSelecionado() {
                       <Medal size={18} color={getMedalColor(index)} />
                     </div>
                     {campeao.jogadorImagem ? (
-                      <img src={avatarMap[campeao.jogadorImagem] || campeao.jogadorImagem} alt={campeao.jogadorNome} className="top3-avatar" />
+                      <img src={getAvatarUrl(campeao.jogadorImagem) || ''} alt={campeao.jogadorNome} className="top3-avatar" />
                     ) : (
                       <div className="top3-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'var(--text-gray)' }}>
                         {campeao.jogadorNome.charAt(0)}
@@ -460,23 +327,6 @@ export function TelaTituloSelecionado() {
             )}
           </div>
         </div>
-      </main>
-
-      {showLoginPopup && (
-        <PopupLogin onClose={() => setShowLoginPopup(false)} onLoginSuccess={setCurrentUser} />
-      )}
-      {showUserPopup && currentUser && (
-        <PopupUser
-          user={{ ...currentUser, imagem: avatarMap[currentUser.imagem || ''] || currentUser.imagem }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user_data');
-            setCurrentUser(null);
-            setShowUserPopup(false);
-          }}
-        />
-      )}
-    </div>
+    </DashboardLayout>
   );
 }

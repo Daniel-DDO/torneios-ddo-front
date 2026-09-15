@@ -1,19 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
-  Menu, 
-  LayoutDashboard, 
-  Users, 
-  Trophy, 
   Shield, 
-  Wallet, 
-  Search, 
-  Gamepad2, 
   Star,
-  Lightbulb,
-  Settings,
-  CalendarSync,
   Plus,
   ArrowLeft,
   Link,
@@ -30,13 +20,12 @@ import {
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
 import PopupNovoTorneio from '../components/PopupNovoTorneio';
 import PopupJogadorClube from '../components/PopupJogadorClube';
 import PopupTrocarJogador from '../components/PopupTrocarJogador';
 import PopupSorteioJogClube from '../components/PopupSorteioJogClube';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 interface Torneio {
   id: string;
@@ -57,25 +46,6 @@ interface Competicao {
   divisao: string;
   valor: number;
   descricao: string;
-}
-
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-  titulos: number;
-  finais: number;
-  partidasJogadas: number;
-  golsMarcados: number;
-}
-
-interface Avatar {
-  id: string;
-  url: string;
-  nome?: string;
 }
 
 interface Temporada {
@@ -114,13 +84,6 @@ const CATEGORIA_ICONS: Record<string, React.ElementType> = {
 const normalizarCategoria = (categoria: string) =>
   CATEGORIA_LABELS[categoria] ?? categoria.charAt(0) + categoria.slice(1).toLowerCase().replace(/_/g, ' ');
 
-const fetchAvatarsService = async () => {
-  const response = await API.get('/api/avatares');
-  if (Array.isArray(response)) return response;
-  if (response.data && Array.isArray(response.data)) return response.data;
-  return [];
-};
-
 const fetchTorneiosPorTemporadaService = async (temporadaId: string) => {
   const response = await API.get(`/torneio/temporada/${temporadaId}`);
   return response.data;
@@ -155,13 +118,8 @@ export function TelaTorneios() {
   const navigate = useNavigate();
   const { temporadaId } = useParams();
   const queryClient = useQueryClient();
+  const { currentUser, isAdmin } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
-
-  const { data: avatars = [] } = useQuery<Avatar[]>({
-    queryKey: ['avatares'],
-    queryFn: fetchAvatarsService,
-    staleTime: 1000 * 60 * 60,
-  });
 
   const { data: torneios = [], isLoading: isLoadingTorneios } = useQuery<Torneio[]>({
     queryKey: ['torneios', temporadaId],
@@ -173,14 +131,6 @@ export function TelaTorneios() {
     queryKey: ['competicoes-simples'],
     queryFn: fetchCompeticoesSimplesService,
   });
-
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((avatar: Avatar) => {
-        map[avatar.id] = avatar.url;
-    });
-    return map;
-  }, [avatars]);
 
   const competicaoMap = useMemo(() => {
     const map: Record<string, Competicao> = {};
@@ -234,50 +184,10 @@ export function TelaTorneios() {
   };
   // ----- Fim Temporada / Prêmios -----
 
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
   const [showNovoTorneioPopup, setShowNovoTorneioPopup] = useState(false);
   const [showJogadorClubePopup, setShowJogadorClubePopup] = useState(false);
   const [showTrocarJogadorPopup, setShowTrocarJogadorPopup] = useState(false);
   const [showSorteioPopup, setShowSorteioPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-  }, []);
-
-  const handleLoginSuccess = (userData: UserData) => {
-    setCurrentUser(userData);
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        setCurrentUser(null);
-        setShowUserPopup(false);
-    }
-  };
-
   const handleNovoTorneioSubmit = () => {
     queryClient.invalidateQueries({ queryKey: ['torneios', temporadaId] });
   };
@@ -285,8 +195,6 @@ export function TelaTorneios() {
   const handleTrocarJogadorSuccess = () => {
     
   };
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   const filteredTorneios = torneios.filter((torneio) => {
     const term = searchTerm.toLowerCase();
@@ -297,11 +205,6 @@ export function TelaTorneios() {
 
     return nomeTorneio.includes(term) || nomeCompeticao.includes(term);
   });
-
-  const getCurrentUserAvatar = () => {
-    if (!currentUser?.imagem) return null;
-    return avatarMap[currentUser.imagem] || currentUser.imagem;
-  };
 
   const handleVerJogadores = () => {
     if (temporadaId) {
@@ -317,12 +220,18 @@ export function TelaTorneios() {
 
   const isLoading = isLoadingTorneios || isLoadingCompeticoes;
 
-  const hasAdminPrivileges = currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
+  const hasAdminPrivileges = isAdmin;
   const canSwapPlayers = currentUser && ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
   const isProprietario = currentUser && currentUser.cargo === 'PROPRIETARIO';
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+    <DashboardLayout
+      searchPlaceholder="Buscar torneio ou competição..."
+      searchValue={searchTerm}
+      onSearchChange={setSearchTerm}
+      headerExtras={<button className="ver-jogadores-btn" onClick={handleVerJogadores}><UserCheck size={18} /><span>Jogadores dessa temporada</span></button>}
+      contentStyle={{ padding: '0rem 0rem' }}
+    >
       
       <style>{`
         .page-content {
@@ -509,123 +418,7 @@ export function TelaTorneios() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-               <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-
-        <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => navigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item active" style={{cursor: 'pointer'}}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-           <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
-
-      <main className="main-content">
-        
-        <header className="top-header compact">
-          <div className="left-header">
-            <button 
-              className="toggle-btn menu-toggle" 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input 
-                type="text" 
-                placeholder="Buscar torneio ou competição..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="header-actions">
-            
-            <button className="ver-jogadores-btn" onClick={handleVerJogadores}>
-                <UserCheck size={18} />
-                <span>Jogadores dessa temporada</span>
-            </button>
-
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
-            </button>
-            <BotaoNotificacao user={currentUser} />
-            
-            {currentUser ? (
-              <div 
-                className="user-avatar-mini" 
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <button 
-                className="login-btn-header" 
-                onClick={() => setShowLoginPopup(true)}
-                style={{
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginLeft: '10px'
-                }}
-              >
-                Login
-              </button>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content">
+      <div className="page-content">
             <button onClick={() => navigate('/temporadas')} className="back-button">
                 <ArrowLeft size={16} /> Voltar para Temporadas
             </button>
@@ -851,26 +644,6 @@ export function TelaTorneios() {
             )}
         </div>
 
-      </main>
-
-      {showLoginPopup && (
-        <PopupLogin 
-          onClose={() => setShowLoginPopup(false)} 
-          onLoginSuccess={handleLoginSuccess} 
-        />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser 
-          user={{
-            ...currentUser,
-            imagem: getCurrentUserAvatar()
-          }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
-
       {showNovoTorneioPopup && (
         <PopupNovoTorneio 
           onClose={() => setShowNovoTorneioPopup(false)} 
@@ -898,6 +671,6 @@ export function TelaTorneios() {
             onSuccess={() => setShowSorteioPopup(false)}
         />
       )}
-    </div>
+    </DashboardLayout>
   );
 }

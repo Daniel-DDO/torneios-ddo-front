@@ -2,18 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { 
-  Menu, 
-  LayoutDashboard, 
-  Users, 
-  Shield, 
-  Trophy, 
-  Star, 
-  CalendarSync, 
-  Gamepad2, 
   Wallet, 
-  Settings, 
-  Search, 
-  Lightbulb, 
+    Star,
   Plus,
   Trash2,
   CheckCircle2,
@@ -26,12 +16,11 @@ import {
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
 import PopupGeral from '../components/PopupGeral';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
 import { useLeilaoSocket, type LanceResumoDTO } from '../hooks/useLeilaoSocket';
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 interface ClubeDTO {
   id: string;
@@ -71,19 +60,6 @@ interface PageResponse<T> {
   totalElementos: number;
   tamanhoPagina: number;
   ultimaPagina: boolean;
-}
-
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-  finais: number;
-  titulos: number;
-  golsMarcados: number;
-  partidasJogadas: number;
 }
 
 interface ItemLanceLocal {
@@ -140,6 +116,7 @@ function mapBuscaParaClubeDTO(dto: ClubeLeilaoBuscaDTO): ClubeDTO {
 export function TelaLanceLeilao() {
   const navigate = useNavigate();
   const { temporadaId } = useParams();
+    const { currentUser } = useAppContext();
   const queryClient = useQueryClient();
   const observerTarget = useRef<HTMLDivElement>(null);
   const buscaTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,12 +136,6 @@ export function TelaLanceLeilao() {
   // alimentado pelo WS -> topic .../atualizacoes-lances
   const [liderancaMercado, setLiderancaMercado] = useState<Record<string, LanceResumoDTO>>({});
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
-
   const [popup, setPopup] = useState<PopupState>({
     open: false,
     title: '',
@@ -179,20 +150,6 @@ export function TelaLanceLeilao() {
   const closePopup = () => {
     setPopup(prev => ({ ...prev, open: false }));
   };
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      const parsed = JSON.parse(storedUser);
-      setCurrentUser({
-          ...parsed,
-          finais: parsed.finais || 0,
-          titulos: parsed.titulos || 0,
-          golsMarcados: parsed.golsMarcados || 0,
-          partidasJogadas: parsed.partidasJogadas || 0
-      });
-    }
-  }, []);
 
   useEffect(() => {
     const fetchActiveLeilao = async () => {
@@ -308,16 +265,6 @@ export function TelaLanceLeilao() {
       });
     }
   });
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
 
   const {
     data: clubesData,
@@ -538,7 +485,11 @@ export function TelaLanceLeilao() {
     : (clubesData?.pages.flatMap(page => page.conteudo) ?? []);
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+        <DashboardLayout
+            searchPlaceholder="Buscar time..."
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+        >
         <style>{`
             .lance-layout {
                 display: grid;
@@ -771,77 +722,6 @@ export function TelaLanceLeilao() {
             }
         `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-               <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-
-        <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}><LayoutDashboard size={20} /> Dashboard</a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}><Users size={20} /> Jogadores</a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}><Shield size={20} /> Clubes</a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}><Trophy size={20} /> Competições</a>
-          <a onClick={() => navigate('/titulos')} className="nav-item" style={{cursor: 'pointer'}}><Star size={20} /> Títulos</a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item active" style={{cursor: 'pointer'}}><CalendarSync size={20} /> Temporadas</a>
-          <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}><Gamepad2 size={20} /> Partidas</a>
-           <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{cursor: 'pointer'}}><Wallet size={20} /> Minha conta</a>
-          <a onClick={() => navigate('/suporte')} className="nav-item" style={{cursor: 'pointer'}}><Settings size={20} /> Suporte</a>
-        </nav>
-      </aside>
-
-      <main className="main-content">
-        <header className="top-header compact">
-          <div className="left-header">
-            <button className="toggle-btn menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input 
-                type="text" 
-                placeholder="Buscar time..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={() => setIsDarkMode(!isDarkMode)}>
-              <Lightbulb size={20} />
-            </button>
-            <BotaoNotificacao user={currentUser} />
-            
-            {currentUser ? (
-              <div 
-                className="user-avatar-mini" 
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                    backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
-                    backgroundSize: 'cover',
-                    backgroundColor: currentUser.imagem ? 'transparent' : 'var(--primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                }}
-              >
-                {!currentUser.imagem && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-                <button className="login-btn-header" onClick={() => setShowLoginPopup(true)}>Login</button>
-            )}
-          </div>
-        </header>
-
         <div className="lance-layout">
             <div className="market-column">
                 <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
@@ -1032,38 +912,6 @@ export function TelaLanceLeilao() {
                 </div>
             </div>
         </div>
-      </main>
-
-      {showLoginPopup && (
-        <PopupLogin 
-          onClose={() => setShowLoginPopup(false)} 
-          onLoginSuccess={(user) => {
-              setCurrentUser({
-                ...user,
-                finais: 0,
-                titulos: 0,
-                golsMarcados: 0,
-                partidasJogadas: 0
-              });
-              setShowLoginPopup(false);
-          }} 
-        />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser 
-          user={currentUser}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user_data');
-            setCurrentUser(null);
-            setShowUserPopup(false);
-            navigate('/');
-          }}
-        />
-      )}
-
       {popup.open && (
         <PopupGeral 
             onClose={closePopup}
@@ -1072,6 +920,6 @@ export function TelaLanceLeilao() {
             type={popup.type}
         />
       )}
-    </div>
+        </DashboardLayout>
   );
 }

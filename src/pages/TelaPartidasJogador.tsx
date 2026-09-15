@@ -1,60 +1,19 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import {
-  Menu,
-  LayoutDashboard,
-  Users,
-  Trophy,
-  Shield,
-  Wallet,
-  Search,
-  Gamepad2,
-  Star,
-  Lightbulb,
-  Settings,
-  CalendarSync,
   Calendar,
   Clock,
   MapPin,
+  Gamepad2,
   Ban,
   ArrowLeft
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
-
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-  titulos: number;
-  finais: number;
-  partidasJogadas: number;
-  golsMarcados: number;
-  golsSofridos: number;
-  cartoesAmarelos: number;
-  cartoesVermelhos: number;
-  descricao: string | null;
-  contaReivindicada: boolean;
-  suspensoAte: string | null;
-  insignias: any[];
-  criacaoConta: string;
-  modificacaoConta?: string;
-  statusJogador: string;
-}
-
-interface Avatar {
-  id: string;
-  url: string;
-  nome?: string;
-}
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 interface JogadorClubeResumoDTO {
   id: string;
@@ -98,67 +57,13 @@ interface PaginacaoResponse<T> {
 
 type AbaPartidas = 'a-fazer' | 'realizadas' | 'anuladas';
 
-const fetchAvatarsService = async () => {
-  const response = await API.get('/api/avatares');
-  if (Array.isArray(response)) return response;
-  if (response.data && Array.isArray(response.data)) return response.data;
-  return [];
-};
-
 export function TelaPartidasJogador() {
   const navigate = useNavigate();
   const { id: jogadorId } = useParams<{ id: string }>();
+  const { isMobile } = useAppContext();
 
-  const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<AbaPartidas>('a-fazer');
   const [nomeJogador, setNomeJogador] = useState<string>('');
-
-  const { data: avatars = [] } = useQuery({
-    queryKey: ['avatares'],
-    queryFn: fetchAvatarsService,
-    staleTime: 1000 * 60 * 60 * 24,
-    refetchOnWindowFocus: false,
-  });
-
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((avatar: Avatar) => {
-      map[avatar.id] = avatar.url;
-    });
-    return map;
-  }, [avatars]);
-
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setCurrentUser(parsedUser);
-      } catch (e) {
-        // usuário não logado ainda pode ver a tela normalmente
-      }
-    }
-    setLoading(false);
-  }, []);
 
   const endpointPorAba: Record<AbaPartidas, string> = {
     'a-fazer': 'a-fazer',
@@ -225,27 +130,6 @@ export function TelaPartidasJogador() {
     };
   }, [loadMore]);
 
-  const handleLoginSuccess = (userData: UserData) => {
-    setCurrentUser(userData);
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user_data');
-      setCurrentUser(null);
-      setShowUserPopup(false);
-      navigate('/');
-    }
-  };
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
-  const getCurrentUserAvatar = () => {
-    if (!currentUser?.imagem) return null;
-    return avatarMap[currentUser.imagem] || currentUser.imagem;
-  };
-
   const formatDataHora = (dataString: string | null) => {
     if (!dataString) return { dia: 'A definir', hora: '--:--' };
     const date = new Date(dataString);
@@ -256,17 +140,16 @@ export function TelaPartidasJogador() {
   };
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
-      <LoadingSpinner isLoading={loading || isLoadingPartidas} />
+    <DashboardLayout esconderBusca contentStyle={{ padding: isMobile ? '1rem' : '0rem 0rem' }}>
+      <LoadingSpinner isLoading={isLoadingPartidas} />
 
       <style>{`
-    .page-content {
-      padding: 2rem 3rem;
+    .tp-match-page-content {
       display: flex;
       justify-content: center;
     }
 
-    .matches-container {
+    .tp-match-container {
       width: 100%;
       max-width: 1000px;
       display: flex;
@@ -274,46 +157,25 @@ export function TelaPartidasJogador() {
       gap: 2rem;
     }
 
-    .matches-page-header {
+    .tp-match-page-header {
         display: flex;
         align-items: center;
         gap: 1rem;
         margin-bottom: -0.5rem;
     }
 
-    .back-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        border: 1px solid var(--border-color);
-        background: var(--bg-card);
-        color: var(--text-dark);
-        cursor: pointer;
-        transition: all 0.2s;
-        flex-shrink: 0;
-    }
-
-    .back-btn:hover {
-        background: var(--primary);
-        color: white;
-        border-color: var(--primary);
-    }
-
-    .matches-page-title h2 {
+    .tp-match-page-title h2 {
         margin: 0;
         font-size: 1.4rem;
         color: var(--text-dark);
     }
 
-    .matches-page-title span {
+    .tp-match-page-title span {
         font-size: 0.9rem;
         color: var(--text-gray);
     }
 
-    .tabs-header {
+    .tp-match-tabs-header {
         display: flex;
         gap: 1rem;
         margin-bottom: 1rem;
@@ -321,7 +183,7 @@ export function TelaPartidasJogador() {
         padding-bottom: 1rem;
     }
 
-    .tab-btn {
+    .tp-match-tab-btn {
         background: transparent;
         border: none;
         padding: 0.5rem 1.5rem;
@@ -333,23 +195,23 @@ export function TelaPartidasJogador() {
         transition: all 0.2s;
     }
 
-    .tab-btn.active {
+    .tp-match-tab-btn.active {
         background: var(--primary);
         color: white;
     }
 
-    .tab-btn:hover:not(.active) {
+    .tp-match-tab-btn:hover:not(.active) {
         background: var(--bg-card);
         color: var(--text-dark);
     }
 
-    .matches-list {
+    .tp-match-list {
         display: flex;
         flex-direction: column;
         gap: 1.5rem;
     }
 
-    .match-card {
+    .tp-match-card {
         background: var(--bg-card);
         border: 1px solid var(--border-color);
         border-radius: var(--radius);
@@ -362,16 +224,16 @@ export function TelaPartidasJogador() {
         cursor: pointer;
     }
 
-    .match-card.anulada-card {
+    .tp-match-card.tp-match-anulada-card {
         opacity: 0.75;
     }
 
-    .match-card:hover {
+    .tp-match-card:hover {
         transform: translateY(-2px);
         border-color: var(--primary);
     }
 
-    .match-header {
+    .tp-match-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -381,18 +243,18 @@ export function TelaPartidasJogador() {
         padding-bottom: 0.8rem;
     }
 
-    .match-info-group {
+    .tp-match-info-group {
         display: flex;
         gap: 1.5rem;
     }
 
-    .match-info-tag {
+    .tp-match-info-tag {
         display: flex;
         align-items: center;
         gap: 6px;
     }
 
-    .match-content {
+    .tp-match-content {
         display: grid;
         grid-template-columns: 1fr auto 1fr;
         align-items: center;
@@ -400,7 +262,7 @@ export function TelaPartidasJogador() {
         padding: 0.5rem 0;
     }
 
-    .team-display {
+    .tp-match-team-display {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -410,14 +272,14 @@ export function TelaPartidasJogador() {
         overflow: hidden;
     }
 
-    .team-logo {
+    .tp-match-team-logo {
         width: 70px;
         height: 70px;
         object-fit: contain;
         margin-bottom: 5px;
     }
 
-    .team-logo-placeholder {
+    .tp-match-team-logo-placeholder {
         width: 70px;
         height: 70px;
         background: var(--bg-main);
@@ -431,7 +293,7 @@ export function TelaPartidasJogador() {
         font-size: 1.5rem;
     }
 
-    .team-name {
+    .tp-match-team-name {
         font-weight: 700;
         color: var(--text-dark);
         font-size: 1.1rem;
@@ -442,7 +304,7 @@ export function TelaPartidasJogador() {
         padding: 0 5px;
     }
 
-    .player-info {
+    .tp-match-player-info {
         display: flex;
         align-items: center;
         gap: 6px;
@@ -454,12 +316,12 @@ export function TelaPartidasJogador() {
         max-width: 100%;
     }
 
-    .player-info.player-info-highlight {
+    .tp-match-player-info.tp-match-player-info-highlight {
         border-color: var(--primary);
         background: rgba(var(--primary-rgb), 0.08);
     }
 
-    .player-avatar-small {
+    .tp-match-player-avatar-small {
         width: 20px;
         height: 20px;
         border-radius: 50%;
@@ -469,7 +331,7 @@ export function TelaPartidasJogador() {
         flex-shrink: 0;
     }
 
-    .player-name {
+    .tp-match-player-name {
         font-size: 0.8rem;
         color: var(--text-gray);
         font-weight: 500;
@@ -478,7 +340,7 @@ export function TelaPartidasJogador() {
         text-overflow: ellipsis;
     }
 
-    .score-board {
+    .tp-match-score-board {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -486,7 +348,7 @@ export function TelaPartidasJogador() {
         min-width: 80px;
     }
 
-    .score-main {
+    .tp-match-score-main {
         display: flex;
         align-items: center;
         gap: 1rem;
@@ -495,19 +357,19 @@ export function TelaPartidasJogador() {
         color: var(--text-dark);
     }
 
-    .score-penalties {
+    .tp-match-score-penalties {
         font-size: 0.85rem;
         color: var(--text-gray);
     }
 
-    .vs-text {
+    .tp-match-vs-text {
         font-size: 1.5rem;
         color: var(--text-gray);
         font-weight: 700;
         opacity: 0.5;
     }
 
-    .status-badge {
+    .tp-match-status-badge {
         padding: 4px 12px;
         border-radius: 20px;
         font-size: 0.75rem;
@@ -515,12 +377,12 @@ export function TelaPartidasJogador() {
         text-transform: uppercase;
     }
 
-    .status-agendada { background: rgba(var(--primary-rgb), 0.1); color: var(--primary); }
-    .status-finalizada { background: rgba(var(--success-rgb), 0.1); color: var(--success); }
-    .status-wo { background: rgba(var(--danger-rgb), 0.1); color: var(--danger); }
-    .status-anulada { background: rgba(var(--danger-rgb), 0.1); color: var(--danger); }
+    .tp-match-status-agendada { background: rgba(var(--primary-rgb), 0.1); color: var(--primary); }
+    .tp-match-status-finalizada { background: rgba(var(--success-rgb), 0.1); color: var(--success); }
+    .tp-match-status-wo { background: rgba(var(--danger-rgb), 0.1); color: var(--danger); }
+    .tp-match-status-anulada { background: rgba(var(--danger-rgb), 0.1); color: var(--danger); }
 
-    .motivo-anulacao {
+    .tp-match-motivo-anulacao {
         display: flex;
         align-items: center;
         gap: 6px;
@@ -532,7 +394,7 @@ export function TelaPartidasJogador() {
         padding: 0.6rem 1rem;
     }
 
-    .empty-state {
+    .tp-match-empty-state {
         text-align: center;
         padding: 4rem;
         color: var(--text-gray);
@@ -541,185 +403,64 @@ export function TelaPartidasJogador() {
         border: 1px dashed var(--border-color);
     }
 
-    .btn-admin-header {
-        background-color: var(--primary);
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-weight: 600;
-        cursor: pointer;
-        margin-right: 12px;
-        transition: opacity 0.2s;
-        font-size: 0.9rem;
-    }
-    
-    .btn-admin-header:hover {
-      opacity: 0.9;
-    }
-
-    .load-more-status {
+    .tp-match-load-more-status {
         text-align: center;
         padding: 1rem;
         color: var(--text-gray);
     }
 
     @media (max-width: 768px) {
-        .match-content {
+        .tp-match-content {
             grid-template-columns: 1fr;
             gap: 1.5rem;
         }
-        .score-main {
+        .tp-match-score-main {
             justify-content: center;
         }
-        .page-content {
-            padding: 1rem;
+        .tp-match-vs-text {
+            text-align: center;
         }
-        .match-info-group {
+        .tp-match-info-group {
             flex-direction: column;
             gap: 0.5rem;
         }
     }
   `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z" />
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-
-        <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item active" style={{ cursor: 'pointer' }}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => navigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-          <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
-
-      <main className="main-content">
-        <header className="top-header compact">
-          <div className="left-header">
-            <button
-              className="toggle-btn menu-toggle"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input type="text" placeholder="Buscar no sistema..." />
-            </div>
-          </div>
-
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
-            </button>
-            <BotaoNotificacao user={currentUser} />
-
-            {currentUser ? (
-              <div
-                className="user-avatar-mini"
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <button
-                className="login-btn-header"
-                onClick={() => setShowLoginPopup(true)}
-                style={{
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginLeft: '10px'
-                }}
-              >
-                Login
+        <div className="tp-match-page-content">
+          <div className="tp-match-container">
+            <div className="tp-match-page-header">
+              <button className="icon-btn" onClick={() => navigate(`/jogador/${jogadorId}`)} title="Voltar ao perfil">
+                <ArrowLeft size={18} />
               </button>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content">
-          <div className="matches-container">
-            <div className="matches-page-header">
-              <button className="back-btn" onClick={() => navigate(`/jogador/${jogadorId}`)} title="Voltar ao perfil">
-                <ArrowLeft size={20} />
-              </button>
-              <div className="matches-page-title">
+              <div className="tp-match-page-title">
                 <h2>Partidas{nomeJogador ? ` de ${nomeJogador}` : ''}</h2>
                 <span>Histórico completo de confrontos</span>
               </div>
             </div>
 
-            <div className="tabs-header">
+            <div className="tp-match-tabs-header">
               <button
-                className={`tab-btn ${activeTab === 'a-fazer' ? 'active' : ''}`}
+                className={`tp-match-tab-btn ${activeTab === 'a-fazer' ? 'active' : ''}`}
                 onClick={() => setActiveTab('a-fazer')}
               >
                 A Fazer
               </button>
               <button
-                className={`tab-btn ${activeTab === 'realizadas' ? 'active' : ''}`}
+                className={`tp-match-tab-btn ${activeTab === 'realizadas' ? 'active' : ''}`}
                 onClick={() => setActiveTab('realizadas')}
               >
                 Realizadas
               </button>
               <button
-                className={`tab-btn ${activeTab === 'anuladas' ? 'active' : ''}`}
+                className={`tp-match-tab-btn ${activeTab === 'anuladas' ? 'active' : ''}`}
                 onClick={() => setActiveTab('anuladas')}
               >
                 Anuladas
               </button>
             </div>
 
-            <div className="matches-list">
+            <div className="tp-match-list">
               {partidas.length > 0 ? (
                 partidas.map((partida: PartidaHistoricoDTO) => {
                   const { dia, hora } = formatDataHora(partida.dataHora);
@@ -727,88 +468,88 @@ export function TelaPartidasJogador() {
                   return (
                     <div
                       key={partida.id}
-                      className={`match-card ${partida.anulada ? 'anulada-card' : ''}`}
+                      className={`tp-match-card ${partida.anulada ? 'tp-match-anulada-card' : ''}`}
                       onClick={() => navigate(`/partida/${partida.id}`)}
                     >
-                      <div className="match-header">
-                        <div className="match-info-group">
-                          <div className="match-info-tag">
+                      <div className="tp-match-header">
+                        <div className="tp-match-info-group">
+                          <div className="tp-match-info-tag">
                             <Calendar size={14} /> {dia}
                             {partida.dataHora && <><Clock size={14} style={{ marginLeft: '8px' }} /> {hora}</>}
                           </div>
-                          <div className="match-info-tag">
+                          <div className="tp-match-info-tag">
                             <MapPin size={14} /> {partida.estadio}
                           </div>
                         </div>
-                        <div className="match-info-tag">
+                        <div className="tp-match-info-tag">
                           {partida.numeroRodada != null && (
                             <span style={{ fontWeight: 600, marginRight: '10px' }}>Rodada {partida.numeroRodada}</span>
                           )}
                           {partida.anulada ? (
-                            <span className="status-badge status-anulada">ANULADA</span>
+                            <span className="tp-match-status-badge tp-match-status-anulada">ANULADA</span>
                           ) : !partida.realizada ? (
-                            <span className="status-badge status-agendada">AGENDADA</span>
+                            <span className="tp-match-status-badge tp-match-status-agendada">AGENDADA</span>
                           ) : partida.wo ? (
-                            <span className="status-badge status-wo">W.O.</span>
+                            <span className="tp-match-status-badge tp-match-status-wo">W.O.</span>
                           ) : (
-                            <span className="status-badge status-finalizada">FINALIZADA</span>
+                            <span className="tp-match-status-badge tp-match-status-finalizada">FINALIZADA</span>
                           )}
                         </div>
                       </div>
 
-                      <div className="match-content">
-                        <div className="team-display">
+                      <div className="tp-match-content">
+                        <div className="tp-match-team-display">
                           {partida.mandante.clubeImagem ? (
-                            <img src={partida.mandante.clubeImagem} alt={partida.mandante.clubeNome} className="team-logo" />
+                            <img src={partida.mandante.clubeImagem} alt={partida.mandante.clubeNome} className="tp-match-team-logo" />
                           ) : (
-                            <div className="team-logo-placeholder">{partida.mandante.clubeSigla}</div>
+                            <div className="tp-match-team-logo-placeholder">{partida.mandante.clubeSigla}</div>
                           )}
-                          <span className="team-name" title={partida.mandante.clubeNome}>{partida.mandante.clubeNome}</span>
-                          <div className={`player-info ${partida.mandante.jogadorId === jogadorId ? 'player-info-highlight' : ''}`}>
+                          <span className="tp-match-team-name" title={partida.mandante.clubeNome}>{partida.mandante.clubeNome}</span>
+                          <div className={`tp-match-player-info ${partida.mandante.jogadorId === jogadorId ? 'tp-match-player-info-highlight' : ''}`}>
                             <div
-                              className="player-avatar-small"
+                              className="tp-match-player-avatar-small"
                               style={{ backgroundImage: partida.mandante.jogadorImagem ? `url(${partida.mandante.jogadorImagem})` : 'none' }}
                             ></div>
-                            <span className="player-name">{partida.mandante.jogadorNome}</span>
+                            <span className="tp-match-player-name">{partida.mandante.jogadorNome}</span>
                           </div>
                         </div>
 
                         {mostrarPlacar ? (
-                          <div className="score-board">
-                            <div className="score-main">
+                          <div className="tp-match-score-board">
+                            <div className="tp-match-score-main">
                               <span>{partida.golsMandante ?? 0}</span>
                               <span style={{ opacity: 0.3, fontSize: '1.5rem' }}>x</span>
                               <span>{partida.golsVisitante ?? 0}</span>
                             </div>
                             {partida.houvePenaltis && (
-                              <span className="score-penalties">
+                              <span className="tp-match-score-penalties">
                                 ({partida.penaltisMandante} - {partida.penaltisVisitante} Pen.)
                               </span>
                             )}
                           </div>
                         ) : (
-                          <div className="vs-text">VS</div>
+                          <div className="tp-match-vs-text">VS</div>
                         )}
 
-                        <div className="team-display">
+                        <div className="tp-match-team-display">
                           {partida.visitante.clubeImagem ? (
-                            <img src={partida.visitante.clubeImagem} alt={partida.visitante.clubeNome} className="team-logo" />
+                            <img src={partida.visitante.clubeImagem} alt={partida.visitante.clubeNome} className="tp-match-team-logo" />
                           ) : (
-                            <div className="team-logo-placeholder">{partida.visitante.clubeSigla}</div>
+                            <div className="tp-match-team-logo-placeholder">{partida.visitante.clubeSigla}</div>
                           )}
-                          <span className="team-name" title={partida.visitante.clubeNome}>{partida.visitante.clubeNome}</span>
-                          <div className={`player-info ${partida.visitante.jogadorId === jogadorId ? 'player-info-highlight' : ''}`}>
+                          <span className="tp-match-team-name" title={partida.visitante.clubeNome}>{partida.visitante.clubeNome}</span>
+                          <div className={`tp-match-player-info ${partida.visitante.jogadorId === jogadorId ? 'tp-match-player-info-highlight' : ''}`}>
                             <div
-                              className="player-avatar-small"
+                              className="tp-match-player-avatar-small"
                               style={{ backgroundImage: partida.visitante.jogadorImagem ? `url(${partida.visitante.jogadorImagem})` : 'none' }}
                             ></div>
-                            <span className="player-name">{partida.visitante.jogadorNome}</span>
+                            <span className="tp-match-player-name">{partida.visitante.jogadorNome}</span>
                           </div>
                         </div>
                       </div>
 
                       {partida.anulada && partida.motivoAnulacao && (
-                        <div className="motivo-anulacao" onClick={(e) => e.stopPropagation()}>
+                        <div className="tp-match-motivo-anulacao" onClick={(e) => e.stopPropagation()}>
                           <Ban size={14} /> Motivo: {partida.motivoAnulacao}
                         </div>
                       )}
@@ -816,7 +557,7 @@ export function TelaPartidasJogador() {
                   );
                 })
               ) : (
-                <div className="empty-state">
+                <div className="tp-match-empty-state">
                   <Gamepad2 size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
                   <p>
                     {activeTab === 'a-fazer' && 'Nenhuma partida pendente encontrada.'}
@@ -828,30 +569,11 @@ export function TelaPartidasJogador() {
 
               <div ref={observerTarget} style={{ height: '20px' }} />
               {isFetchingNextPage && (
-                <div className="load-more-status">Carregando mais partidas...</div>
+                <div className="tp-match-load-more-status">Carregando mais partidas...</div>
               )}
             </div>
           </div>
         </div>
-      </main>
-
-      {showLoginPopup && (
-        <PopupLogin
-          onClose={() => setShowLoginPopup(false)}
-          onLoginSuccess={handleLoginSuccess}
-        />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser
-          user={{
-            ...currentUser,
-            imagem: getCurrentUserAvatar()
-          }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
-    </div>
+    </DashboardLayout>
   );
 }

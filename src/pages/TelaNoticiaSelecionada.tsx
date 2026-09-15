@@ -1,19 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
-  Menu, 
-  LayoutDashboard, 
-  Users, 
-  Trophy, 
   Shield,  
-  Wallet, 
-  Settings, 
-  Search, 
-  Bell, 
-  Gamepad2, 
-  Star,
-  Lightbulb,
-  CalendarSync,
   ArrowLeft,
   Calendar,
   ExternalLink,
@@ -25,22 +13,8 @@ import {
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
-import PopupNotificacao from '../components/PopupNotificacao';
-
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: 'PROPRIETARIO' | 'DIRETOR' | 'ADMINISTRADOR' | 'JOGADOR';
-  saldoVirtual: number;
-  titulos: number;
-  finais: number;
-  partidasJogadas: number;
-  golsMarcados: number;
-}
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 interface NoticiaDetalhada {
   id: string;
@@ -93,22 +67,11 @@ const NEWS_CONFIG = {
 export function TelaNoticiaSelecionada() {
   const navigate = useNavigate();
   const { noticiaId } = useParams();
-  
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [showNotificacaoPopup, setShowNotificacaoPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const { isMobile } = useAppContext();
   
   const [noticia, setNoticia] = useState<NoticiaDetalhada | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
 
   useEffect(() => {
     const fetchNoticia = async () => {
@@ -127,41 +90,6 @@ export function TelaNoticiaSelecionada() {
     fetchNoticia();
   }, [noticiaId]);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile) setSidebarOpen(false);
-      else setSidebarOpen(true);
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
-  const handleNavigate = (path: string) => {
-    navigate(path);
-    if (isMobile) setSidebarOpen(false);
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('pt-BR', { 
@@ -178,135 +106,10 @@ export function TelaNoticiaSelecionada() {
     return NEWS_CONFIG[tipo as keyof typeof NEWS_CONFIG] || NEWS_CONFIG.JOGO_QUENTE;
   };
 
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        setCurrentUser(null);
-        setShowUserPopup(false);
-    }
-  };
-
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+    <DashboardLayout esconderBusca>
       
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`} style={{zIndex: 100}}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-               <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-
-        <nav className="nav-menu">
-          <a onClick={() => handleNavigate('/')} className="nav-item" style={{cursor: 'pointer'}}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => handleNavigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => handleNavigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => handleNavigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => handleNavigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => handleNavigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => handleNavigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-           <a onClick={() => handleNavigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => handleNavigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
-
-      {isMobile && sidebarOpen && (
-        <div 
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 99 }}
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      <main className="main-content">
-        
-        <header className="top-header compact">
-          <div className="left-header">
-            <button 
-              className="toggle-btn menu-toggle" 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input type="text" placeholder="Buscar jogador..." />
-            </div>
-          </div>
-          
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
-            </button>
-            <button 
-              className="icon-btn" 
-              onClick={() => setShowNotificacaoPopup(true)}
-            >
-                <Bell size={20} />
-            </button>
-            
-            {currentUser ? (
-              <div 
-                className="user-avatar-mini"
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!currentUser.imagem && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <button 
-                className="login-btn-header" 
-                onClick={() => setShowLoginPopup(true)}
-                style={{
-                    background: 'var(--primary)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                }}
-              >
-                Login
-              </button>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content">
+        <div>
           
           <div style={{ marginBottom: '20px' }}>
             <button 
@@ -472,11 +275,6 @@ export function TelaNoticiaSelecionada() {
             })()
           )}
         </div>
-      </main>
-
-      {showLoginPopup && <PopupLogin onClose={() => setShowLoginPopup(false)} onLoginSuccess={setCurrentUser} />}
-      {showUserPopup && currentUser && <PopupUser user={{...currentUser, imagem: currentUser.imagem || ''}} onClose={() => setShowUserPopup(false)} onLogout={handleLogout} />}
-      {showNotificacaoPopup && <PopupNotificacao onClose={() => setShowNotificacaoPopup(false)} />}
-    </div>
+    </DashboardLayout>
   );
 }

@@ -1,22 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
 import { 
-  Menu, 
-  LayoutDashboard, 
-  Users, 
+  LayoutDashboard,
   Trophy, 
   Shield,  
-  Wallet, 
-  Settings, 
-  Search, 
-  Gamepad2, 
-  Star,
-  Lightbulb,
-  CalendarSync,
   Crown,
   TrendingUp,
   Plus,
@@ -36,8 +27,6 @@ import {
 } from 'lucide-react';
 import { API, API_ANALISE } from '../services/api';
 import '../styles/TorneiosPage.css';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
 import PopupAdicionarJFase from '../components/PopupAdicionarJFase';
 import PopupColorirPos from '../components/PopupColorirPos';
 import PopupSorteio from '../components/PopupSorteio';
@@ -45,7 +34,8 @@ import PopupCopaReal from '../components/PopupCopaReal';
 import PopupCopaLiga from '../components/PopupCopaLiga';
 import PopupPunicao from '../components/PopupPunicao';
 import { PdfRelatorioFase } from '../components/RelatorioFase';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 interface FaseTorneioDTO {
   id: string;
@@ -78,25 +68,6 @@ interface ParticipanteFase {
   saldoGols: number;
   zonaNome: string;
   zonaCor: string;
-}
-
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: 'PROPRIETARIO' | 'DIRETOR' | 'ADMINISTRADOR' | 'JOGADOR';
-  saldoVirtual: number;
-  titulos: number;
-  finais: number;
-  partidasJogadas: number;
-  golsMarcados: number;
-}
-
-interface Avatar {
-  id: string;
-  url: string;
-  nome?: string;
 }
 
 interface TimeAnaliseDTO {
@@ -218,15 +189,11 @@ export function TelaFase() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { faseId, torneioId, temporadaId } = useParams();
+  const { currentUser, isAdmin, isMobile } = useAppContext();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [gerandoPdf, setGerandoPdf] = useState(false);
 
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
   const [showAddPlayerPopup, setShowAddPlayerPopup] = useState(false);
   const [showColorirPopup, setShowColorirPopup] = useState(false);
   const [showSorteioPopup, setShowSorteioPopup] = useState(false);
@@ -238,15 +205,6 @@ export function TelaFase() {
     nome: string;
     clube: string;
   } | null>(null);
-
-  const { data: avatars = [] } = useQuery<Avatar[]>({
-    queryKey: ['avatares'],
-    queryFn: async () => {
-      const response = await API.get('/api/avatares');
-      return Array.isArray(response.data) ? response.data : [];
-    },
-    staleTime: 1000 * 60 * 60,
-  });
 
   const { data: fase, isLoading: isLoadingFase } = useQuery<FaseTorneioDTO>({
     queryKey: ['fase-detalhe', faseId],
@@ -316,27 +274,6 @@ export function TelaFase() {
     },
   });
 
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((avatar) => { map[avatar.id] = avatar.url; });
-    return map;
-  }, [avatars]);
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) setCurrentUser(JSON.parse(storedUser));
-  }, []);
-
   const filteredParticipantes = useMemo(() => {
     return participantes.filter(p =>
       (p?.nomeJogador || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -373,27 +310,8 @@ export function TelaFase() {
     );
   }, [parecer]);
 
-  const getCurrentUserAvatar = () => {
-    if (!currentUser?.imagem) return null;
-    return avatarMap[currentUser.imagem] || currentUser.imagem;
-  };
-
-  const isAdmin = currentUser && ['DIRETOR', 'PROPRIETARIO', 'ADMINISTRADOR'].includes(currentUser.cargo);
   const isProprietario = currentUser && currentUser.cargo === 'PROPRIETARIO';
   const isDiretor = currentUser && currentUser.cargo === 'DIRETOR';
-
-  const handleLoginSuccess = (userData: UserData) => setCurrentUser(userData);
-  
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user_data');
-      setCurrentUser(null);
-      setShowUserPopup(false);
-    }
-  };
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   const handleExportarPdf = async () => {
     if (gerandoPdf) return;
@@ -436,7 +354,12 @@ export function TelaFase() {
   ));
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+    <DashboardLayout
+      searchPlaceholder="Buscar participante..."
+      searchValue={searchTerm}
+      onSearchChange={setSearchTerm}
+      contentStyle={{ padding: isMobile ? '1rem' : '2rem 3rem' }}
+    >
        <style>{`
         .glass-panel {
           background: var(--bg-card);
@@ -1073,117 +996,7 @@ export function TelaFase() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-               <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-
-        <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => navigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item active" style={{cursor: 'pointer'}}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-           <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
-
-      <main className="main-content">
-        
-        <header className="top-header compact">
-          <div className="left-header">
-            <button 
-              className="toggle-btn menu-toggle" 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input 
-                type="text" 
-                placeholder="Buscar participante..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
-            </button>
-            <BotaoNotificacao user={currentUser} />
-            
-            {currentUser ? (
-              <div 
-                className="user-avatar-mini"
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <button 
-                className="login-btn-header" 
-                onClick={() => setShowLoginPopup(true)}
-                style={{
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginLeft: '10px'
-                }}
-              >
-                Login
-              </button>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content">
+      <div>
           <button onClick={() => navigate(`/${temporadaId}/${torneioId}/fases`)} className="back-button">
             <ArrowLeft size={18} /> Voltar para Fases
           </button>
@@ -1662,22 +1475,6 @@ export function TelaFase() {
             </div>
           )}
         </div>
-      </main>
-
-      {showLoginPopup && (
-        <PopupLogin 
-          onClose={() => setShowLoginPopup(false)} 
-          onLoginSuccess={handleLoginSuccess} 
-        />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser
-          user={{ ...currentUser, imagem: getCurrentUserAvatar() }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
 
       {showAddPlayerPopup && (
         <PopupAdicionarJFase
@@ -1737,6 +1534,6 @@ export function TelaFase() {
           }}
         />
       )}
-    </div>
+    </DashboardLayout>
   );
 }

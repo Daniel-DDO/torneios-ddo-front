@@ -2,18 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { 
-  Menu, 
-  LayoutDashboard, 
-  Users, 
-  Trophy, 
-  Shield, 
-  Wallet, 
-  Search, 
-  Gamepad2, 
   Star,
-  Lightbulb,
-  Settings,
-  CalendarSync,
   Gavel,
   Clock,
   Plus,
@@ -26,12 +15,11 @@ import {
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
 import PopupCriarLeilao from '../components/PopupCriarLeilao';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
 import { useLeilaoSocket, type FeedItemDTO } from '../hooks/useLeilaoSocket';
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 interface Leilao {
   id: string;
@@ -83,32 +71,6 @@ interface PageResponse<T> {
   ultimaPagina: boolean;
 }
 
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-  titulos: number;
-  finais: number;
-  partidasJogadas: number;
-  golsMarcados: number;
-}
-
-interface Avatar {
-  id: string;
-  url: string;
-  nome?: string;
-}
-
-const fetchAvatarsService = async () => {
-  const response = await API.get('/api/avatares');
-  if (Array.isArray(response)) return response;
-  if (response.data && Array.isArray(response.data)) return response.data;
-  return [];
-};
-
 const fetchLeiloesPorTemporadaService = async (temporadaId: string) => {
   const response = await API.get(`/api/leiloes/temporada/${temporadaId}`);
   return response.data;
@@ -148,28 +110,14 @@ const formatLeagueName = (liga: string) => {
 export function TelaLeilao() {
   const navigate = useNavigate();
   const { temporadaId } = useParams();
+  const { currentUser, isAdmin, abrirLogin } = useAppContext();
   const queryClient = useQueryClient();
   const observerTarget = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [isExpired, setIsExpired] = useState(false);
 
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
   const [showCriarLeilaoPopup, setShowCriarLeilaoPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
-
-  const { data: avatars = [] } = useQuery<Avatar[]>({
-    queryKey: ['avatares'],
-    queryFn: fetchAvatarsService,
-    staleTime: 1000 * 60 * 60,
-  });
 
   const { data: leiloes = [], isLoading: isLoadingLeiloes } = useQuery<Leilao[]>({
     queryKey: ['leiloes', temporadaId],
@@ -297,14 +245,6 @@ export function TelaLeilao() {
     enabled: !!activeLeilao
   });
 
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((avatar: Avatar) => {
-        map[avatar.id] = avatar.url;
-    });
-    return map;
-  }, [avatars]);
-
   const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
     const [target] = entries;
     if (target.isIntersecting && hasNextPage) {
@@ -321,45 +261,8 @@ export function TelaLeilao() {
     };
   }, [handleObserver, activeLeilao]);
 
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-  }, []);
-
-  const handleLoginSuccess = (userData: UserData) => {
-    setCurrentUser(userData);
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        setCurrentUser(null);
-        setShowUserPopup(false);
-    }
-  };
-
   const handleCriarLeilaoSubmit = () => {
     queryClient.invalidateQueries({ queryKey: ['leiloes', temporadaId] });
-  };
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
-  const getCurrentUserAvatar = () => {
-    if (!currentUser?.imagem) return null;
-    return avatarMap[currentUser.imagem] || currentUser.imagem;
   };
 
   const formatDate = (dateString: string) => {
@@ -400,10 +303,13 @@ export function TelaLeilao() {
     return `D$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
   };
 
-  const isProprietario = currentUser && currentUser.cargo === 'PROPRIETARIO';
-
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+    <DashboardLayout
+      searchPlaceholder={activeLeilao ? 'Buscar clube...' : 'Buscar leilão...'}
+      searchValue={searchTerm}
+      onSearchChange={setSearchTerm}
+      contentStyle={{ padding: '1rem 2rem' }}
+    >
       
       <style>{`
         .leilao-hero-banner {
@@ -648,108 +554,7 @@ export function TelaLeilao() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-               <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-
-        <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => navigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item active" style={{cursor: 'pointer'}}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-           <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
-
-      <main className="main-content">
-        
-        <header className="top-header compact">
-          <div className="left-header">
-            <button 
-              className="toggle-btn menu-toggle" 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input 
-                type="text" 
-                placeholder={activeLeilao ? "Buscar clube..." : "Buscar leilão..."} 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
-            </button>
-            <BotaoNotificacao user={currentUser} />
-            
-            {currentUser ? (
-              <div 
-                className="user-avatar-mini" 
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <button 
-                className="t-btn"
-                style={{background: 'var(--primary)', color: 'white', border: 'none'}}
-                onClick={() => setShowLoginPopup(true)}
-              >
-                Login
-              </button>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content">
+        <div>
             <button onClick={() => navigate(`/${temporadaId}/torneios`)} className="back-btn-custom">
                 <ChevronLeft size={18} /> Voltar para Torneios
             </button>
@@ -760,7 +565,7 @@ export function TelaLeilao() {
                   <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem', margin: '4px 0 0' }}>Dispute os melhores clubes para a temporada</p>
               </div>
 
-              {isProprietario && (
+              {isAdmin && (
                 <button 
                   className="btn-primary-custom" 
                   onClick={() => setShowCriarLeilaoPopup(true)}
@@ -872,7 +677,7 @@ export function TelaLeilao() {
                                         <button 
                                             className="btn-primary-custom" 
                                             style={{marginTop: 16, width: '100%', justifyContent: 'center'}}
-                                            onClick={() => setShowLoginPopup(true)}
+                                            onClick={abrirLogin}
                                         >
                                             Entrar
                                         </button>
@@ -1084,32 +889,12 @@ export function TelaLeilao() {
             )}
         </div>
 
-      </main>
-
-      {showLoginPopup && (
-        <PopupLogin 
-          onClose={() => setShowLoginPopup(false)} 
-          onLoginSuccess={handleLoginSuccess} 
-        />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser 
-          user={{
-            ...currentUser,
-            imagem: getCurrentUserAvatar()
-          }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
-
       {showCriarLeilaoPopup && (
         <PopupCriarLeilao 
           onClose={() => setShowCriarLeilaoPopup(false)}
           onSubmit={handleCriarLeilaoSubmit}
         />
       )}
-    </div>
+    </DashboardLayout>
   );
 }

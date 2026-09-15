@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AppProvider } from './context/AppContext';
 import { TorneiosPage } from './pages/TorneiosPage';
 import { TelaJogadores } from './pages/TelaJogadores';
 import { TelaClubes } from './pages/TelaClubes';
@@ -57,54 +58,56 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <Routes>
-          <Route path="/" element={<TorneiosPage />} />
-          <Route path="/jogadores" element={<TelaJogadores />} />
-          <Route path="/jogadores/comparando/:id1/:id2" element={<TelaComparandoJogador />} />
-          <Route path="/jogadores/ranking-financeiro" element={<TelaRankingFinanceiro />} />
-          <Route path="/clubes" element={<TelaClubes />} />
-          <Route path="/competicoes" element={<TelaCompeticoes />} />
-          <Route path="/competicao/:competicaoId" element={<TelaCompeticaoSelecionada />} />
-          <Route path="/minha-conta" element={<TelaMinhaConta />} />
-          <Route path="/minha-conta/financeiro" element={<TelaMinhasTransacoes />} />
-          <Route path="/admin" element={<TelaAdmin />} />
-          <Route path="/admin/mercado" element={<TelaMercadoAdmin />} />
-          <Route path="/anuncios" element={<TelaAnuncios />} />
-          <Route path="/anuncios/:anuncioId" element={<TelaAnuncioSelecionado />} />
-          <Route path="/jogador/:id" element={<TelaPerfilJogador />} />
-          <Route path="/jogador/:id/premios" element={<TelaPremiosJogadorSelecionado />} />
-          <Route path="/jogador/:id/partidas" element={<TelaPartidasJogador />} />
-          <Route path="/temporadas" element={<TelaTemporadas />} />
-          <Route path="/noticias/:noticiaId" element={<TelaNoticiaSelecionada />} />
-          <Route path="/:temporadaId/torneios" element={<TelaTorneios />} />
-          <Route path="/:temporadaId/torneios/leilao" element={<TelaLeilao />} />
-          <Route path="/:temporadaId/torneios/leilao/:clubeId" element={<TelaLeilaoClube />} />
-          <Route path="/:temporadaId/torneios/leilao/lance" element={<TelaLanceLeilao />} />
-          <Route path="/:temporadaId/torneios/leilao/parciais" element={<TelaLeilaoParciais />} />
-          <Route path="/:temporadaId/torneios/leilao/final" element={<TelaLeilaoFinal />} />
-          <Route path="/:temporadaId/torneios/jogadores" element={<TelaTorneiosJogadores />} />
-          <Route path="/:temporadaId/:torneioId/fases" element={<TelaTorneiosFases />} />
-          <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId" element={<TelaFase />} />
-          <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/bracket" element={<TelaBracket />} />
-          <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/bracket/:etapa/:chaveIndex" element={<TelaBracketJogos />} />
-          <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/bracket/:etapa/:chaveIndex/partida/:partidaId" element={<TelaPartidaSelecionada />} />
-          <Route path="/partidas" element={<TelaPartidas />} />
-          <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/rodadas" element={<TelaRodadas />} />
-          <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/rodadas/:partidaId" element={<TelaPartidaSelecionada />} />
-          <Route path="/partida/:partidaId" element={<TelaPartidaSelecionada />} />
-          <Route path="/suporte" element={<TelaSuporte />} />
-          <Route path="/titulos" element={<TelaTitulos />} />
-          <Route path="/titulo/:tituloId" element={<TelaTituloSelecionado />} />
-          <Route path="/insignias" element={<TelaInsignia />} />
-          <Route path="/mercado" element={<TelaMercado />} />
-          <Route path="/clube/:clubeId" element={<TelaClubeSelecionado />} />
-          <Route path="/transparencia" element={<TelaTransparencia />} />
-          <Route path="/hall-da-fama" element={<TelaHallDaFama />} />
-          <Route path="/ranking" element={<TelaTabelaRanking />} />
-          <Route path="/admin/conquistas" element={<TelaConquistasAdm />} />
-        </Routes>
-      </Router>
+      <AppProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<TorneiosPage />} />
+            <Route path="/jogadores" element={<TelaJogadores />} />
+            <Route path="/jogadores/comparando/:id1/:id2" element={<TelaComparandoJogador />} />
+            <Route path="/jogadores/ranking-financeiro" element={<TelaRankingFinanceiro />} />
+            <Route path="/clubes" element={<TelaClubes />} />
+            <Route path="/competicoes" element={<TelaCompeticoes />} />
+            <Route path="/competicao/:competicaoId" element={<TelaCompeticaoSelecionada />} />
+            <Route path="/minha-conta" element={<TelaMinhaConta />} />
+            <Route path="/minha-conta/financeiro" element={<TelaMinhasTransacoes />} />
+            <Route path="/admin" element={<TelaAdmin />} />
+            <Route path="/admin/mercado" element={<TelaMercadoAdmin />} />
+            <Route path="/anuncios" element={<TelaAnuncios />} />
+            <Route path="/anuncios/:anuncioId" element={<TelaAnuncioSelecionado />} />
+            <Route path="/jogador/:id" element={<TelaPerfilJogador />} />
+            <Route path="/jogador/:id/premios" element={<TelaPremiosJogadorSelecionado />} />
+            <Route path="/jogador/:id/partidas" element={<TelaPartidasJogador />} />
+            <Route path="/temporadas" element={<TelaTemporadas />} />
+            <Route path="/noticias/:noticiaId" element={<TelaNoticiaSelecionada />} />
+            <Route path="/:temporadaId/torneios" element={<TelaTorneios />} />
+            <Route path="/:temporadaId/torneios/leilao" element={<TelaLeilao />} />
+            <Route path="/:temporadaId/torneios/leilao/:clubeId" element={<TelaLeilaoClube />} />
+            <Route path="/:temporadaId/torneios/leilao/lance" element={<TelaLanceLeilao />} />
+            <Route path="/:temporadaId/torneios/leilao/parciais" element={<TelaLeilaoParciais />} />
+            <Route path="/:temporadaId/torneios/leilao/final" element={<TelaLeilaoFinal />} />
+            <Route path="/:temporadaId/torneios/jogadores" element={<TelaTorneiosJogadores />} />
+            <Route path="/:temporadaId/:torneioId/fases" element={<TelaTorneiosFases />} />
+            <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId" element={<TelaFase />} />
+            <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/bracket" element={<TelaBracket />} />
+            <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/bracket/:etapa/:chaveIndex" element={<TelaBracketJogos />} />
+            <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/bracket/:etapa/:chaveIndex/partida/:partidaId" element={<TelaPartidaSelecionada />} />
+            <Route path="/partidas" element={<TelaPartidas />} />
+            <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/rodadas" element={<TelaRodadas />} />
+            <Route path="/:temporadaId/torneio/:torneioId/fase/:faseId/rodadas/:partidaId" element={<TelaPartidaSelecionada />} />
+            <Route path="/partida/:partidaId" element={<TelaPartidaSelecionada />} />
+            <Route path="/suporte" element={<TelaSuporte />} />
+            <Route path="/titulos" element={<TelaTitulos />} />
+            <Route path="/titulo/:tituloId" element={<TelaTituloSelecionado />} />
+            <Route path="/insignias" element={<TelaInsignia />} />
+            <Route path="/mercado" element={<TelaMercado />} />
+            <Route path="/clube/:clubeId" element={<TelaClubeSelecionado />} />
+            <Route path="/transparencia" element={<TelaTransparencia />} />
+            <Route path="/hall-da-fama" element={<TelaHallDaFama />} />
+            <Route path="/ranking" element={<TelaTabelaRanking />} />
+            <Route path="/admin/conquistas" element={<TelaConquistasAdm />} />
+          </Routes>
+        </Router>
+      </AppProvider>
     </QueryClientProvider>
   );
 }

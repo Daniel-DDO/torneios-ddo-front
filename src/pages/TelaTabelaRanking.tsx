@@ -1,20 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Menu,
-  LayoutDashboard,
-  Users,
-  Trophy,
-  Shield,
-  Wallet,
-  Settings,
-  Search,
-  Bell,
-  Gamepad2,
-  Star,
-  Lightbulb,
-  CalendarSync,
   TrendingUp,
   ShieldAlert,
   ArrowUpCircle,
@@ -26,11 +13,8 @@ import {
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
-import PopupReivindicar from '../components/PopupReivindicar';
-import PopupRecuperarSenha from '../components/PopupRecuperarSenha';
-import PopupNotificacao from '../components/PopupNotificacao';
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 import bronze1 from '../assets/imagens/insignias/bronze1.png';
 import prata1 from '../assets/imagens/insignias/prata1.png';
@@ -52,35 +36,6 @@ interface JogadorRanking {
   strikesParaRebaixar: number;
   imagemJogador?: string | null;
   discordJogador?: string | null;
-}
-
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: 'PROPRIETARIO' | 'DIRETOR' | 'ADMINISTRADOR' | 'JOGADOR';
-  saldoVirtual: number;
-  titulos: number;
-  finais: number;
-  partidasJogadas: number;
-  golsMarcados: number;
-}
-
-interface Avatar {
-  id: string;
-  url: string;
-  nome?: string;
-}
-
-interface Notificacao {
-  id: string;
-  titulo: string;
-  mensagem: string;
-  link: string;
-  tipo: string;
-  lida: boolean;
-  dataCriacao: string;
 }
 
 const RANK_ICONS: Record<string, string> = {
@@ -128,18 +83,6 @@ const getRankFamily = (rankAtual: string): string | null => {
   return null;
 };
 
-const fetchAvatarsService = async () => {
-  const response = await API.get('/api/avatares');
-  if (Array.isArray(response)) return response;
-  if (response.data && Array.isArray(response.data)) return response.data;
-  return [];
-};
-
-const fetchMinhasNotificacoesService = async () => {
-  const response = await API.get('/api/notificacoes/minhas');
-  return response.data || [];
-};
-
 const fetchTabelaRankingService = async () => {
   const response = await API.get('/api/ranking/tabela');
   return response.data || [];
@@ -147,48 +90,14 @@ const fetchTabelaRankingService = async () => {
 
 export function TelaTabelaRanking() {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [showRecuperarSenhaPopup, setShowRecuperarSenhaPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { getAvatarUrl, isMobile } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
-  const [showReivindicarPopup, setShowReivindicarPopup] = useState(false);
-  const [showNotificacaoPopup, setShowNotificacaoPopup] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-
-  const { data: avatars = [] } = useQuery({
-    queryKey: ['avatares'],
-    queryFn: fetchAvatarsService,
-    staleTime: 1000 * 60 * 60,
-  });
-
-  const { data: notificacoes = [], isError: isAuthError } = useQuery<Notificacao[]>({
-    queryKey: ['notificacoesMinhas'],
-    queryFn: fetchMinhasNotificacoesService,
-    enabled: !!currentUser,
-    staleTime: 1000 * 60,
-    refetchInterval: 1000 * 60 * 5,
-    retry: false
-  });
 
   const { data: tabelaRanking = [], isLoading: isLoadingRanking } = useQuery<JogadorRanking[]>({
     queryKey: ['tabelaRanking'],
     queryFn: fetchTabelaRankingService,
     staleTime: 1000 * 60 * 2,
   });
-
-  const temNotificacaoNaoLida = useMemo(() => {
-    return notificacoes.some(n => !n.lida);
-  }, [notificacoes]);
-
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((avatar: Avatar) => {
-      map[avatar.id] = avatar.url;
-    });
-    return map;
-  }, [avatars]);
 
   // Ordena por pontos (maior primeiro), já que o back não garante ordenação
   const rankingOrdenado = useMemo(() => {
@@ -202,78 +111,6 @@ export function TelaTabelaRanking() {
       (jogador.discordJogador || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [rankingOrdenado, searchTerm]);
-
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-
-    const handleResize = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-      if (mobile) {
-        setSidebarOpen(false);
-      } else {
-        setSidebarOpen(true);
-      }
-    };
-
-    handleResize();
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (isAuthError) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user_data');
-      setCurrentUser(null);
-    }
-  }, [isAuthError]);
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
-  const handleLoginSuccess = (userData: UserData) => {
-    setCurrentUser(userData);
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user_data');
-      setCurrentUser(null);
-      setShowUserPopup(false);
-    }
-  };
-
-  const handleNavigate = (path: string) => {
-    navigate(path);
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
-  };
-
-  const getCurrentUserAvatar = () => {
-    if (!currentUser?.imagem) return null;
-    return avatarMap[currentUser.imagem] || currentUser.imagem;
-  };
 
   // Calcula % de progresso até o próximo rank, com base nos pontos atuais
   // e nos pontos que faltam (pontosParaProximoRank é a distância restante).
@@ -292,167 +129,13 @@ export function TelaTabelaRanking() {
   };
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+    <DashboardLayout
+      searchPlaceholder="Buscar jogador..."
+      searchValue={searchTerm}
+      onSearchChange={setSearchTerm}
+    >
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`} style={{ zIndex: 100 }}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z" />
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-
-        <nav className="nav-menu">
-          <a onClick={() => handleNavigate('/')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => handleNavigate('/jogadores')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => handleNavigate('/clubes')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => handleNavigate('/competicoes')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => handleNavigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => handleNavigate('/temporadas')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => handleNavigate('/partidas')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-          <a onClick={() => handleNavigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => handleNavigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
-
-      {isMobile && sidebarOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            zIndex: 99
-          }}
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      <main className="main-content" style={{ overflowX: 'hidden' }}>
-        <header className="top-header compact">
-          <div className="left-header">
-            <button
-              className="toggle-btn menu-toggle"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input
-                type="text"
-                placeholder="Buscar jogador..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
-            </button>
-            <button
-              className="icon-btn"
-              onClick={() => setShowNotificacaoPopup(true)}
-              style={{ position: 'relative' }}
-            >
-              <Bell size={20} />
-              {currentUser && temNotificacaoNaoLida && (
-                <span style={{
-                  position: 'absolute',
-                  top: '8px',
-                  right: '8px',
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: '#ff4757',
-                  borderRadius: '50%',
-                  border: '1px solid var(--header-bg, #fff)'
-                }}></span>
-              )}
-            </button>
-
-            {currentUser ? (
-              <div
-                className="user-avatar-mini"
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <button
-                  onClick={() => setShowReivindicarPopup(true)}
-                  className="reivindicar-btn-header"
-                  style={{
-                    background: 'transparent',
-                    color: 'var(--text-dark)',
-                    border: '1px solid var(--border-color)',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    marginLeft: '10px',
-                    display: isMobile ? 'none' : 'block'
-                  }}
-                >
-                  Reivindicar Conta
-                </button>
-                <button
-                  className="login-btn-header"
-                  onClick={() => setShowLoginPopup(true)}
-                  style={{
-                    background: 'var(--primary)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    marginLeft: '10px'
-                  }}
-                >
-                  Login
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content" style={{ animation: 'fadeInUp 0.6s ease-out', paddingBottom: '40px' }}>
+      <div className="page-content" style={{ animation: 'fadeInUp 0.6s ease-out', paddingBottom: '40px' }}>
 
           <div style={{
             display: 'flex',
@@ -637,7 +320,7 @@ export function TelaTabelaRanking() {
                 const rankFamily = getRankFamily(jogador.rankAtual);
                 const rankIcon = rankFamily ? RANK_ICONS[rankFamily] : null;
                 const rankColor = (rankFamily && RANK_COLORS[rankFamily]) || RANK_COLORS['Sem Ranking'];
-                const avatarUrl = jogador.imagemJogador ? avatarMap[jogador.imagemJogador] || jogador.imagemJogador : null;
+                const avatarUrl = getAvatarUrl(jogador.imagemJogador);
                 const progressoSubida = getProgressoSubida(jogador);
                 const progressoRebaixamento = getProgressoRebaixamento(jogador);
 
@@ -785,52 +468,7 @@ export function TelaTabelaRanking() {
               })}
             </div>
           )}
-        </div>
-      </main>
-
-      {showLoginPopup && (
-        <PopupLogin
-          onClose={() => setShowLoginPopup(false)}
-          onLoginSuccess={handleLoginSuccess}
-        />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser
-          user={{
-            ...currentUser,
-            imagem: getCurrentUserAvatar()
-          }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
-
-      {showReivindicarPopup && (
-        <PopupReivindicar
-          onClose={() => setShowReivindicarPopup(false)}
-          onSubmit={(data) => {
-            console.log("Dados para Reivindicar:", data);
-            setShowReivindicarPopup(false);
-          }}
-        />
-      )}
-
-      {showRecuperarSenhaPopup && (
-        <PopupRecuperarSenha
-          onClose={() => setShowRecuperarSenhaPopup(false)}
-          onSuccess={() => {
-            setShowRecuperarSenhaPopup(false);
-            alert("Senha redefinida com sucesso!");
-          }}
-        />
-      )}
-
-      {showNotificacaoPopup && (
-        <PopupNotificacao
-          onClose={() => setShowNotificacaoPopup(false)}
-        />
-      )}
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

@@ -1,167 +1,29 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { 
-  Menu, 
-  LayoutDashboard, 
-  Users, 
-  Trophy, 
-  Shield, 
-  Wallet, 
-  Search, 
-  Edit, 
-  Camera, 
-  Mail, 
-  Gamepad2,
-  Star,
-  Lightbulb,
-  Settings,
-  CalendarSync
+import {
+  Edit,
+  Camera,
+  Mail,
+  Wallet,
 } from 'lucide-react';
-import { API } from '../services/api';
-import '../styles/TorneiosPage.css';
-import LoadingSpinner from '../components/LoadingSpinner';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
 import PopupAtualizarFoto from '../components/PopupAtualizarFoto';
 import PopupAlterarCredenciais from '../components/PopupAlterarCredenciais';
 import PopupAtualizarConta from '../components/PopupAtualizarConta';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
-
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-  titulos: number;
-  finais: number;
-  partidasJogadas: number;
-  golsMarcados: number;
-  golsSofridos: number;
-  cartoesAmarelos: number;
-  cartoesVermelhos: number;
-  descricao: string | null;
-  contaReivindicada: boolean;
-  suspensoAte: string | null;
-  insignias: any[]; 
-  criacaoConta: string;
-  modificacaoConta?: string;
-  statusJogador: string;
-}
-
-interface Avatar {
-  id: string;
-  url: string;
-  nome?: string;
-}
-
-const fetchAvatarsService = async () => {
-  const response = await API.get('/api/avatares');
-  if (Array.isArray(response)) return response;
-  if (response.data && Array.isArray(response.data)) return response.data;
-  return [];
-};
+import PopupGeral from '../components/PopupGeral';
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 export function TelaMinhaConta() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { currentUser, atualizarUsuario, getAvatarUrl, abrirLogin } = useAppContext();
+
   const [showAvatarPopup, setShowAvatarPopup] = useState(false);
-  
-  const { data: avatars = [] } = useQuery({
-    queryKey: ['avatares'],
-    queryFn: fetchAvatarsService,
-    staleTime: 1000 * 60 * 60,
-  });
-
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((avatar: Avatar) => {
-        map[avatar.id] = avatar.url;
-    });
-    return map;
-  }, [avatars]);
-
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const initializeUser = async () => {
-      const storedUser = localStorage.getItem('user_data');
-      
-      if (!storedUser) {
-        navigate('/');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setCurrentUser(parsedUser);
-
-        try {
-          const response = await API.get(`/jogador/${parsedUser.id}`);
-          const freshData = response.data || response;
-          
-          if (freshData && freshData.id) {
-            setCurrentUser(freshData);
-            localStorage.setItem('user_data', JSON.stringify(freshData));
-          }
-        } catch (apiError) {
-          console.error("Erro ao atualizar dados do usuário:", apiError);
-        }
-      } catch (e) {
-        navigate('/');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeUser();
-  }, [navigate]);
-
-  const handleLoginSuccess = (userData: UserData) => {
-    setCurrentUser(userData);
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user_data');
-      setCurrentUser(null);
-      setShowUserPopup(false);
-      navigate('/');
-    }
-  };
+  const [showCredenciaisPopup, setShowCredenciaisPopup] = useState(false);
+  const [showAtualizarContaPopup, setShowAtualizarContaPopup] = useState(false);
 
   const handleAvatarUpdate = (novaUrl: string) => {
-    if (currentUser) {
-      const updatedUser = { ...currentUser, imagem: novaUrl };
-      setCurrentUser(updatedUser);
-      localStorage.setItem('user_data', JSON.stringify(updatedUser));
-    }
+    atualizarUsuario({ imagem: novaUrl });
   };
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-  
-  const isAdmin = currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '-';
@@ -174,24 +36,37 @@ export function TelaMinhaConta() {
 
   const formatCurrency = (value: number | null) => {
     const val = value ?? 0;
-    return 'D$ ' + val.toLocaleString('pt-BR', { 
-      minimumFractionDigits: 2, 
-      maximumFractionDigits: 2 
+    return 'D$ ' + val.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     });
   };
 
-  const getCurrentUserAvatar = () => {
-    if (!currentUser?.imagem) return null;
-    return avatarMap[currentUser.imagem] || currentUser.imagem;
-  };
+  const avatarUrl = currentUser ? getAvatarUrl(currentUser.imagem) : null;
 
-  const [showCredenciaisPopup, setShowCredenciaisPopup] = useState(false);
-  const [showAtualizarContaPopup, setShowAtualizarContaPopup] = useState(false);
+    if (!currentUser) {
+    return (
+      <>
+        <DashboardLayout esconderBusca>
+          <div />
+        </DashboardLayout>
+        <PopupGeral
+          title="Login Necessário"
+          message="Faça login para visualizar sua conta."
+          type="warning"
+          buttonText="Fazer Login"
+          onClose={() => navigate('/')}
+          onConfirm={() => {
+            navigate('/');
+            abrirLogin();
+          }}
+        />
+      </>
+    );
+  }
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
-      <LoadingSpinner isLoading={loading} />
-
+    <DashboardLayout esconderBusca contentStyle={{ padding: '1rem 0rem' }}>
       <style>{`
         .page-content {
           padding: 2rem 3rem;
@@ -387,23 +262,6 @@ export function TelaMinhaConta() {
           border-color: var(--primary);
         }
 
-        .btn-admin-header {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-right: 12px;
-            transition: opacity 0.2s;
-            font-size: 0.9rem;
-        }
-        
-        .btn-admin-header:hover {
-            opacity: 0.9;
-        }
-
         @media (max-width: 768px) {
           .profile-details-list {
             grid-template-columns: 1fr;
@@ -416,215 +274,99 @@ export function TelaMinhaConta() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z" />
-            </svg>
+      <div className="profile-container">
+
+        <div className="profile-header-card">
+          <div className="profile-bg-detail"></div>
+
+          <div
+              className="profile-avatar-large"
+              style={{
+                  backgroundImage: avatarUrl ? `url(${avatarUrl})` : 'none'
+              }}
+          >
+              {!avatarUrl && (currentUser.nome?.charAt(0) || '0')}
+              <div className="profile-badge"></div>
           </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
+
+          <div className="profile-info">
+              <h1 className="profile-name">{currentUser.nome || '0'}</h1>
+              <div className="profile-discord">
+                    <span style={{opacity: 0.7}}>#</span> {currentUser.discord || '0'}
+              </div>
+              <span className="profile-role-tag">
+                  {(currentUser.cargo || '0').replace('_', ' ')}
+              </span>
+          </div>
+
+          <div className="profile-stats-grid">
+              <div className="stat-box">
+                  <div className="stat-value money">{formatCurrency(currentUser.saldoVirtual)}</div>
+                  <div className="stat-label">Saldo Virtual</div>
+              </div>
+
+              <div className="stat-box">
+                  <div className="stat-value">{currentUser.partidasJogadas ?? 0}</div>
+                  <div className="stat-label">Partidas</div>
+              </div>
+
+              <div className="stat-box">
+                  <div className="stat-value">{currentUser.titulos ?? 0}</div>
+                  <div className="stat-label">Títulos</div>
+              </div>
+
+              <div className="stat-box">
+                  <div className="stat-value">{currentUser.golsMarcados ?? 0}</div>
+                  <div className="stat-label">Gols Marcados</div>
+              </div>
+
+              <div className="stat-box">
+                  <div className="stat-value">{currentUser.golsSofridos ?? 0}</div>
+                  <div className="stat-label">Gols Sofridos</div>
+              </div>
+
+              <div className="stat-box">
+                  <div className="stat-value">
+                      {currentUser.partidasJogadas > 0
+                          ? (currentUser.golsMarcados / currentUser.partidasJogadas).toFixed(2).replace('.', ',')
+                          : '0,00'}
+                  </div>
+                  <div className="stat-label">Média p/ Jogo</div>
+              </div>
+          </div>
+
+          <div className="profile-details-list">
+              <div className="detail-item">
+                  <label>ID do Jogador</label>
+                  <span style={{fontFamily: 'monospace', fontSize: '0.9rem'}}>{currentUser.id || '0'}</span>
+              </div>
+              <div className="detail-item">
+                  <label>Membro desde</label>
+                  <span>{formatDate(currentUser.criacaoConta || '')}</span>
+              </div>
+          </div>
         </div>
 
-        <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => navigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-          <a onClick={() => navigate('/minha-conta')} className="nav-item active" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
-
-      <main className="main-content">
-        <header className="top-header compact">
-          <div className="left-header">
-            <button
-              className="toggle-btn menu-toggle"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
+        <div className="action-buttons-container">
+            <button className="action-btn" onClick={() => setShowAvatarPopup(true)}>
+              <Camera size={20} />
+              Atualizar foto do perfil
             </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input type="text" placeholder="Buscar no sistema..." />
-            </div>
-          </div>
-
-          <div className="header-actions">
-            {isAdmin && (
-                <button className="btn-admin-header" onClick={() => navigate('/admin')}>
-                    Painel do Adm
-                </button>
-            )}
-
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
+            <button className="action-btn" onClick={() => navigate('/minha-conta/financeiro')}>
+              <Wallet size={20} />
+              Minhas finanças
             </button>
-            <BotaoNotificacao user={currentUser} />
-
-            {currentUser && (
-              <div
-                className="user-avatar-mini"
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
-              </div>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content">
-          {currentUser && (
-            <div className="profile-container">
-              
-              <div className="profile-header-card">
-                <div className="profile-bg-detail"></div>
-                
-                <div 
-                    className="profile-avatar-large"
-                    style={{
-                        backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none'
-                    }}
-                >
-                    {!getCurrentUserAvatar() && (currentUser.nome?.charAt(0) || '0')}
-                    <div className="profile-badge"></div>
-                </div>
-
-                <div className="profile-info">
-                    <h1 className="profile-name">{currentUser.nome || '0'}</h1>
-                    <div className="profile-discord">
-                          <span style={{opacity: 0.7}}>#</span> {currentUser.discord || '0'}
-                    </div>
-                    <span className="profile-role-tag">
-                        {(currentUser.cargo || '0').replace('_', ' ')}
-                    </span>
-                </div>
-
-                <div className="profile-stats-grid">
-                    <div className="stat-box">
-                        <div className="stat-value money">{formatCurrency(currentUser.saldoVirtual)}</div>
-                        <div className="stat-label">Saldo Virtual</div>
-                    </div>
-
-                    <div className="stat-box">
-                        <div className="stat-value">{currentUser.partidasJogadas ?? 0}</div>
-                        <div className="stat-label">Partidas</div>
-                    </div>
-
-                    <div className="stat-box">
-                        <div className="stat-value">{currentUser.titulos ?? 0}</div>
-                        <div className="stat-label">Títulos</div>
-                    </div>
-
-                    <div className="stat-box">
-                        <div className="stat-value">{currentUser.golsMarcados ?? 0}</div>
-                        <div className="stat-label">Gols Marcados</div>
-                    </div>
-
-                    <div className="stat-box">
-                        <div className="stat-value">{currentUser.golsSofridos ?? 0}</div>
-                        <div className="stat-label">Gols Sofridos</div>
-                    </div>
-
-                    <div className="stat-box">
-                        <div className="stat-value">
-                            {currentUser.partidasJogadas > 0 
-                                ? (currentUser.golsMarcados / currentUser.partidasJogadas).toFixed(2).replace('.', ',') 
-                                : '0,00'}
-                        </div>
-                        <div className="stat-label">Média p/ Jogo</div>
-                    </div>
-                </div>
-
-                <div className="profile-details-list">
-                    <div className="detail-item">
-                        <label>ID do Jogador</label>
-                        <span style={{fontFamily: 'monospace', fontSize: '0.9rem'}}>{currentUser.id || '0'}</span>
-                    </div>
-                    <div className="detail-item">
-                        <label>Membro desde</label>
-                        <span>{formatDate(currentUser.criacaoConta)}</span>
-                    </div>
-                </div>
-              </div>
-
-              <div className="action-buttons-container">
-                  <button className="action-btn" onClick={() => setShowAvatarPopup(true)}>
-                    <Camera size={20} />
-                    Atualizar foto do perfil
-                  </button>
-                  <button className="action-btn" onClick={() => navigate('/minha-conta/financeiro')}>
-                    <Wallet size={20} />
-                    Minhas finanças
-                  </button>
-                  <button className="action-btn" onClick={() => setShowAtualizarContaPopup(true)}>
-                    <Edit size={20} />
-                    Atualizar conta
-                  </button>
-                  <button className="action-btn" onClick={() => setShowCredenciaisPopup(true)}>
-                    <Mail size={20} />
-                    Atualizar email e senha
-                  </button>
-              </div>
-
-            </div>
-          )}
+            <button className="action-btn" onClick={() => setShowAtualizarContaPopup(true)}>
+              <Edit size={20} />
+              Atualizar conta
+            </button>
+            <button className="action-btn" onClick={() => setShowCredenciaisPopup(true)}>
+              <Mail size={20} />
+              Atualizar email e senha
+            </button>
         </div>
-      </main>
 
-      {showLoginPopup && (
-        <PopupLogin
-          onClose={() => setShowLoginPopup(false)}
-          onLoginSuccess={handleLoginSuccess}
-        />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser
-          user={{
-            ...currentUser,
-            imagem: getCurrentUserAvatar()
-          }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
+      </div>
 
       {showAvatarPopup && (
         <PopupAtualizarFoto
@@ -645,17 +387,14 @@ export function TelaMinhaConta() {
 
       {showAtualizarContaPopup && currentUser && (
         <PopupAtualizarConta
-          currentUser={currentUser} 
+          currentUser={currentUser}
           onClose={() => setShowAtualizarContaPopup(false)}
           onUpdateSuccess={(updatedData: any) => {
-             const newUserData = { ...currentUser, ...updatedData };
-             setCurrentUser(newUserData);
-             localStorage.setItem('user_data', JSON.stringify(newUserData));
+             atualizarUsuario(updatedData);
              setShowAtualizarContaPopup(false);
           }}
         />
       )}
-
-    </div>
+    </DashboardLayout>
   );
 }

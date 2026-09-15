@@ -7,14 +7,16 @@ interface PopupGeralProps {
     type?: 'success' | 'error' | 'warning' | 'info';
     buttonText?: string;
     onClose: () => void;
+    onConfirm?: () => void;
 }
 
-const PopupGeral: React.FC<PopupGeralProps> = ({ 
-    title, 
-    message, 
-    type = 'info', 
-    buttonText = 'Entendido', 
-    onClose 
+const PopupGeral: React.FC<PopupGeralProps> = ({
+    title,
+    message,
+    type = 'info',
+    buttonText = 'Entendido',
+    onClose,
+    onConfirm,
 }) => {
     const [fadeout, setFadeout] = useState(false);
 
@@ -22,6 +24,13 @@ const PopupGeral: React.FC<PopupGeralProps> = ({
         setFadeout(true);
         setTimeout(() => {
             onClose();
+        }, 300);
+    };
+
+    const handleConfirm = () => {
+        setFadeout(true);
+        setTimeout(() => {
+            (onConfirm ?? onClose)();
         }, 300);
     };
 
@@ -50,7 +59,7 @@ const PopupGeral: React.FC<PopupGeralProps> = ({
                         <line x1="12" y1="17" x2="12.01" y2="17"></line>
                     </svg>
                 );
-            default: 
+            default:
                 return (
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="32" height="32">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -85,10 +94,10 @@ const PopupGeral: React.FC<PopupGeralProps> = ({
                 </div>
 
                 <div className="pger-footer-fixed">
-                    <button 
-                        type="button" 
-                        className={`pger-confirm-btn pger-btn-${type}`} 
-                        onClick={handleClose}
+                    <button
+                        type="button"
+                        className={`pger-confirm-btn pger-btn-${type}`}
+                        onClick={handleConfirm}
                     >
                         {buttonText}
                     </button>

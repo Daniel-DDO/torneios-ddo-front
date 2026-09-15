@@ -2,9 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search, 
-  ArrowLeft, Gamepad2, Lightbulb, Settings, 
-  CheckCircle, Clock, Award, BarChart3, Target, CalendarSync,
+    Trophy, Shield, Wallet, ArrowLeft, Gamepad2,
+    CheckCircle, Clock, Award, BarChart3, Target,
   Flag, Ban, TrendingUp, Info, FileText, Star, Swords, Activity, Skull,
   Pencil, Home, Plane, CalendarClock, Sparkles, ShieldCheck, Zap
 } from 'lucide-react';
@@ -12,10 +11,9 @@ import jsPDF from 'jspdf';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
 import PopupMudarDiscord from '../components/PopupMudarDiscord';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 
 interface InsigniaDefinition {
@@ -78,19 +76,6 @@ interface Player {
   rank: string | null;
   partidasRankeadas: number;
   strikesRebaixamento: number;
-}
-
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-  titulos: number;
-  finais: number;
-  partidasJogadas: number;
-  golsMarcados: number;
 }
 
 interface HistoryData {
@@ -244,13 +229,6 @@ const getRankConfig = (rankPoints: number): RankConfig => {
   return RANKS_CONFIG.find(r => pontos >= r.min && pontos <= r.max) || RANKS_CONFIG[RANKS_CONFIG.length - 1];
 };
 
-const fetchAvatarsService = async () => {
-  const response = await API.get('/api/avatares');
-  if (Array.isArray(response)) return response;
-  if (response.data && Array.isArray(response.data)) return response.data;
-  return [];
-};
-
 const fetchInsigniasService = async () => {
     const response = await API.get('/insignia');
     if (Array.isArray(response)) return response;
@@ -324,23 +302,14 @@ const fetchPlayerEstiloService = async (playerId: string): Promise<EstiloJogador
 export function TelaPerfilJogador() {
   const navigate = useNavigate();
   const { id } = useParams();
+    const { currentUser, getAvatarUrl, isMobile, atualizarUsuario } = useAppContext();
 
   const [player, setPlayer] = useState<Player | null>(null);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
   const [showDiscordPopup, setShowDiscordPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [hoveredBadgeId, setHoveredBadgeId] = useState<string | null>(null);
-
-  const { data: avatars = [] } = useQuery({
-    queryKey: ['avatares'],
-    queryFn: fetchAvatarsService,
-    staleTime: 1000 * 60 * 60,
-  });
 
   const { data: insigniasDefinitions = [] } = useQuery({
     queryKey: ['insigniasDefinitions'],
@@ -405,14 +374,6 @@ export function TelaPerfilJogador() {
     gcTime: 1000 * 60 * 30,
   });
 
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((avatar: any) => {
-        map[avatar.id] = avatar.url;
-    });
-    return map;
-  }, [avatars]);
-
   const insigniaDetailsMap = useMemo(() => {
       const map: Record<string, InsigniaDefinition> = {};
       insigniasDefinitions.forEach((def: InsigniaDefinition) => {
@@ -421,26 +382,7 @@ export function TelaPerfilJogador() {
       return map;
   }, [insigniasDefinitions]);
 
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
-
   useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
     if (id) {
         fetchPlayerDetails(id);
     }
@@ -460,42 +402,12 @@ export function TelaPerfilJogador() {
     }
   };
 
-  const handleLoginSuccess = (userData: any) => {
-    setCurrentUser(userData);
-    localStorage.setItem('user_data', JSON.stringify(userData));
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        setCurrentUser(null);
-        setShowUserPopup(false);
-    }
-  };
-
-  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      navigate(`/jogadores?busca=${searchTerm}`);
-    }
-  };
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
-  const getCurrentUserAvatar = () => {
-    if (!currentUser?.imagem) return null;
-    return avatarMap[currentUser.imagem] || currentUser.imagem;
-  };
-
   const getPlayerAvatar = () => {
-    if (!player?.imagem) return null;
-    return avatarMap[player.imagem] || player.imagem;
+        return getAvatarUrl(player?.imagem);
   };
 
   const getVictimAvatar = (victim: VictimData) => {
-      if (!victim.adversarioImagem) return null;
-      if (victim.adversarioImagem.startsWith('http')) return victim.adversarioImagem;
-      return avatarMap[victim.adversarioImagem] || victim.adversarioImagem;
+            return getAvatarUrl(victim.adversarioImagem);
   };
 
   const formatDate = (dateString: string | null) => {
@@ -596,9 +508,7 @@ export function TelaPerfilJogador() {
   const handleDiscordChangeSuccess = (novoDiscord: string) => {
     setPlayer((prev) => prev ? { ...prev, discord: novoDiscord } : prev);
     if (currentUser && currentUser.id === player?.id) {
-      const updatedUser = { ...currentUser, discord: novoDiscord };
-      setCurrentUser(updatedUser);
-      localStorage.setItem('user_data', JSON.stringify(updatedUser));
+            atualizarUsuario({ discord: novoDiscord });
     }
   };
 
@@ -760,9 +670,13 @@ export function TelaPerfilJogador() {
     }
   };
 
-  return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
-      
+    return (
+        <DashboardLayout
+            searchPlaceholder="Buscar jogador..."
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            contentStyle={{ padding: isMobile ? '1rem' : '2rem 3rem' }}
+        >
       <LoadingSpinner isLoading={loading || pdfLoading} />
 
       <style>{`
@@ -1949,118 +1863,7 @@ export function TelaPerfilJogador() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-               <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-
-        <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item active" style={{cursor: 'pointer'}}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => navigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-           <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
-
-      <main className="main-content">
-        
-        <header className="top-header compact">
-          <div className="left-header">
-            <button 
-              className="toggle-btn menu-toggle" 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input 
-                type="text" 
-                placeholder="Buscar jogador..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={handleSearch}
-              />
-            </div>
-          </div>
-          
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
-            </button>
-            <BotaoNotificacao user={currentUser} />
-            
-            {currentUser ? (
-              <div 
-                className="user-avatar-mini" 
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <button 
-                className="login-btn-header" 
-                onClick={() => setShowLoginPopup(true)}
-                style={{
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginLeft: '10px'
-                }}
-              >
-                Login
-              </button>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content">
+            <div>
             {player && (
                 <div className="profile-wrapper">
                     <button onClick={() => navigate('/jogadores')} className="btn-back">
@@ -2939,26 +2742,6 @@ export function TelaPerfilJogador() {
             )}
         </div>
 
-      </main>
-
-      {showLoginPopup && (
-        <PopupLogin 
-          onClose={() => setShowLoginPopup(false)} 
-          onLoginSuccess={handleLoginSuccess} 
-        />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser 
-          user={{
-            ...currentUser,
-            imagem: getCurrentUserAvatar()
-          }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
-
       {showDiscordPopup && player && (
         <PopupMudarDiscord
           playerId={player.id}
@@ -2967,6 +2750,6 @@ export function TelaPerfilJogador() {
           onSuccess={handleDiscordChangeSuccess}
         />
       )}
-    </div>
+        </DashboardLayout>
   );
 }

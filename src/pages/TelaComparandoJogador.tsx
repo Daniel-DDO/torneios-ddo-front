@@ -1,19 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Menu, 
-  LayoutDashboard, 
-  Users, 
-  Trophy, 
-  Shield, 
-  Wallet, 
-  Settings, 
-  Search, 
-  Gamepad2, 
-  Star,
-  Lightbulb,
-  CalendarSync,
   Swords,
   BrainCircuit,
   ChevronLeft,
@@ -32,10 +20,8 @@ import {
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
-import PopupNotificacao from '../components/PopupNotificacao';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer, Legend } from 'recharts';
 
 interface CasaForaStats {
@@ -153,19 +139,6 @@ interface ComparacaoResponse {
   analiseComparativa: AnaliseComparativa;
 }
 
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: 'PROPRIETARIO' | 'DIRETOR' | 'ADMINISTRADOR' | 'JOGADOR';
-  saldoVirtual: number;
-  finais?: number;
-  titulos?: number;
-  golsMarcados?: number;
-  partidasJogadas?: number;
-}
-
 interface AtributosRadar {
   ataque: number;
   defesa: number;
@@ -187,51 +160,23 @@ interface RadarComparacaoResponse {
 }
 
 const fetchRadarComparacaoService = async (id1: string, id2: string): Promise<RadarComparacaoResponse | null> => {
-    try {
-        const response = await API.get(`/jogador/radar`, { params: { id1, id2 } });
-        return response.data;
-    } catch (error) {
-        return null;
-    }
-};
-
-const fetchAvatarsService = async () => {
-  const response = await API.get('/api/avatares');
-  if (Array.isArray(response)) return response;
-  if (response.data && Array.isArray(response.data)) return response.data;
-  return [];
+  try {
+    const response = await API.get('/jogador/radar', { params: { id1, id2 } });
+    return response.data;
+  } catch {
+    return null;
+  }
 };
 
 const fetchComparacaoService = async (id1: string, id2: string): Promise<ComparacaoResponse> => {
-  // Propaga o erro (ex: 400 de validação) para o react-query em vez de
-  // engolir a exceção — assim a tela sai do estado de loading e mostra
-  // a mensagem correta, ao invés de ficar tentando novamente.
-  const response = await API.get(`/jogador/comparar`, {
-    params: { id1, id2 }
-  });
+  const response = await API.get('/jogador/comparar', { params: { id1, id2 } });
   return response.data;
 };
 
 export function TelaComparandoJogador() {
   const navigate = useNavigate();
   const { id1, id2 } = useParams();
-  
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [showNotificacaoPopup, setShowNotificacaoPopup] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
-
-  const { data: avatars = [] } = useQuery({
-    queryKey: ['avatares'],
-    queryFn: fetchAvatarsService,
-    staleTime: 1000 * 60 * 60,
-  });
+    const { getAvatarUrl, isMobile } = useAppContext();
 
   const { data: comparacao, isLoading, isError, error } = useQuery<ComparacaoResponse>({
     queryKey: ['comparacao', id1, id2],
@@ -250,96 +195,19 @@ export function TelaComparandoJogador() {
     staleTime: 1000 * 60 * 5,
   });
 
-  // O back retorna 400 com um payload de erro de validação (ex: jogador sem
-  // partidas suficientes para estimar estilo). Extraímos a mensagem amigável
-  // para exibir em vez de deixar a tela tentando renderizar dados inexistentes.
   const comparacaoErrorMessage = useMemo(() => {
     if (!isError) return null;
     const respData = (error as any)?.response?.data;
     if (respData?.message) return respData.message as string;
-    return 'Não foi possível carregar a comparação entre esses jogadores no momento.';
+    return 'Nao foi possivel carregar a comparacao entre esses jogadores no momento.';
   }, [isError, error]);
 
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((avatar: any) => {
-        map[avatar.id] = avatar.url;
-    });
-    return map;
-  }, [avatars]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-
-    const handleResize = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-      if (mobile) {
-        setSidebarOpen(false);
-      } else {
-        setSidebarOpen(true);
-      }
-    };
-
-    handleResize(); 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
-  const handleLoginSuccess = (userData: any) => {
-    setCurrentUser(userData);
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        setCurrentUser(null);
-        setShowUserPopup(false);
-        navigate('/');
-    }
-  };
-
-  const handleNavigate = (path: string) => {
-    navigate(path);
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
-  };
-
-  const getCurrentUserAvatar = () => {
-    if (!currentUser?.imagem) return null;
-    return avatarMap[currentUser.imagem] || currentUser.imagem;
-  };
-
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
   const formatData = (iso: string) => {
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(new Date(iso));
+    return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(iso));
   };
 
   const parsePercentage = (val: string) => parseFloat(val.replace('%', '').replace(',', '.'));
@@ -350,24 +218,80 @@ export function TelaComparandoJogador() {
     return (val1 / total) * 100;
   };
 
-  // Casa/Fora somado (clube + seleção) para cada jogador
   const getCasaForaResumo = (cf: CasaForaStats) => {
     const vCasa = cf.vClubeCasa + cf.vSelecaoCasa;
     const eCasa = cf.eClubeCasa + cf.eSelecaoCasa;
     const dCasa = cf.dClubeCasa + cf.dSelecaoCasa;
     const totalCasa = vCasa + eCasa + dCasa;
-
     const vFora = cf.vClubeFora + cf.vSelecaoFora;
     const eFora = cf.eClubeFora + cf.eSelecaoFora;
     const dFora = cf.dClubeFora + cf.dSelecaoFora;
     const totalFora = vFora + eFora + dFora;
-
-    const pct = (v: number, total: number) => (total > 0 ? Math.round((v / total) * 100) : 0);
+    const pct = (v: number, total: number) => total > 0 ? Math.round((v / total) * 100) : 0;
 
     return {
-      casa: { 
-        v: vCasa, e: eCasa, d: dCasa, total: totalCasa, aproveitamento: pct(vCasa, totalCasa),
-        golsPro: cf.golsMarcadosCasa,
+      casa: { v: vCasa, e: eCasa, d: dCasa, total: totalCasa, aproveitamento: pct(vCasa, totalCasa), golsPro: cf.golsMarcadosCasa, golsContra: cf.golsSofridosCasa, saldo: cf.golsMarcadosCasa - cf.golsSofridosCasa },
+      fora: { v: vFora, e: eFora, d: dFora, total: totalFora, aproveitamento: pct(vFora, totalFora), golsPro: cf.golsMarcadosFora, golsContra: cf.golsSofridosFora, saldo: cf.golsMarcadosFora - cf.golsSofridosFora },
+    };
+  };
+
+  const StatRow = ({ label, val1, val2, type = 'number', highlightBetter = true }: { label: string, val1: string | number, val2: string | number, type?: 'number' | 'currency' | 'percent', highlightBetter?: boolean }) => {
+    let num1 = typeof val1 === 'string' ? (type === 'percent' ? parsePercentage(val1) : 0) : val1;
+    let num2 = typeof val2 === 'string' ? (type === 'percent' ? parsePercentage(val2) : 0) : val2;
+    if (type === 'currency') { num1 = val1 as number; num2 = val2 as number; }
+    const better1 = highlightBetter && num1 > num2;
+    const better2 = highlightBetter && num2 > num1;
+    const width1 = getBarWidth(num1, num2);
+    const width2 = 100 - width1;
+    const display1 = type === 'currency' ? formatCurrency(val1 as number) : val1;
+    const display2 = type === 'currency' ? formatCurrency(val2 as number) : val2;
+
+    return (
+      <div style={{ marginBottom: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem', fontWeight: '600' }}>
+          <span style={{ color: better1 ? 'var(--primary)' : 'var(--text-dark)', fontWeight: better1 ? 'bold' : 'normal', opacity: better1 ? 1 : 0.7 }}>{display1}</span>
+          <span style={{ textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '1px', color: 'var(--text-gray)' }}>{label}</span>
+          <span style={{ color: better2 ? 'var(--primary)' : 'var(--text-dark)', fontWeight: better2 ? 'bold' : 'normal', opacity: better2 ? 1 : 0.7 }}>{display2}</span>
+        </div>
+        <div style={{ width: '100%', height: '8px', background: 'var(--bg-body)', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
+          <div style={{ width: `${width1}%`, background: better1 ? 'var(--primary)' : 'var(--text-gray)', opacity: better1 ? 1 : 0.3, height: '100%', transition: 'width 1s ease' }}></div>
+          <div style={{ width: '2px', background: 'var(--bg-card)' }}></div>
+          <div style={{ width: `${width2}%`, background: better2 ? 'var(--primary)' : 'var(--text-gray)', opacity: better2 ? 1 : 0.3, height: '100%', transition: 'width 1s ease' }}></div>
+        </div>
+      </div>
+    );
+  };
+
+  const getPlacarConfronto = (partida: PartidaHistorico, jogador1Id: string) => {
+    if (partida.wo) return 'W.O.';
+    if (partida.golsMandante === null || partida.golsVisitante === null) return '-';
+    const mandanteEhJogador1 = partida.mandante?.jogadorId === jogador1Id;
+    const golsJ1 = mandanteEhJogador1 ? partida.golsMandante : partida.golsVisitante;
+    const golsJ2 = mandanteEhJogador1 ? partida.golsVisitante : partida.golsMandante;
+    let placar = `${golsJ1} x ${golsJ2}`;
+    if (partida.houvePenaltis && partida.penaltisMandante !== null && partida.penaltisVisitante !== null) {
+      const penJ1 = mandanteEhJogador1 ? partida.penaltisMandante : partida.penaltisVisitante;
+      const penJ2 = mandanteEhJogador1 ? partida.penaltisVisitante : partida.penaltisMandante;
+      placar += ` (${penJ1} x ${penJ2} pen.)`;
+    }
+    return placar;
+  };
+
+  const getVencedorConfronto = (partida: PartidaHistorico, jogador1Id: string, jogador2Id: string) => {
+    if (partida.golsMandante === null || partida.golsVisitante === null) return null;
+    const mandanteEhJogador1 = partida.mandante?.jogadorId === jogador1Id;
+    let golsJ1 = mandanteEhJogador1 ? partida.golsMandante : partida.golsVisitante;
+    let golsJ2 = mandanteEhJogador1 ? partida.golsVisitante : partida.golsMandante;
+    if (golsJ1 === golsJ2 && partida.houvePenaltis && partida.penaltisMandante !== null && partida.penaltisVisitante !== null) {
+      golsJ1 = mandanteEhJogador1 ? partida.penaltisMandante : partida.penaltisVisitante;
+      golsJ2 = mandanteEhJogador1 ? partida.penaltisVisitante : partida.penaltisMandante;
+    }
+    if (golsJ1 > golsJ2) return jogador1Id;
+    if (golsJ2 > golsJ1) return jogador2Id;
+    return null;
+  };
+
+  /*
         golsContra: cf.golsSofridosCasa,
         saldo: cf.golsMarcadosCasa - cf.golsSofridosCasa
       },
@@ -450,6 +374,8 @@ export function TelaComparandoJogador() {
     return null;
   };
 
+  */
+
   const resultBadgeColor: Record<string, string> = {
     V: '#10b981',
     E: '#94a3b8',
@@ -457,122 +383,9 @@ export function TelaComparandoJogador() {
   };
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+    <DashboardLayout esconderBusca contentStyle={{ paddingBottom: '60px', paddingLeft: isMobile ? '1rem' : '5%', paddingRight: isMobile ? '1rem' : '5%', paddingTop: isMobile ? '20px' : '30px' }}>
       
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`} style={{zIndex: 100}}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-               <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-
-        <nav className="nav-menu">
-          <a onClick={() => handleNavigate('/')} className="nav-item" style={{cursor: 'pointer'}}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => handleNavigate('/jogadores')} className="nav-item active" style={{cursor: 'pointer'}}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => handleNavigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => handleNavigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => handleNavigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => handleNavigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => handleNavigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-           <a onClick={() => handleNavigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => handleNavigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
-
-      {isMobile && sidebarOpen && (
-        <div 
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 99 }}
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      <main className="main-content" style={{ overflowX: 'hidden' }}>
-        <header className="top-header compact">
-          <div className="left-header">
-            <button 
-              className="toggle-btn menu-toggle" 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input type="text" placeholder="Buscar..." disabled />
-            </div>
-          </div>
-          
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
-            </button>
-            <BotaoNotificacao user={currentUser} />
-            
-            {currentUser ? (
-              <div 
-                className="user-avatar-mini"
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <button 
-                  className="login-btn-header" 
-                  onClick={() => setShowLoginPopup(true)}
-                  style={{
-                    background: 'var(--primary)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    marginLeft: '10px'
-                  }}
-                >
-                  Login
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content" style={{ animation: 'fadeInUp 0.6s ease-out', paddingBottom: '60px', paddingLeft: '5%', paddingRight: '5%', paddingTop: '30px' }}>
+      <div>
           
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
             
@@ -669,7 +482,7 @@ export function TelaComparandoJogador() {
                           >
                             <div style={{
                                 width: '100%', height: '100%', borderRadius: '50%',
-                                backgroundImage: comparacao.jogador1.imagem ? `url(${avatarMap[comparacao.jogador1.imagem] || comparacao.jogador1.imagem})` : 'none',
+                                backgroundImage: getAvatarUrl(comparacao.jogador1.imagem) ? `url(${getAvatarUrl(comparacao.jogador1.imagem)})` : 'none',
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center',
                                 backgroundColor: 'var(--primary)',
@@ -734,7 +547,7 @@ export function TelaComparandoJogador() {
                           >
                              <div style={{
                                 width: '100%', height: '100%', borderRadius: '50%',
-                                backgroundImage: comparacao.jogador2.imagem ? `url(${avatarMap[comparacao.jogador2.imagem] || comparacao.jogador2.imagem})` : 'none',
+                                backgroundImage: getAvatarUrl(comparacao.jogador2.imagem) ? `url(${getAvatarUrl(comparacao.jogador2.imagem)})` : 'none',
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center',
                                 backgroundColor: 'var(--text-gray)',
@@ -1206,30 +1019,6 @@ export function TelaComparandoJogador() {
             )}
           </div>
         </div>
-      </main>
-
-      {showLoginPopup && (
-        <PopupLogin onClose={() => setShowLoginPopup(false)} onLoginSuccess={handleLoginSuccess} />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser 
-          user={{
-            ...currentUser,
-            imagem: getCurrentUserAvatar(),
-            finais: currentUser.finais || 0,
-            titulos: currentUser.titulos || 0,
-            golsMarcados: currentUser.golsMarcados || 0,
-            partidasJogadas: currentUser.partidasJogadas || 0
-          }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
-
-      {showNotificacaoPopup && (
-        <PopupNotificacao onClose={() => setShowNotificacaoPopup(false)} />
-      )}
-    </div>
+    </DashboardLayout>
   );
 }

@@ -1,41 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import {
-  Menu,
-  LayoutDashboard,
-  Users,
-  Trophy,
-  Shield,
-  Wallet,
-  Search,
-  Gamepad2,
-  Star,
-  Settings,
-  CalendarSync,
-  Lightbulb,
   Send,
   Bot,
   AlertTriangle
 } from 'lucide-react';
 import { API } from '../services/api';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
 import '../styles/TorneiosPage.css';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
-
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-  titulos: number;
-  finais: number;
-  partidasJogadas: number;
-  golsMarcados: number;
-}
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 interface Message {
   id: number;
@@ -49,47 +21,13 @@ interface Message {
 const TIMEOUT_SUPORTE_MS = 40000;
 
 export function TelaSuporte() {
-  const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+  const { isMobile } = useAppContext();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: avatars = [] } = useQuery({
-    queryKey: ['avatares'],
-    queryFn: async () => {
-      const response = await API.get('/api/avatares');
-      return Array.isArray(response.data) ? response.data : [];
-    },
-    staleTime: 1000 * 60 * 30,
-    enabled: !!currentUser
-  });
-
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((a: any) => map[a.id] = a.url);
-    return map;
-  }, [avatars]);
-
   useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) setCurrentUser(JSON.parse(storedUser));
-
     setMessages([{
       id: 1,
       text: "Sou o assistente virtual dos torneios DDO, pode me chamar para resolver qualquer problema, ou tirar dúvidas sobre o regulamento. Seja direto ao ponto. Se possível, envie toda a história completa (em uma mensagem), para que eu possa te ajudar melhor.",
@@ -184,12 +122,12 @@ export function TelaSuporte() {
   };
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+    <DashboardLayout esconderBusca contentStyle={{ padding: isMobile ? '1rem' : '0rem 0rem'}}>
       <style>{`
         .chat-layout {
           display: flex;
           flex-direction: column;
-          height: calc(100vh - 100px);
+          height: calc(92vh - 100px);
           background: var(--bg-card);
           border-radius: var(--radius);
           border: 1px solid var(--border-color);
@@ -374,7 +312,8 @@ export function TelaSuporte() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+      {/* shared navigation is provided by DashboardLayout */}
+      {/*
         <div className="logo-area">
           <div className="logo-icon">
             <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
@@ -421,6 +360,7 @@ export function TelaSuporte() {
             )}
           </div>
         </header>
+      */}
 
         <div className="page-content">
           <div className="chat-layout">
@@ -489,10 +429,6 @@ export function TelaSuporte() {
             </div>
           </div>
         </div>
-      </main>
-
-      {showLoginPopup && <PopupLogin onClose={() => setShowLoginPopup(false)} onLoginSuccess={setCurrentUser} />}
-      {showUserPopup && currentUser && <PopupUser user={{...currentUser, imagem: avatarMap[currentUser.imagem || ''] || currentUser.imagem}} onClose={() => setShowUserPopup(false)} onLogout={() => { localStorage.removeItem('token'); localStorage.removeItem('user_data'); setCurrentUser(null); setShowUserPopup(false); }} />}
-    </div>
+    </DashboardLayout>
   );
 }

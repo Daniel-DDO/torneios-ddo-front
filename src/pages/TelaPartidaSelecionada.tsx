@@ -2,17 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Menu,
-  LayoutDashboard,
   Users,
-  Trophy,
-  Shield,
-  Wallet,
-  Search,
   Gamepad2,
-  Star,
   Settings,
-  CalendarSync,
   ArrowLeft,
   MapPin,
   Clock,
@@ -21,7 +13,6 @@ import {
   Banknote,
   FileText,
   Edit3,
-  Lightbulb,
   Share2,
   TrendingUp,
   AlertCircle,
@@ -36,14 +27,13 @@ import {
   Target
 } from 'lucide-react';
 import { API, API_SECUNDARIA } from '../services/api';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
 import PopupRegistrarPartida from '../components/PopupRegistrarPartida';
 import PopupReportarPartida from '../components/PopupReportarPartida';
 import PopupGeral from '../components/PopupGeral';
 import PopupGeralConf from '../components/PopupGeralConf';
 import '../styles/TorneiosPage.css';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 import PopupAnularPartida from '../components/PopupAnularPartida';
 import PopupSubstituirJogPartida from '../components/PopupSubstituirJogPartida';
 
@@ -331,16 +321,12 @@ export function TelaPartidaSelecionada() {
   const navigate = useNavigate();
   const { partidaId } = useParams();
   const queryClient = useQueryClient();
+  const { currentUser, isAdmin, isMobile, abrirLogin } = useAppContext();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
   const [showRegistrarPopup, setShowRegistrarPopup] = useState(false);
   const [showReportarPopup, setShowReportarPopup] = useState(false);
   const [showAnularPopup, setShowAnularPopup] = useState(false);
   const [showTrocarPopup, setShowTrocarPopup] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
 
   const [novoComentario, setNovoComentario] = useState('');
@@ -522,21 +508,6 @@ export function TelaPartidaSelecionada() {
   });
 
   useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) setCurrentUser(JSON.parse(storedUser));
-  }, []);
-
-  useEffect(() => {
     if (meuPalpite) {
       setPalpiteMandante(String(meuPalpite.placarMandante));
       setPalpiteVisitante(String(meuPalpite.placarVisitante));
@@ -544,8 +515,7 @@ export function TelaPartidaSelecionada() {
   }, [meuPalpite]);
 
   const hasEditPermission = () => {
-    if (!currentUser) return false;
-    return ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
+    return isAdmin;
   };
 
   const hasReportPermission = () => {
@@ -649,7 +619,7 @@ export function TelaPartidaSelecionada() {
   };
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+    <DashboardLayout esconderBusca contentStyle={{ padding: isMobile ? '1rem' : '0rem 0rem' }}>
       <style>{`
         .match-hero {
           background: var(--bg-card);
@@ -1367,7 +1337,7 @@ export function TelaPartidaSelecionada() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+      {/*
         <div className="logo-area">
           <div className="logo-icon">
             <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
@@ -1414,6 +1384,7 @@ export function TelaPartidaSelecionada() {
             )}
           </div>
         </header>
+      */}
 
         <div className="page-content">
           <button onClick={() => navigate(-1)} className="back-button" style={{ display: 'flex', alignItems: 'center', gap: 8, border: 'none', background: 'none', color: 'var(--text-gray)', marginBottom: 20, cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
@@ -1796,7 +1767,7 @@ export function TelaPartidaSelecionada() {
                     <div className="login-prompt" style={{ marginBottom: 22 }}>
                       <Lock size={18} />
                       <span>Faça login para registrar seu palpite.</span>
-                      <button className="login-btn-inline" onClick={() => setShowLoginPopup(true)}>Entrar</button>
+                      <button className="login-btn-inline" onClick={abrirLogin}>Entrar</button>
                     </div>
                   )}
 
@@ -1869,7 +1840,7 @@ export function TelaPartidaSelecionada() {
                     <div className="login-prompt">
                       <Lock size={18} />
                       <span>Faça login para participar da discussão.</span>
-                      <button className="login-btn-inline" onClick={() => setShowLoginPopup(true)}>
+                      <button className="login-btn-inline" onClick={abrirLogin}>
                         Entrar
                       </button>
                     </div>
@@ -1903,8 +1874,6 @@ export function TelaPartidaSelecionada() {
             </>
           )}
         </div>
-      </main>
-
       {commentToDelete && (
         <PopupGeralConf
           title="Confirmar Exclusão"
@@ -1925,8 +1894,6 @@ export function TelaPartidaSelecionada() {
         />
       )}
 
-      {showLoginPopup && <PopupLogin onClose={() => setShowLoginPopup(false)} onLoginSuccess={setCurrentUser} />}
-      {showUserPopup && currentUser && <PopupUser user={currentUser} onClose={() => setShowUserPopup(false)} onLogout={() => { localStorage.removeItem('token'); localStorage.removeItem('user_data'); setCurrentUser(null); setShowUserPopup(false); }} />}
       {showRegistrarPopup && partida && partida.mandante && partida.visitante && (
         <PopupRegistrarPartida
           partida={{
@@ -1994,6 +1961,6 @@ export function TelaPartidaSelecionada() {
           onSuccess={() => { setShowTrocarPopup(false); refetch(); }}
         />
       )}
-    </div>
+    </DashboardLayout>
   );
 }

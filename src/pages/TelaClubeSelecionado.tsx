@@ -1,17 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
-  Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search, 
-  ArrowLeft, Gamepad2, Lightbulb, Settings, 
-  CheckCircle, CalendarSync, Star, MapPin, DollarSign, 
+  Trophy,
+  ArrowLeft,
+  CheckCircle, Star, MapPin, DollarSign, 
   Activity, Info, StarHalf, TrendingUp, Landmark, Crown
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 interface TituloDefinition {
   id: string;
@@ -55,19 +54,6 @@ interface JogadorDestaque {
   totalConquistas: number;
 }
 
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-  finais?: number;
-  titulos?: number;
-  golsMarcados?: number;
-  partidasJogadas?: number;
-}
-
 export function TelaClubeSelecionado() {
   const navigate = useNavigate();
   const { clubeId } = useParams();
@@ -75,33 +61,10 @@ export function TelaClubeSelecionado() {
   const [clube, setClube] = useState<Club | null>(null);
   const [jogadorDestaque, setJogadorDestaque] = useState<JogadorDestaque | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { isMobile, getAvatarUrl } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
-
   useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-    
     if (clubeId) {
         fetchClubDetails(clubeId);
         fetchJogadorDestaque(clubeId);
@@ -134,27 +97,11 @@ export function TelaClubeSelecionado() {
     }
   };
 
-  const handleLoginSuccess = (userData: any) => {
-    setCurrentUser(userData);
-    localStorage.setItem('user_data', JSON.stringify(userData));
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        setCurrentUser(null);
-        setShowUserPopup(false);
-    }
-  };
-
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       navigate(`/jogadores?busca=${searchTerm}`);
     }
   };
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   const formatCurrency = (value: number) => {
     return 'D$ ' + new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
@@ -207,7 +154,20 @@ export function TelaClubeSelecionado() {
   }, [clube]);
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+        <DashboardLayout
+            searchPlaceholder="Buscar jogador..."
+            searchSlot={(
+                <input
+                    className="search-bar"
+                    type="text"
+                    placeholder="Buscar jogador..."
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    onKeyDown={handleSearch}
+                />
+            )}
+            contentStyle={{ padding: isMobile ? '1rem' : undefined }}
+        >
       
       <LoadingSpinner isLoading={loading} />
 
@@ -515,6 +475,22 @@ export function TelaClubeSelecionado() {
             flex-shrink: 0;
         }
 
+        .highlight-player-avatar-placeholder {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 4px solid #f59e0b;
+            box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
+            flex-shrink: 0;
+            background: var(--hover-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #f59e0b;
+        }
+
         .highlight-player-info {
             flex: 1;
         }
@@ -538,6 +514,16 @@ export function TelaClubeSelecionado() {
             font-size: 0.95rem;
         }
 
+        .highlight-player-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 8px;
+            color: var(--text-gray);
+            padding: 20px 0;
+        }
+
         @media (max-width: 900px) {
             .info-grid-3 { grid-template-columns: 1fr; }
             .financial-row { grid-template-columns: 1fr; }
@@ -547,118 +533,7 @@ export function TelaClubeSelecionado() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-               <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-
-        <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => navigate('/clubes')} className="nav-item active" style={{cursor: 'pointer'}}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => navigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-           <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
-
-      <main className="main-content">
-        
-        <header className="top-header compact">
-          <div className="left-header">
-            <button 
-              className="toggle-btn menu-toggle" 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input 
-                type="text" 
-                placeholder="Buscar jogador..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={handleSearch}
-              />
-            </div>
-          </div>
-          
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
-            </button>
-            <BotaoNotificacao user={currentUser} />
-            
-            {currentUser ? (
-              <div 
-                className="user-avatar-mini" 
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: currentUser.imagem ? `url(${currentUser.imagem})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!currentUser.imagem && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <button 
-                className="login-btn-header" 
-                onClick={() => setShowLoginPopup(true)}
-                style={{
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginLeft: '10px'
-                }}
-              >
-                Login
-              </button>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content">
+                <>
             {clube && (
                 <div className="profile-wrapper">
                     <button onClick={() => navigate('/clubes')} className="btn-back">
@@ -849,21 +724,32 @@ export function TelaClubeSelecionado() {
                         )}
                     </div>
 
-                    {jogadorDestaque && (
-                        <div className="highlight-player-section">
-                            <div className="highlight-player-header">
-                                <Crown size={24} style={{color: '#f59e0b'}} />
-                                Jogador Destaque
-                            </div>
+                    <div className="highlight-player-section">
+                        <div className="highlight-player-header">
+                            <Crown size={24} style={{color: '#f59e0b'}} />
+                            Jogador Destaque
+                        </div>
+
+                        {jogadorDestaque ? (
                             <div className="highlight-player-body">
-                                <img
-                                    src={jogadorDestaque.jogadorImagem}
-                                    alt={jogadorDestaque.jogadorNome}
-                                    className="highlight-player-avatar"
-                                />
+                                {(() => {
+                                    const nomeDestaque = jogadorDestaque.jogadorNome || 'Jogador';
+                                    const avatarDestaque = getAvatarUrl(jogadorDestaque.jogadorImagem);
+                                    return avatarDestaque ? (
+                                        <img
+                                            src={avatarDestaque}
+                                            alt={nomeDestaque}
+                                            className="highlight-player-avatar"
+                                        />
+                                    ) : (
+                                        <div className="highlight-player-avatar-placeholder">
+                                            {nomeDestaque.charAt(0).toUpperCase()}
+                                        </div>
+                                    );
+                                })()}
                                 <div className="highlight-player-info">
                                     <div className="highlight-player-name">
-                                        {jogadorDestaque.jogadorNome}
+                                        {jogadorDestaque.jogadorNome || 'Jogador'}
                                     </div>
                                     <div className="highlight-player-count">
                                         <Trophy size={16} />
@@ -871,40 +757,18 @@ export function TelaClubeSelecionado() {
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="highlight-player-empty">
+                                <Crown size={40} style={{opacity: 0.25}} />
+                                <p>Nenhum jogador destaque para este clube ainda.</p>
+                            </div>
+                        )}
+                    </div>
 
                 </div>
             )}
-        </div>
+        </>
 
-      </main>
-
-      {showLoginPopup && (
-        <PopupLogin 
-          onClose={() => setShowLoginPopup(false)} 
-          onLoginSuccess={handleLoginSuccess} 
-        />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser 
-          user={{
-            id: currentUser.id,
-            nome: currentUser.nome,
-            discord: currentUser.discord,
-            imagem: currentUser.imagem,
-            cargo: currentUser.cargo,
-            saldoVirtual: currentUser.saldoVirtual,
-            finais: currentUser.finais || 0,
-            titulos: currentUser.titulos || 0,
-            golsMarcados: currentUser.golsMarcados || 0,
-            partidasJogadas: currentUser.partidasJogadas || 0
-          }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
-    </div>
+        </DashboardLayout>
   );
 }

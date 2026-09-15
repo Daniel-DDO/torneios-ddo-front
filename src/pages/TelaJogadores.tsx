@@ -2,31 +2,17 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { 
-  Menu, 
-  LayoutDashboard, 
-  Users, 
-  Trophy, 
-  Shield, 
-  Wallet, 
-  Search, 
-  Gamepad2, 
-  Star,
-  Lightbulb,
-  Settings,
-  CalendarSync,
   TrendingUp,
   ArrowRight,
   Swords,
-  X,
-  Loader2
+  X
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
 import PopupCadastrarJogador from '../components/PopupCadastrarJogador';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 interface Player {
   id: string;
@@ -42,35 +28,9 @@ interface Player {
   saldoVirtual: number;
 }
 
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-  titulos: number;
-  finais: number;
-  partidasJogadas: number;
-  golsMarcados: number;
-}
-
-interface Avatar {
-  id: string;
-  url: string;
-  nome?: string;
-}
-
 const fetchPlayersService = async ({ pageParam = 0 }) => {
   const response = await API.get(`/jogador/todos?page=${pageParam}&size=12`);
   return (response && (response as any).data) ? (response as any).data : response;
-};
-
-const fetchAvatarsService = async () => {
-  const response = await API.get('/api/avatares');
-  if (Array.isArray(response)) return response;
-  if (response.data && Array.isArray(response.data)) return response.data;
-  return [];
 };
 
 // Autocomplete do back — usado apenas quando a listagem completa ainda não
@@ -84,6 +44,7 @@ const fetchBuscaRapidaService = async (termo: string): Promise<Player[]> => {
 
 export function TelaJogadores() {
   const navigate = useNavigate();
+  const { currentUser, isAdmin, getAvatarUrl, isMobile } = useAppContext();
   const observerTarget = useRef(null);
 
   const {
@@ -101,12 +62,6 @@ export function TelaJogadores() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: avatars = [] } = useQuery({
-    queryKey: ['avatares'],
-    queryFn: fetchAvatarsService,
-    staleTime: 1000 * 60 * 60,
-  });
-
   const allPlayers = useMemo((): Player[] => {
     return data?.pages.flatMap(page => page.conteudo) || [];
   }, [data]);
@@ -116,11 +71,7 @@ export function TelaJogadores() {
   // esconder jogadores que ainda não foram paginados até aqui.
   const listagemCompleta = !hasNextPage;
 
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
   const [showCadastrarJogadorPopup, setShowCadastrarJogadorPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
@@ -141,38 +92,8 @@ export function TelaJogadores() {
     return () => observer.disconnect();
   }, [hasNextPage, fetchNextPage, isFetchingNextPage, debouncedSearchTerm]);
 
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((avatar: Avatar) => {
-        map[avatar.id] = avatar.url;
-    });
-    return map;
-  }, [avatars]);
-  
   const [isComparing, setIsComparing] = useState(false);
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
-
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-  }, []);
 
   // Debounce da busca — só dispara a query de autocomplete 350ms após o
   // usuário parar de digitar, evitando martelar o back a cada tecla.
@@ -192,21 +113,6 @@ export function TelaJogadores() {
     staleTime: 1000 * 30,
   });
 
-  const handleLoginSuccess = (userData: UserData) => {
-    setCurrentUser(userData);
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        setCurrentUser(null);
-        setShowUserPopup(false);
-    }
-  };
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
   // Fonte da lista exibida:
   // - sem termo de busca -> lista local (paginada normalmente)
   // - com termo e listagem local já completa -> filtra localmente (sem custo de rede)
@@ -225,11 +131,6 @@ export function TelaJogadores() {
 
   const mostrandoLoaderBusca = buscaRapidaHabilitada && buscandoNoBack;
 
-  const getCurrentUserAvatar = () => {
-    if (!currentUser?.imagem) return null;
-    return avatarMap[currentUser.imagem] || currentUser.imagem;
-  };
-
   const togglePlayerSelection = (player: Player) => {
     if (selectedPlayers.find(p => p.id === player.id)) {
       setSelectedPlayers(selectedPlayers.filter(p => p.id !== player.id));
@@ -247,8 +148,12 @@ export function TelaJogadores() {
   };
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
-      
+    <DashboardLayout
+      searchPlaceholder="Buscar jogador..."
+      searchValue={searchTerm}
+      onSearchChange={setSearchTerm}
+      contentStyle={{ padding: isMobile ? '1rem' : '2rem 3rem' }}
+    >
       <LoadingSpinner isLoading={loadingPlayers && !isFetchingNextPage} />
 
       <style>{`
@@ -492,118 +397,7 @@ export function TelaJogadores() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-               <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-
-        <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{cursor: 'pointer'}}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item active" style={{cursor: 'pointer'}}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => navigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-            <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
-
-      <main className="main-content">
-        
-        <header className="top-header compact">
-          <div className="left-header">
-            <button 
-              className="toggle-btn menu-toggle" 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input 
-                type="text" 
-                placeholder="Buscar jogador..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              {mostrandoLoaderBusca && <Loader2 size={16} className="search-loading-icon" />}
-            </div>
-          </div>
-          
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
-            </button>
-            <BotaoNotificacao user={currentUser} />
-            
-            {currentUser ? (
-              <div 
-                className="user-avatar-mini" 
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <button 
-                className="login-btn-header" 
-                onClick={() => setShowLoginPopup(true)}
-                style={{
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginLeft: '10px'
-                }}
-              >
-                Login
-              </button>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content">
+      <div>
             <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
                 <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Jogadores Cadastrados</h2>
@@ -678,7 +472,7 @@ export function TelaJogadores() {
                     Ranking Financeiro
                 </button>
 
-                {currentUser && ['ADMINISTRADOR', 'DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo) && (
+                {currentUser && isAdmin && (
                     <button 
                       className="t-btn" 
                       onClick={() => setShowCadastrarJogadorPopup(true)}
@@ -707,7 +501,7 @@ export function TelaJogadores() {
 
             <div className="players-grid-container">
             {filteredPlayers.map((player, index) => {
-                const avatarUrl = player.imagem ? (avatarMap[player.imagem] || player.imagem) : null;
+                const avatarUrl = getAvatarUrl(player.imagem);
                 const isSelected = selectedPlayers.some(p => p.id === player.id);
                 
                 return (
@@ -788,12 +582,10 @@ export function TelaJogadores() {
             )}
         </div>
 
-      </main>
-
       {isComparing && selectedPlayers.length > 0 && (
         <div className="compare-bar">
           <div className="selected-player-mini">
-             <div className="mini-avatar" style={{ backgroundImage: selectedPlayers[0].imagem ? `url(${avatarMap[selectedPlayers[0].imagem] || selectedPlayers[0].imagem})` : 'none' }}>
+             <div className="mini-avatar" style={{ backgroundImage: getAvatarUrl(selectedPlayers[0].imagem) ? `url(${getAvatarUrl(selectedPlayers[0].imagem)})` : 'none' }}>
                {!selectedPlayers[0].imagem && selectedPlayers[0].nome.charAt(0)}
              </div>
              <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{selectedPlayers[0].nome}</span>
@@ -805,7 +597,7 @@ export function TelaJogadores() {
           <div className="selected-player-mini">
              {selectedPlayers[1] ? (
                <>
-                 <div className="mini-avatar" style={{ backgroundImage: selectedPlayers[1].imagem ? `url(${avatarMap[selectedPlayers[1].imagem] || selectedPlayers[1].imagem})` : 'none' }}>
+                 <div className="mini-avatar" style={{ backgroundImage: getAvatarUrl(selectedPlayers[1].imagem) ? `url(${getAvatarUrl(selectedPlayers[1].imagem)})` : 'none' }}>
                     {!selectedPlayers[1].imagem && selectedPlayers[1].nome.charAt(0)}
                  </div>
                  <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{selectedPlayers[1].nome}</span>
@@ -826,30 +618,12 @@ export function TelaJogadores() {
         </div>
       )}
 
-      {showLoginPopup && (
-        <PopupLogin 
-          onClose={() => setShowLoginPopup(false)} 
-          onLoginSuccess={handleLoginSuccess} 
-        />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser 
-          user={{
-            ...currentUser,
-            imagem: getCurrentUserAvatar()
-          }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
-
       {showCadastrarJogadorPopup && (
         <PopupCadastrarJogador
           onClose={() => setShowCadastrarJogadorPopup(false)}
           onSuccess={() => refetch()}
         />
       )}
-    </div>
+    </DashboardLayout>
   );
 }

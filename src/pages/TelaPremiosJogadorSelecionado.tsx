@@ -1,18 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Menu, LayoutDashboard, Users, Trophy, Shield, Wallet, Search,
-  ArrowLeft, Gamepad2, Lightbulb, Settings, CalendarSync,
-  Award, Target, ShieldCheck, HeartHandshake, TrendingUp, Star,
+  Trophy, ArrowLeft,
+  Award, Target, ShieldCheck, HeartHandshake, TrendingUp,
   Sparkles, Calendar
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 type CategoriaPremio = 'ARTILHEIRO' | 'FAIR_PLAY' | 'MELHOR_DEFESA' | 'MELHOR_JOGADOR' | 'MELHOR_RANKING';
 
@@ -32,25 +30,6 @@ interface JogadorResumoDTO {
   pontosCoeficiente: number;
   imagem: string | null;
   cargo?: string;
-}
-
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-  titulos: number;
-  finais: number;
-  partidasJogadas: number;
-  golsMarcados: number;
-}
-
-interface Avatar {
-  id: string;
-  url: string;
-  nome?: string;
 }
 
 interface CategoriaConfig {
@@ -97,13 +76,6 @@ const CATEGORIA_CONFIG: Record<CategoriaPremio, CategoriaConfig> = {
   },
 };
 
-const fetchAvatarsService = async () => {
-  const response = await API.get('/api/avatares');
-  if (Array.isArray(response)) return response;
-  if (response.data && Array.isArray(response.data)) return response.data;
-  return [];
-};
-
 const fetchJogadorResumoService = async (jogadorId: string): Promise<JogadorResumoDTO | null> => {
   try {
     const response = await API.get(`/jogador/${jogadorId}/resumo`);
@@ -125,18 +97,7 @@ const fetchPremiosJogadorService = async (jogadorId: string): Promise<PremioTemp
 export function TelaPremiosJogadorSelecionado() {
   const navigate = useNavigate();
   const { id } = useParams();
-
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
-
-  const { data: avatars = [] } = useQuery<Avatar[]>({
-    queryKey: ['avatares'],
-    queryFn: fetchAvatarsService,
-    staleTime: 1000 * 60 * 60,
-  });
+  const { getAvatarUrl } = useAppContext();
 
   const { data: jogador, isLoading: isLoadingJogador } = useQuery<JogadorResumoDTO | null>({
     queryKey: ['jogadorResumo', id],
@@ -152,51 +113,9 @@ export function TelaPremiosJogadorSelecionado() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((avatar) => {
-      map[avatar.id] = avatar.url;
-    });
-    return map;
-  }, [avatars]);
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) setCurrentUser(JSON.parse(storedUser));
-  }, []);
-
-  const handleLoginSuccess = (userData: UserData) => setCurrentUser(userData);
-
-  const handleLogout = () => {
-    if (window.confirm('Deseja realmente sair?')) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user_data');
-      setCurrentUser(null);
-      setShowUserPopup(false);
-    }
-  };
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
-  const getCurrentUserAvatar = () => {
-    if (!currentUser?.imagem) return null;
-    return avatarMap[currentUser.imagem] || currentUser.imagem;
-  };
-
   const getJogadorAvatar = () => {
     if (!jogador?.imagem) return null;
-    if (jogador.imagem.startsWith('http')) return jogador.imagem;
-    return avatarMap[jogador.imagem] || jogador.imagem;
+    return getAvatarUrl(jogador.imagem);
   };
 
   const formatDate = (dateString: string) => {
@@ -226,7 +145,7 @@ export function TelaPremiosJogadorSelecionado() {
   }, [premios]);
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+    <DashboardLayout esconderBusca>
 
       <LoadingSpinner isLoading={isLoadingJogador && isLoadingPremios} />
 
@@ -450,111 +369,7 @@ export function TelaPremiosJogadorSelecionado() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z" />
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-
-        <nav className="nav-menu">
-          <a onClick={() => navigate('/')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => navigate('/jogadores')} className="nav-item active" style={{ cursor: 'pointer' }}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => navigate('/clubes')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => navigate('/competicoes')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => navigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => navigate('/temporadas')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => navigate('/partidas')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-          <a onClick={() => navigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => navigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
-
-      <main className="main-content">
-        <header className="top-header compact">
-          <div className="left-header">
-            <button
-              className="toggle-btn menu-toggle"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input type="text" placeholder="Buscar..." disabled />
-            </div>
-          </div>
-
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
-            </button>
-            <BotaoNotificacao user={currentUser} />
-
-            {currentUser ? (
-              <div
-                className="user-avatar-mini"
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <button
-                className="login-btn-header"
-                onClick={() => setShowLoginPopup(true)}
-                style={{
-                  background: 'var(--primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginLeft: '10px'
-                }}
-              >
-                Login
-              </button>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content">
+        <div>
           <div className="premios-wrapper">
             <button
               onClick={() => navigate(`/jogador/${id}`)}
@@ -655,19 +470,6 @@ export function TelaPremiosJogadorSelecionado() {
             )}
           </div>
         </div>
-      </main>
-
-      {showLoginPopup && (
-        <PopupLogin onClose={() => setShowLoginPopup(false)} onLoginSuccess={handleLoginSuccess} />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser
-          user={{ ...currentUser, imagem: getCurrentUserAvatar() }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
-    </div>
+    </DashboardLayout>
   );
 }

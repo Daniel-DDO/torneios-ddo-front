@@ -1,20 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { 
-  Menu, 
-  LayoutDashboard, 
-  Users, 
-  Trophy, 
-  Shield,  
-  Wallet, 
-  Settings, 
-  Search, 
-  Bell, 
-  Gamepad2, 
-  Star,
-  Lightbulb,
-  CalendarSync,
   ChevronLeft,
   ChevronRight,
   Medal,
@@ -22,9 +9,8 @@ import {
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
-import PopupNotificacao from '../components/PopupNotificacao';
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 interface JogadorRanking {
   id: string;
@@ -50,36 +36,6 @@ interface PageableResponse<T> {
   };
 }
 
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: 'PROPRIETARIO' | 'DIRETOR' | 'ADMINISTRADOR' | 'JOGADOR';
-  saldoVirtual: number;
-  finais?: number;
-  titulos?: number;
-  golsMarcados?: number;
-  partidasJogadas?: number;
-}
-
-interface Notificacao {
-  id: string;
-  lida: boolean;
-}
-
-const fetchAvatarsService = async () => {
-  const response = await API.get('/api/avatares');
-  if (Array.isArray(response)) return response;
-  if (response.data && Array.isArray(response.data)) return response.data;
-  return [];
-};
-
-const fetchMinhasNotificacoesService = async () => {
-  const response = await API.get('/api/notificacoes/minhas');
-  return response.data || [];
-};
-
 const fetchRankingFinanceiroService = async (page: number): Promise<PageableResponse<JogadorRanking>> => {
   const response = await API.get('/jogador/ranking-financeiro', {
     params: {
@@ -92,111 +48,14 @@ const fetchRankingFinanceiroService = async (page: number): Promise<PageableResp
 
 export function TelaRankingFinanceiro() {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [showNotificacaoPopup, setShowNotificacaoPopup] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
+  const { currentUser, getAvatarUrl } = useAppContext();
   const [page, setPage] = useState(0);
-
-  const { data: avatars = [] } = useQuery({
-    queryKey: ['avatares'],
-    queryFn: fetchAvatarsService,
-    staleTime: 1000 * 60 * 60,
-  });
-
-  const { data: notificacoes = [] } = useQuery<Notificacao[]>({
-    queryKey: ['notificacoesMinhas'],
-    queryFn: fetchMinhasNotificacoesService,
-    enabled: !!currentUser,
-    staleTime: 1000 * 60,
-    refetchInterval: 1000 * 60 * 5 
-  });
 
   const { data: rankingPage, isLoading: isLoadingRanking } = useQuery<PageableResponse<JogadorRanking>>({
     queryKey: ['rankingFinanceiro', page],
     queryFn: () => fetchRankingFinanceiroService(page),
     placeholderData: keepPreviousData 
   });
-
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    avatars.forEach((avatar: any) => {
-        map[avatar.id] = avatar.url;
-    });
-    return map;
-  }, [avatars]);
-
-  const temNotificacaoNaoLida = useMemo(() => {
-    return notificacoes.some(n => !n.lida);
-  }, [notificacoes]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-
-    const handleResize = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-      if (mobile) {
-        setSidebarOpen(false);
-      } else {
-        setSidebarOpen(true);
-      }
-    };
-
-    handleResize(); 
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleLoginSuccess = (userData: any) => {
-    setCurrentUser(userData);
-  };
-
-  const handleLogout = () => {
-    if (window.confirm("Deseja realmente sair?")) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        setCurrentUser(null);
-        setShowUserPopup(false);
-        navigate('/');
-    }
-  };
-
-  const handleNavigate = (path: string) => {
-    navigate(path);
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
-  };
-
-  const getCurrentUserAvatar = () => {
-    if (!currentUser?.imagem) return null;
-    return avatarMap[currentUser.imagem] || currentUser.imagem;
-  };
 
   const formatCurrency = (value: number) => {
     const formatted = new Intl.NumberFormat('pt-BR', {
@@ -215,149 +74,9 @@ export function TelaRankingFinanceiro() {
   };
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+    <DashboardLayout esconderBusca contentStyle={{ padding: '0rem 0rem' }}>
       
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`} style={{zIndex: 100}}>
-        <div className="logo-area">
-          <div className="logo-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-               <path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5L12 22l10-8.5-5-2.5-5 2.5z"/>
-            </svg>
-          </div>
-          <span className="logo-text">Torneios <span>DDO</span></span>
-        </div>
-
-        <nav className="nav-menu">
-          <a onClick={() => handleNavigate('/')} className="nav-item" style={{cursor: 'pointer'}}>
-            <LayoutDashboard size={20} /> Dashboard
-          </a>
-          <a onClick={() => handleNavigate('/jogadores')} className="nav-item active" style={{cursor: 'pointer'}}>
-            <Users size={20} /> Jogadores
-          </a>
-          <a onClick={() => handleNavigate('/clubes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Shield size={20} /> Clubes
-          </a>
-          <a onClick={() => handleNavigate('/competicoes')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Trophy size={20} /> Competições
-          </a>
-          <a onClick={() => handleNavigate('/titulos')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Star size={20} /> Títulos
-          </a>
-          <a onClick={() => handleNavigate('/temporadas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <CalendarSync size={20} /> Temporadas
-          </a>
-          <div className="nav-separator"></div>
-          <a onClick={() => handleNavigate('/partidas')} className="nav-item" style={{cursor: 'pointer'}}>
-            <Gamepad2 size={20} /> Partidas
-          </a>
-           <a onClick={() => handleNavigate('/minha-conta')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Wallet size={20} /> Minha conta
-          </a>
-          <a onClick={() => handleNavigate('/suporte')} className="nav-item" style={{ cursor: 'pointer' }}>
-            <Settings size={20} /> Suporte
-          </a>
-        </nav>
-      </aside>
-
-      {isMobile && sidebarOpen && (
-        <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            zIndex: 99
-          }}
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      <main className="main-content" style={{ overflowX: 'hidden' }}>
-        <header className="top-header compact">
-          <div className="left-header">
-            <button 
-              className="toggle-btn menu-toggle" 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              title="Alternar Menu"
-            >
-              <Menu size={24} />
-            </button>
-            <div className="search-bar">
-              <Search size={20} />
-              <input 
-                type="text" 
-                placeholder="Buscar..." 
-                disabled
-              />
-            </div>
-          </div>
-          
-          <div className="header-actions">
-            <button className="icon-btn theme-toggle-btn" onClick={toggleTheme} title="Alternar Tema">
-              <Lightbulb size={20} />
-            </button>
-            <button 
-              className="icon-btn" 
-              onClick={() => setShowNotificacaoPopup(true)}
-              style={{ position: 'relative' }}
-            >
-                <Bell size={20} />
-                {currentUser && temNotificacaoNaoLida && (
-                  <span style={{
-                    position: 'absolute',
-                    top: '8px',
-                    right: '8px',
-                    width: '8px',
-                    height: '8px',
-                    backgroundColor: '#ff4757',
-                    borderRadius: '50%',
-                    border: '1px solid var(--header-bg, #fff)'
-                  }}></span>
-                )}
-            </button>
-            
-            {currentUser ? (
-              <div 
-                className="user-avatar-mini"
-                onClick={() => setShowUserPopup(true)}
-                style={{
-                  backgroundImage: getCurrentUserAvatar() ? `url(${getCurrentUserAvatar()})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundColor: getCurrentUserAvatar() ? 'transparent' : 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                {!getCurrentUserAvatar() && currentUser.nome.charAt(0)}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <button 
-                  className="login-btn-header" 
-                  onClick={() => setShowLoginPopup(true)}
-                  style={{
-                    background: 'var(--primary)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    marginLeft: '10px'
-                  }}
-                >
-                  Login
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
-
-        <div className="page-content" style={{ animation: 'fadeInUp 0.6s ease-out', paddingBottom: '40px' }}>
+      <div className="page-content" style={{ animation: 'fadeInUp 0.6s ease-out', paddingBottom: '40px' }}>
           
           <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -423,7 +142,7 @@ export function TelaRankingFinanceiro() {
                                                 height: '40px',
                                                 borderRadius: '50%',
                                                 backgroundColor: 'var(--primary)',
-                                                backgroundImage: jogador.imagem ? `url(${avatarMap[jogador.imagem] || jogador.imagem})` : 'none',
+                                                backgroundImage: getAvatarUrl(jogador.imagem) ? `url(${getAvatarUrl(jogador.imagem)})` : 'none',
                                                 backgroundSize: 'cover',
                                                 backgroundPosition: 'center',
                                                 display: 'flex',
@@ -522,36 +241,7 @@ export function TelaRankingFinanceiro() {
             )}
           </div>
 
-        </div>
-      </main>
-
-      {showLoginPopup && (
-        <PopupLogin 
-          onClose={() => setShowLoginPopup(false)} 
-          onLoginSuccess={handleLoginSuccess} 
-        />
-      )}
-
-      {showUserPopup && currentUser && (
-        <PopupUser 
-          user={{
-            ...currentUser,
-            imagem: getCurrentUserAvatar(),
-            finais: currentUser.finais || 0,
-            titulos: currentUser.titulos || 0,
-            golsMarcados: currentUser.golsMarcados || 0,
-            partidasJogadas: currentUser.partidasJogadas || 0
-          }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={handleLogout}
-        />
-      )}
-
-      {showNotificacaoPopup && (
-        <PopupNotificacao 
-          onClose={() => setShowNotificacaoPopup(false)}
-        />
-      )}
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

@@ -1,43 +1,18 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Menu,
-  LayoutDashboard,
-  Users,
   Trophy,
-  Shield,
-  Wallet,
-  Search,
-  Gamepad2,
-  Star,
-  Settings,
-  CalendarSync,
-  Lightbulb,
   Coins,
   History,
   Medal
 } from 'lucide-react';
 import { API } from '../services/api';
-import PopupLogin from '../components/PopupLogin';
-import PopupUser from '../components/PopupUser';
 import PopupTitulo from '../components/PopupTitulo';
 import PopupTituloLegado from '../components/PopupTituloLegado';
 import '../styles/TorneiosPage.css';
-import { BotaoNotificacao } from '../components/BotaoNotificacao';
-
-interface UserData {
-  id: string;
-  nome: string;
-  discord: string;
-  imagem: string | null;
-  cargo: string;
-  saldoVirtual: number;
-  titulos: number;
-  finais: number;
-  partidasJogadas: number;
-  golsMarcados: number;
-}
+import { useAppContext } from '../context/AppContext';
+import { DashboardLayout } from '../layouts/DashboardLayout';
 
 interface Titulo {
   id: string;
@@ -51,24 +26,10 @@ interface Titulo {
 
 export function TelaTitulos() {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const [showUserPopup, setShowUserPopup] = useState(false);
+  const { currentUser, isAdmin, isMobile } = useAppContext();
   const [showTituloPopup, setShowTituloPopup] = useState(false);
   const [showTituloLegadoPopup, setShowTituloLegadoPopup] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
-
-  const { data: avatars = [] } = useQuery({
-    queryKey: ['avatares'],
-    queryFn: async () => {
-      const response = await API.get('/api/avatares');
-      return Array.isArray(response.data) ? response.data : [];
-    },
-    staleTime: 1000 * 60 * 30,
-    enabled: !!currentUser
-  });
 
   const { data: titulos = [], isLoading, refetch } = useQuery({
     queryKey: ['titulos'],
@@ -82,27 +43,6 @@ export function TelaTitulos() {
     staleTime: 1000 * 60 * 5
   });
 
-  const avatarMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    avatars.forEach((a: any) => (map[a.id] = a.url));
-    return map;
-  }, [avatars]);
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-mode');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) setCurrentUser(JSON.parse(storedUser));
-  }, []);
-
   const filteredTitulos = titulos.filter((t: Titulo) => 
     t.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -111,7 +51,7 @@ export function TelaTitulos() {
   const titulosInativos = filteredTitulos.filter((t: Titulo) => !t.ativo);
 
   return (
-    <div className={`dashboard-container ${sidebarOpen ? 'sidebar-active' : 'sidebar-hidden'}`}>
+    <DashboardLayout searchPlaceholder="Buscar títulos..." searchValue={searchTerm} onSearchChange={setSearchTerm} contentStyle={{ padding: isMobile ? '1rem' : '0rem 0rem' }}>
       <style>{`
         .titulos-grid {
           display: grid;
@@ -265,7 +205,8 @@ export function TelaTitulos() {
         }
       `}</style>
 
-      <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+      {/* shared navigation is provided by DashboardLayout */}
+      {/*
         <div className="logo-area">
           <div className="logo-icon">
             <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
@@ -340,6 +281,7 @@ export function TelaTitulos() {
             )}
           </div>
         </header>
+      */}
 
         <div className="page-content">
           <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -347,7 +289,7 @@ export function TelaTitulos() {
                <h2 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Galeria de Títulos</h2>
                <p style={{ color: 'var(--text-gray)', fontSize: '0.9rem' }}>Conquistas e premiações dos Torneios DDO</p>
             </div>
-            {currentUser && currentUser.cargo === 'PROPRIETARIO' && (
+            {currentUser && isAdmin && currentUser.cargo === 'PROPRIETARIO' && (
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button 
                   className="t-btn" 
@@ -462,23 +404,7 @@ export function TelaTitulos() {
              </>
           )}
         </div>
-      </main>
 
-      {showLoginPopup && (
-        <PopupLogin onClose={() => setShowLoginPopup(false)} onLoginSuccess={setCurrentUser} />
-      )}
-      {showUserPopup && currentUser && (
-        <PopupUser
-          user={{ ...currentUser, imagem: avatarMap[currentUser.imagem || ''] || currentUser.imagem }}
-          onClose={() => setShowUserPopup(false)}
-          onLogout={() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user_data');
-            setCurrentUser(null);
-            setShowUserPopup(false);
-          }}
-        />
-      )}
       {showTituloPopup && (
         <PopupTitulo
           onClose={() => setShowTituloPopup(false)}
@@ -491,6 +417,6 @@ export function TelaTitulos() {
           onSuccess={() => refetch()}
         />
       )}
-    </div>
+    </DashboardLayout>
   );
 }
