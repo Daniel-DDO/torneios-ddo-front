@@ -11,6 +11,7 @@ import {
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
+import PopupGeral from '../components/PopupGeral';
 import { useAppContext } from '../context/AppContext';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 
@@ -54,7 +55,7 @@ interface PaginacaoResponse<T> {
 
 export function TelaPartidas() {
   const navigate = useNavigate();
-  const { currentUser, isMobile } = useAppContext();
+  const { currentUser, isMobile, abrirLogin } = useAppContext();
   const [activeTab, setActiveTab] = useState<'pendentes' | 'feitas'>('pendentes');
 
   const {
@@ -134,6 +135,27 @@ export function TelaPartidas() {
       hora: date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     };
   };
+
+  if (!currentUser) {
+    return (
+      <>
+        <DashboardLayout esconderBusca>
+          <div />
+        </DashboardLayout>
+        <PopupGeral
+          title="Login Necessário"
+          message="Faça login para visualizar as partidas."
+          type="warning"
+          buttonText="Fazer Login"
+          onClose={() => navigate('/')}
+          onConfirm={() => {
+            navigate('/');
+            abrirLogin();
+          }}
+        />
+      </>
+    );
+  }
 
   return (
     <DashboardLayout esconderBusca contentStyle={{ padding: isMobile ? '1rem' : undefined }}>
