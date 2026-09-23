@@ -10,10 +10,13 @@ import {
   AlertTriangle,
   ShieldAlert,
   Loader2,
+  ArrowRight,
 } from 'lucide-react';
 import PopupGeral from '../components/PopupGeral';
 import { useAppContext } from '../context/AppContext';
 import { DashboardLayout } from '../layouts/DashboardLayout';
+
+// ---------- Tipos (espelhando os DTOs reais do backend) ----------
 
 interface ElegibilidadeEmprestimo {
   elegivel: boolean;
@@ -64,6 +67,8 @@ interface Emprestimo {
 
 const OPCOES_PARCELAS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
+// ---------- Componente ----------
+
 export function TelaEmprestimos() {
   const navigate = useNavigate();
   const { currentUser, abrirLogin } = useAppContext();
@@ -106,7 +111,6 @@ export function TelaEmprestimos() {
         setEmprestimoAtivo(null);
       }
     } catch (e) {
-      console.error('Erro ao carregar dados de empréstimo:', e);
       setErro('Não foi possível carregar seus dados de empréstimo.');
     } finally {
       setLoading(false);
@@ -286,6 +290,14 @@ export function TelaEmprestimos() {
           margin-bottom: 1.5rem;
         }
 
+        .header-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 1rem;
+        }
+
         .card-subtitle {
           font-size: 0.85rem;
           color: var(--text-gray);
@@ -373,28 +385,12 @@ export function TelaEmprestimos() {
           margin-bottom: 6px;
         }
 
-        .form-group input,
-        .form-group select {
+        .form-group input, .form-group select {
           width: 100%;
           padding: 10px 12px;
           border-radius: var(--radius);
           border: 1px solid var(--border-color);
-          background-color: var(--bg-main);
-          color: var(--text-dark);
-        }
-
-        .form-group select {
-          -webkit-appearance: none;
-          -moz-appearance: none;
-          appearance: none;
-          background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%23718096' d='M0 0l6 8 6-8z'/%3E%3C/svg%3E");
-          background-repeat: no-repeat;
-          background-position: right 12px center;
-          padding-right: 32px;
-        }
-
-        .form-group select option {
-          background-color: var(--bg-main);
+          background: var(--bg-main);
           color: var(--text-dark);
         }
 
@@ -514,6 +510,17 @@ export function TelaEmprestimos() {
       <div className="emprestimos-page">
         <div className="emprestimos-container">
 
+          <div className="header-row">
+            <div className="card-title" style={{ marginBottom: 0 }}>
+              <Landmark size={22} />
+              Meu Empréstimo
+            </div>
+            <button className="btn-secondary" onClick={() => navigate('/banco')}>
+              Ver banco público
+              <ArrowRight size={14} />
+            </button>
+          </div>
+
           {loading && (
             <div className="card empty-state">
               <Loader2 className="animate-spin" size={28} />
@@ -530,6 +537,7 @@ export function TelaEmprestimos() {
 
           {!loading && !erro && (
             <>
+              {/* Empréstimo ativo */}
               {emprestimoAtivo ? (
                 <div className="card">
                   <div className="card-title">
@@ -600,6 +608,7 @@ export function TelaEmprestimos() {
                 </div>
               ) : (
                 <>
+                  {/* Elegibilidade + simulação, só aparece se não tem empréstimo ativo */}
                   {elegibilidade && (
                     <div className="card">
                       <div className="card-title">
@@ -702,6 +711,7 @@ export function TelaEmprestimos() {
                 </>
               )}
 
+              {/* Histórico */}
               <div className="card">
                 <div className="card-title">
                   <Calendar size={22} />
@@ -728,6 +738,7 @@ export function TelaEmprestimos() {
                 )}
               </div>
 
+              {/* Admin: forçar recebimento */}
               {isProprietario && (
                 <div className="card admin-card">
                   <div className="card-title">

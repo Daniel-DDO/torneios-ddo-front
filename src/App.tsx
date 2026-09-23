@@ -44,6 +44,8 @@ import { TelaPartidasJogador } from './pages/TelaPartidasJogador';
 import { TelaConquistasAdm } from './pages/TelaConquistasAdm';
 import { TelaPremiosJogadorSelecionado } from './pages/TelaPremiosJogadorSelecionado';
 import { TelaEmprestimos } from './pages/TelaEmprestimos';
+import { TelaBancoPublico } from './pages/TelaBancoPublico';
+import { TelaSituacaoJogador } from './pages/TelaSituacaoJogador';
 
 import './App.css';
 
@@ -107,6 +109,8 @@ function App() {
             <Route path="/ranking" element={<TelaTabelaRanking />} />
             <Route path="/admin/conquistas" element={<TelaConquistasAdm />} />
             <Route path="/emprestimos" element={<TelaEmprestimos />} />
+            <Route path="/banco" element={<TelaBancoPublico />} />
+            <Route path="/banco/jogador/:jogadorId" element={<TelaSituacaoJogador />} />
           </Routes>
         </Router>
       </AppProvider>
