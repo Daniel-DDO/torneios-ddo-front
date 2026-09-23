@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Sparkles,
   Gamepad2,
+  Landmark
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
@@ -927,6 +928,46 @@ export function TorneiosPage() {
               </div>
             ))}
           </div>
+
+          {currentUser && (
+            <div
+              className="tp-card"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                padding: '20px',
+                marginBottom: '40px',
+                cursor: 'pointer',
+                borderLeft: '4px solid var(--success)',
+              }}
+              onClick={() => navigate('/emprestimos')}
+            >
+              <div
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  background: 'rgba(0, 200, 100, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Landmark size={24} color="var(--success)" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ fontSize: '1.05rem', fontWeight: '600', color: 'var(--text-dark)', marginBottom: '4px' }}>
+                  Empréstimos
+                </h4>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-gray)' }}>
+                  Simule, solicite e acompanhe suas parcelas.
+                </p>
+              </div>
+              <ChevronRight size={20} color="var(--text-gray)" />
+            </div>
+          )}
 
           {anuncios && anuncios.length > 0 && (
             <div style={{ marginTop: '20px' }}>

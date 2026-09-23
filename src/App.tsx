@@ -43,6 +43,7 @@ import { TelaTabelaRanking } from './pages/TelaTabelaRanking';
 import { TelaPartidasJogador } from './pages/TelaPartidasJogador';
 import { TelaConquistasAdm } from './pages/TelaConquistasAdm';
 import { TelaPremiosJogadorSelecionado } from './pages/TelaPremiosJogadorSelecionado';
+import { TelaEmprestimos } from './pages/TelaEmprestimos';
 
 import './App.css';
 
@@ -105,6 +106,7 @@ function App() {
             <Route path="/hall-da-fama" element={<TelaHallDaFama />} />
             <Route path="/ranking" element={<TelaTabelaRanking />} />
             <Route path="/admin/conquistas" element={<TelaConquistasAdm />} />
+            <Route path="/emprestimos" element={<TelaEmprestimos />} />
           </Routes>
         </Router>
       </AppProvider>
