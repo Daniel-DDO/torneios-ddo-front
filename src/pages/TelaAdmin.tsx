@@ -9,7 +9,8 @@ import {
   Banknote,
   ShieldPlus,
   Wand2,
-  DollarSign
+  DollarSign,
+  TrendingUp,
 } from 'lucide-react';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -38,6 +39,10 @@ export function TelaAdmin() {
   // TelaMercadoAdmin também bloqueia o acesso, mas evitamos mostrar o card
   // para quem nem entraria na tela).
   const podeAcessarMercado = currentUser && ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
+
+  // A inflação de clubes é exclusiva do PROPRIETARIO (a própria
+  // TelaInflacaoClubes também bloqueia o acesso).
+  const ehProprietario = currentUser?.cargo === 'PROPRIETARIO';
 
   if (!isAdmin) {
     return <LoadingSpinner isLoading={true} />;
@@ -176,6 +181,14 @@ export function TelaAdmin() {
             </div>
           )}
 
+          {ehProprietario && (
+            <div className="action-card" onClick={() => navigate('/admin/inflacao')}>
+                <div className="action-icon"><TrendingUp size={40} /></div>
+                <h4 className="action-title">Inflação de clubes</h4>
+                <p className="action-desc">Simule e aplique a inflação de mercado sobre o valor dos clubes</p>
+            </div>
+          )}
+
         </div>
       </>
 
@@ -193,7 +206,7 @@ export function TelaAdmin() {
       )}
 
       {showRecSenhaAdmPopup && currentUser && (
-        <PopupRecSenhaAdm 
+        <PopupRecSenhaAdm
           currentUser={currentUser}
           onClose={() => setShowRecSenhaAdmPopup(false)}
         />

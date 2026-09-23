@@ -46,6 +46,7 @@ import { TelaPremiosJogadorSelecionado } from './pages/TelaPremiosJogadorSelecio
 import { TelaEmprestimos } from './pages/TelaEmprestimos';
 import { TelaBancoPublico } from './pages/TelaBancoPublico';
 import { TelaSituacaoJogador } from './pages/TelaSituacaoJogador';
+import { TelaInflacaoClubes } from './pages/TelaInflacaoClubes';
 
 import './App.css';
 
@@ -111,6 +112,7 @@ function App() {
             <Route path="/emprestimos" element={<TelaEmprestimos />} />
             <Route path="/banco" element={<TelaBancoPublico />} />
             <Route path="/banco/jogador/:jogadorId" element={<TelaSituacaoJogador />} />
+            <Route path="/admin/inflacao" element={<TelaInflacaoClubes />} />
           </Routes>
         </Router>
       </AppProvider>
