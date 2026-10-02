@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -22,6 +22,7 @@ import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import { useAppContext } from '../context/AppContext';
 import { DashboardLayout } from '../layouts/DashboardLayout';
+import PopupAvisoDisponibilidade from '../components/PopupAvisoDisponibilidade';
 
 interface Conquista {
   idConquista: string;
@@ -97,6 +98,33 @@ const fetchAnunciosService = async (): Promise<Anuncio[]> => {
   return response.data || [];
 };
 
+const AVISO_DISP_LIMITE = new Date(2026, 9, 10, 23, 59, 59); // mês 9 = outubro
+const avisoDispDentroDoPrazo = () => new Date() <= AVISO_DISP_LIMITE;
+
+const chaveNuncaMais = (userId: string) => `aviso-disp-nunca-mais:${userId}`;
+const chaveSessao = (userId: string) => `aviso-disp-sessao:${userId}`;
+
+const lerStorage = (tipo: 'local' | 'session', chave: string) => {
+  try {
+    return (tipo === 'local' ? localStorage : sessionStorage).getItem(chave);
+  } catch {
+    return null;
+  }
+};
+
+const gravarStorage = (tipo: 'local' | 'session', chave: string) => {
+  try {
+    (tipo === 'local' ? localStorage : sessionStorage).setItem(chave, '1');
+  } catch {
+    /* sem storage disponível: o aviso só reaparece na próxima visita */
+  }
+};
+
+const fetchDisponibilidadeAvisoService = async (playerId: string) => {
+  const response: any = await API.get(`disponibilidades/jogador/${playerId}`);
+  return (response?.data ?? response) as { atualizadoEm: string | null };
+};
+
 export function TorneiosPage() {
   const navigate = useNavigate();
   const { currentUser, isMobile, getAvatarUrl, abrirReivindicar, abrirRecuperarSenha } = useAppContext();
@@ -129,6 +157,45 @@ export function TorneiosPage() {
     queryFn: fetchAnunciosService,
     staleTime: 1000 * 60 * 10,
   });
+
+  const [showDispPopup, setShowDispPopup] = useState(false);
+
+const userId = currentUser?.id;
+const avisoPossivel =
+  !!userId && avisoDispDentroDoPrazo() && !lerStorage('local', chaveNuncaMais(userId));
+
+// Mesma queryKey da TelaDisponibilidade, então compartilha cache
+const { data: disponibilidadeAviso, isSuccess: disponibilidadeCarregada } = useQuery({
+  queryKey: ['disponibilidade', userId],
+  queryFn: () => fetchDisponibilidadeAvisoService(userId!),
+  enabled: avisoPossivel,
+  staleTime: 1000 * 60 * 5,
+});
+
+useEffect(() => {
+  if (!userId || !disponibilidadeCarregada) return;
+  if (!avisoDispDentroDoPrazo()) return;
+  if (disponibilidadeAviso?.atualizadoEm) return;               // já preencheu
+  if (lerStorage('local', chaveNuncaMais(userId))) return;      // "não mostrar mais"
+  if (lerStorage('session', chaveSessao(userId))) return;       // já fechou nesta visita
+  setShowDispPopup(true);
+}, [userId, disponibilidadeCarregada, disponibilidadeAviso?.atualizadoEm]);
+
+const fecharAvisoDepois = () => {
+  if (userId) gravarStorage('session', chaveSessao(userId));
+  setShowDispPopup(false);
+};
+
+const fecharAvisoParaSempre = () => {
+  if (userId) gravarStorage('local', chaveNuncaMais(userId));
+  setShowDispPopup(false);
+};
+
+const irParaDisponibilidade = () => {
+  if (userId) gravarStorage('session', chaveSessao(userId));
+  setShowDispPopup(false);
+  navigate(`/jogador/${userId}/disponibilidade`);
+};
 
   const destaque = useMemo(() => {
     if (!conquistas || conquistas.length === 0) return null;
@@ -1133,6 +1200,13 @@ export function TorneiosPage() {
           </div>
         </div>
       </div>
+            {showDispPopup && (
+        <PopupAvisoDisponibilidade
+          onPreencherAgora={irParaDisponibilidade}
+          onDepois={fecharAvisoDepois}
+          onNuncaMais={fecharAvisoParaSempre}
+        />
+      )}
     </DashboardLayout>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
     Trophy, Shield, Wallet, ArrowLeft, Gamepad2,
     CheckCircle, Clock, Award, BarChart3, Target,
@@ -299,13 +299,30 @@ const fetchPlayerEstiloService = async (playerId: string): Promise<EstiloJogador
     }
 };
 
+const fetchPlayerService = async (playerId: string): Promise<Player> => {
+    const data = await API.get(`jogador/${playerId}`);
+    return ((data && (data as any).data) ? (data as any).data : data) as Player;
+};
+
 export function TelaPerfilJogador() {
   const navigate = useNavigate();
   const { id } = useParams();
     const { currentUser, getAvatarUrl, isMobile, atualizarUsuario } = useAppContext();
 
-  const [player, setPlayer] = useState<Player | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+const { data: player = null, isLoading: loading, isError: playerError } = useQuery<Player>({
+  queryKey: ['player', id],
+  queryFn: () => fetchPlayerService(id!),
+  enabled: !!id,
+  staleTime: 1000 * 60 * 5,
+  gcTime: 1000 * 60 * 30,
+  retry: 1,
+});
+
+useEffect(() => {
+  if (playerError) navigate('/jogadores');
+}, [playerError, navigate]);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [showDiscordPopup, setShowDiscordPopup] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -381,26 +398,6 @@ export function TelaPerfilJogador() {
       });
       return map;
   }, [insigniasDefinitions]);
-
-  useEffect(() => {
-    if (id) {
-        fetchPlayerDetails(id);
-    }
-  }, [id]);
-
-  const fetchPlayerDetails = async (playerId: string) => {
-    try {
-      setLoading(true);
-      const data = await API.get(`jogador/${playerId}`);
-      const playerData = (data && (data as any).data) ? (data as any).data : data;
-      setPlayer(playerData as Player);
-    } catch (error) {
-      console.error(error);
-      navigate('/jogadores');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getPlayerAvatar = () => {
         return getAvatarUrl(player?.imagem);
@@ -506,11 +503,13 @@ export function TelaPerfilJogador() {
   }, [casaFora]);
 
   const handleDiscordChangeSuccess = (novoDiscord: string) => {
-    setPlayer((prev) => prev ? { ...prev, discord: novoDiscord } : prev);
+    queryClient.setQueryData<Player>(['player', id], (prev) =>
+        prev ? { ...prev, discord: novoDiscord } : prev
+    );
     if (currentUser && currentUser.id === player?.id) {
-            atualizarUsuario({ discord: novoDiscord });
+        atualizarUsuario({ discord: novoDiscord });
     }
-  };
+    };
 
   const getImageDataUrl = async (url: string): Promise<string | null> => {
     try {
@@ -2053,6 +2052,13 @@ export function TelaPerfilJogador() {
                                         onClick={() => navigate(`/jogador/${player.id}/partidas`)}
                                     >
                                         <Gamepad2 size={16} /> Ver Partidas
+                                    </button>
+
+                                    <button
+                                        className="btn-ver-partidas"
+                                        onClick={() => navigate(`/jogador/${player.id}/disponibilidade`)}
+                                    >
+                                        <CalendarClock size={16} /> Disponibilidade
                                     </button>
                                 </div>
                             </div>

@@ -47,7 +47,7 @@ import { TelaEmprestimos } from './pages/TelaEmprestimos';
 import { TelaBancoPublico } from './pages/TelaBancoPublico';
 import { TelaSituacaoJogador } from './pages/TelaSituacaoJogador';
 import { TelaInflacaoClubes } from './pages/TelaInflacaoClubes';
-
+import { TelaDisponibilidade } from './pages/TelaDisponibilidade';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -113,6 +113,7 @@ function App() {
             <Route path="/banco" element={<TelaBancoPublico />} />
             <Route path="/banco/jogador/:jogadorId" element={<TelaSituacaoJogador />} />
             <Route path="/admin/inflacao" element={<TelaInflacaoClubes />} />
+            <Route path="/jogador/:id/disponibilidade" element={<TelaDisponibilidade />} />
           </Routes>
         </Router>
       </AppProvider>
