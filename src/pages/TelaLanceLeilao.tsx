@@ -68,10 +68,7 @@ interface ItemLanceLocal {
     prioridade: number;
 }
 
-interface Leilao {
-    id: string;
-    ativo: boolean;
-}
+interface Leilao { id: string; ativo: boolean; selecao?: boolean; }
 
 interface PopupState {
     open: boolean;
@@ -123,6 +120,7 @@ export function TelaLanceLeilao() {
   const buscaRequestIdRef = useRef(0);
 
   const [leilaoId, setLeilaoId] = useState<string | null>(null);
+  const [leilaoSelecao, setLeilaoSelecao] = useState(false);   
   const [searchTerm, setSearchTerm] = useState('');
   const [meusLances, setMeusLances] = useState<ItemLanceLocal[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -159,7 +157,9 @@ export function TelaLanceLeilao() {
             const active = response.data.find((l: Leilao) => l.ativo);
             if (active) {
                 setLeilaoId(active.id);
-            } else {
+                setLeilaoSelecao(!!active.selecao);
+            }
+            else {
                 showPopup("Atenção", "Não há leilão ativo nesta temporada.", "warning");
                 setTimeout(() => navigate(`/${temporadaId}/torneios/leilao`), 2000);
             }
@@ -272,14 +272,17 @@ export function TelaLanceLeilao() {
     hasNextPage,
     isFetchingNextPage
   } = useInfiniteQuery<PageResponse<ClubeDTO>>({
-    queryKey: ['clubes-mercado'],
-    queryFn: async ({ pageParam = 0 }) => {
-      const response = await API.get(`/clube/clubes?page=${pageParam}&size=20&sort=estrelas,desc`);
-      return response.data;
-    },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.ultimaPagina ? undefined : lastPage.paginaAtual + 1,
-  });
+  queryKey: ['clubes-leilao-mercado', leilaoId],
+  queryFn: async ({ pageParam = 0 }) => {
+    const response = await API.get(`/api/leiloes/${leilaoId}/clubes`, {
+      params: { page: pageParam, size: 20, sort: 'estrelas,desc' },
+    });
+    return response.data;
+  },
+  initialPageParam: 0,
+  getNextPageParam: (lastPage) => lastPage.ultimaPagina ? undefined : lastPage.paginaAtual + 1,
+  enabled: !!leilaoId,
+});
 
   // Enquanto o usuário está buscando (2+ caracteres), usamos o resultado
   // do endpoint otimizado do leilão. Fora disso, mostramos o scroll
@@ -420,7 +423,7 @@ export function TelaLanceLeilao() {
         }
         
         showPopup("Não foi possível realizar o lance", msg, "error");
-        queryClient.invalidateQueries({ queryKey: ['clubes-mercado'] });
+        queryClient.invalidateQueries({ queryKey: ['clubes-leilao-mercado', leilaoId] });
     } finally {
         setSubmitting(false);
     }
@@ -486,7 +489,7 @@ export function TelaLanceLeilao() {
 
   return (
         <DashboardLayout
-            searchPlaceholder="Buscar time..."
+            searchPlaceholder={leilaoSelecao ? 'Buscar seleção...' : 'Buscar time...'}
             searchValue={searchTerm}
             onSearchChange={setSearchTerm}
         >

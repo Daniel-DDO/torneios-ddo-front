@@ -235,8 +235,10 @@ export function TelaLeilao() {
   } = useInfiniteQuery<PageResponse<ClubeDTO>>({
     queryKey: ['clubes-leilao', activeLeilao?.id],
     queryFn: async ({ pageParam = 0 }) => {
-      const response = await API.get(`/clube/clubes?page=${pageParam}&size=20&sort=valorAvaliado,desc`);
-      return response.data;
+        const response = await API.get(`/api/leiloes/${activeLeilao!.id}/clubes`, {
+            params: { page: pageParam, size: 20, sort: 'valorAvaliado,desc' },
+        });
+        return response.data;
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
@@ -305,7 +307,7 @@ export function TelaLeilao() {
 
   return (
     <DashboardLayout
-      searchPlaceholder={activeLeilao ? 'Buscar clube...' : 'Buscar leilão...'}
+      searchPlaceholder={activeLeilao ? (activeLeilao.selecao ? 'Buscar seleção...' : 'Buscar clube...') : 'Buscar leilão...'}
       searchValue={searchTerm}
       onSearchChange={setSearchTerm}
       contentStyle={{ padding: '1rem 2rem' }}
