@@ -91,8 +91,41 @@ const fetchMinhasNotificacoesService = async (): Promise<Notificacao[]> => {
   return response.data || [];
 };
 
+/**
+ * Só consideramos "sessão inválida" quando o backend respondeu 401.
+ * Timeout, erro de rede, 5xx, servidor dormindo (Render), CORS etc.
+ * NÃO são motivo para deslogar o usuário.
+ */
+function ehErroDeAuth(error: unknown): boolean {
+  const e = error as { status?: number; response?: { status?: number } } | null;
+  const status = e?.status ?? e?.response?.status;
+  return status === 401;
+}
+
+/** Lê o usuário salvo de forma segura (sem quebrar com JSON inválido). */
+function lerUsuarioSalvo(): UserData | null {
+  try {
+    const token = localStorage.getItem('token');
+    const stored = localStorage.getItem('user_data');
+    if (!stored) return null;
+
+    // user_data sem token = sessão já encerrada, limpa o resto.
+    if (!token) {
+      localStorage.removeItem('user_data');
+      return null;
+    }
+
+    return JSON.parse(stored) as UserData;
+  } catch {
+    localStorage.removeItem('user_data');
+    return null;
+  }
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
+  // Restaura a sessão já na primeira renderização (evita "piscar" deslogado
+  // e qualquer corrida entre restauração e redirecionamentos).
+  const [currentUser, setCurrentUser] = useState<UserData | null>(lerUsuarioSalvo);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
 
@@ -113,13 +146,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     staleTime: 1000 * 60 * 60,
   });
 
-  const { data: notificacoes = [], isError: isAuthError } = useQuery<Notificacao[]>({
+  const { data: notificacoes = [], error: notificacoesError } = useQuery<Notificacao[]>({
     queryKey: ['notificacoesMinhas'],
     queryFn: fetchMinhasNotificacoesService,
     enabled: !!currentUser,
     staleTime: 1000 * 60,
     refetchInterval: 1000 * 60 * 5,
-    retry: false,
+    // Tenta de novo em falhas transitórias (servidor acordando, 5xx, rede),
+    // mas não insiste em 401: token inválido não se resolve tentando de novo.
+    retry: (failureCount, error) => !ehErroDeAuth(error) && failureCount < 2,
+    retryDelay: (tentativa) => 1000 * (tentativa + 1),
   });
 
   const avatarMap = useMemo(() => {
@@ -145,11 +181,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [currentUser]);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user_data');
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
-    }
-
     const handleResize = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
@@ -161,13 +192,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Desloga SOMENTE se o backend confirmou que o token é inválido (401).
   useEffect(() => {
-    if (isAuthError) {
+    if (notificacoesError && ehErroDeAuth(notificacoesError)) {
       localStorage.removeItem('token');
       localStorage.removeItem('user_data');
       setCurrentUser(null);
     }
-  }, [isAuthError]);
+  }, [notificacoesError]);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -195,6 +227,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const handleLoginSuccess = (userData: UserData) => {
+    localStorage.setItem('user_data', JSON.stringify(userData));
     setCurrentUser(userData);
     setShowLoginPopup(false);
   };

@@ -17,6 +17,10 @@ const ANALISE_TORNEIOS_URL = 'https://analise-torneios.onrender.com';
 
 const isDev = import.meta.env.DEV;
 
+// Evento disparado quando o backend confirma que a sessão é inválida.
+// O AppContext escuta e limpa o usuário SEM recarregar a página.
+export const EVENTO_SESSAO_EXPIRADA = 'auth:sessao-expirada';
+
 let currentServerIndex = Math.floor(Math.random() * SERVERS.length);
 
 const axiosInstance = axios.create({
@@ -44,7 +48,8 @@ const analiseInstance = axios.create({
 });
 
 interface CustomAxiosRequestConfig extends AxiosRequestConfig {
-  _retry?: boolean;
+  _retry?: boolean;      // já tentou outro servidor após erro 5xx/rede
+  _retryAuth?: boolean;  // já tentou outro servidor após 401
 }
 
 axiosInstance.interceptors.request.use(
@@ -70,20 +75,46 @@ microserviceInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+function proximoServidor(): string {
+  currentServerIndex = (currentServerIndex + 1) % SERVERS.length;
+  return SERVERS[currentServerIndex];
+}
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as CustomAxiosRequestConfig;
+    const originalRequest = error.config as CustomAxiosRequestConfig | undefined;
 
-    if (error.response && error.response.status === 401) {
-      handleLogout();
+    // --- 401 ---
+    // Só vale como "sessão expirada" se a requisição foi enviada COM token
+    // (um 401 de login com senha errada não pode derrubar nada).
+    if (error.response?.status === 401) {
+      const enviouToken = !!(originalRequest?.headers as Record<string, unknown> | undefined)?.Authorization;
+
+      if (enviouToken && originalRequest) {
+        // Com vários servidores, um deles pode estar mal configurado.
+        // Confirma em outro servidor antes de considerar a sessão inválida.
+        if (!originalRequest._retryAuth && SERVERS.length > 1) {
+          originalRequest._retryAuth = true;
+          const newUrl = proximoServidor();
+          if (isDev) {
+            console.warn(`401 recebido. Confirmando token em: ${newUrl}`);
+          }
+          originalRequest.baseURL = newUrl;
+          return axiosInstance(originalRequest);
+        }
+
+        // Dois servidores recusaram o token: sessão inválida de verdade.
+        encerrarSessao();
+      }
+
       return Promise.reject(error);
     }
 
+    // --- Falha de rede / 5xx: tenta outro servidor uma vez ---
     if (originalRequest && !originalRequest._retry && shouldSwitchServer(error)) {
       originalRequest._retry = true;
-      currentServerIndex = (currentServerIndex + 1) % SERVERS.length;
-      const newUrl = SERVERS[currentServerIndex];
+      const newUrl = proximoServidor();
       if (isDev) {
         console.warn(`Erro no servidor principal. Trocando rota para: ${newUrl}`);
       }
@@ -96,31 +127,28 @@ axiosInstance.interceptors.response.use(
   }
 );
 
+// Sem logout aqui de propósito: o microsserviço é auxiliar. Um 401/403 dele
+// (ex.: 403 de permissão) nunca deve derrubar a sessão do usuário. Quem
+// consome essa instância trata o erro localmente.
 microserviceInstance.interceptors.response.use(
-    (response) => response,
-    async (error: AxiosError) => {
-      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-        handleLogout();
-      }
-      return Promise.reject(error);
-    }
+  (response) => response,
+  (error: AxiosError) => Promise.reject(error)
 );
 
-// Sem interceptor de logout aqui de propósito: esse serviço é auxiliar
-// (probabilidades/análises). Um erro ou timeout dele nunca deve derrubar
-// a sessão do usuário nem afetar o restante do app - quem consome essa
-// instância trata o erro localmente e simplesmente não exibe a seção.
+// Idem: serviço auxiliar (probabilidades/análises). Erro ou timeout dele
+// nunca deve afetar a sessão nem o restante do app.
 analiseInstance.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => Promise.reject(error)
 );
 
-function handleLogout() {
-    if (isDev) {
-      console.warn('Sessão expirada. Logout...');
-    }
-    localStorage.removeItem('token');
-    window.location.href = '/';
+function encerrarSessao() {
+  if (isDev) {
+    console.warn('Sessão inválida confirmada pelo backend. Encerrando sessão...');
+  }
+  localStorage.removeItem('token');
+  localStorage.removeItem('user_data');
+  window.dispatchEvent(new Event(EVENTO_SESSAO_EXPIRADA));
 }
 
 function shouldSwitchServer(error: AxiosError) {
