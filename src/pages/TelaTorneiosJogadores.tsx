@@ -5,11 +5,14 @@ import {
   ArrowLeft,
   ArrowUp,
   ArrowDown,
-  ChevronsUpDown
+  ChevronsUpDown,
+  Pencil
 } from 'lucide-react';
 import { API } from '../services/api';
 import '../styles/TorneiosPage.css';
 import { DashboardLayout } from '../layouts/DashboardLayout';
+import { useAppContext } from '../context/AppContext';
+import PopupEditarJogadorClube from '../components/PopupEditarJogadorClube';
 
 interface JogadorClubeDTO {
   id: string;
@@ -46,7 +49,13 @@ const fetchInscritosService = async (temporadaId: string) => {
 export function TelaTorneiosJogadores() {
   const navigate = useNavigate();
   const { temporadaId } = useParams();
+  const { currentUser } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
+  const [editando, setEditando] = useState<JogadorClubeDTO | null>(null);
+
+  // Só PROPRIETARIO e DIRETOR podem trocar o clube/seleção do jogador
+  // (o back também valida essa permissão).
+  const podeEditar = !!currentUser && ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
 
   const [sortConfig, setSortConfig] = useState<{ key: SortKey | null; direction: SortDirection }>({
     key: null,
@@ -243,6 +252,24 @@ export function TelaTorneiosJogadores() {
             object-fit: contain;
         }
 
+        .edit-row-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            background: none;
+            color: var(--text-gray);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .edit-row-button:hover {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
         .ved-cell {
             font-size: 0.9rem;
             color: var(--text-gray);
@@ -307,6 +334,7 @@ export function TelaTorneiosJogadores() {
                       Coeficiente {renderSortIcon('coeficiente')}
                   </div>
                 </th>
+                {podeEditar && <th style={{ cursor: 'default', width: 1 }} />}
               </tr>
             </thead>
             <tbody>
@@ -328,11 +356,23 @@ export function TelaTorneiosJogadores() {
                     <td style={{textAlign: 'center', color: '#10b981'}}>{item.golsMarcados}</td>
                     <td style={{textAlign: 'center', color: '#ef4444'}}>{item.golsSofridos}</td>
                     <td style={{textAlign: 'right', fontWeight: 'bold'}}>{item.pontosCoeficiente.toFixed(3)}</td>
+                    {podeEditar && (
+                      <td style={{textAlign: 'right'}}>
+                        <button
+                          className="edit-row-button"
+                          title="Editar clube/seleção"
+                          aria-label={`Editar clube de ${item.jogadorNome}`}
+                          onClick={() => setEditando(item)}
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
               ))}
               {filteredAndSortedInscritos.length === 0 && (
                 <tr>
-                    <td colSpan={7} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
+                    <td colSpan={podeEditar ? 8 : 7} style={{textAlign: 'center', padding: '30px', color: 'var(--text-secondary)'}}>
                         {searchTerm ? 'Nenhum resultado para a busca' : 'Nenhum jogador inscrito encontrado'}
                     </td>
                 </tr>
@@ -342,6 +382,18 @@ export function TelaTorneiosJogadores() {
           </>
         )}
       </div>
+
+      {editando && podeEditar && (
+        <PopupEditarJogadorClube
+          jogadorClubeId={editando.id}
+          jogadorNome={editando.jogadorNome}
+          clubeAtualId={editando.clubeId}
+          clubeAtualNome={editando.clubeNome}
+          clubeAtualImagem={editando.clubeImagem}
+          temporadaId={temporadaId || ''}
+          onClose={() => setEditando(null)}
+        />
+      )}
     </DashboardLayout>
   );
 }
