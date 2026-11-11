@@ -11,6 +11,7 @@ import {
   Wand2,
   DollarSign,
   TrendingUp,
+  ShieldAlert,
 } from 'lucide-react';
 import '../styles/TorneiosPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -43,6 +44,8 @@ export function TelaAdmin() {
   // A inflação de clubes é exclusiva do PROPRIETARIO (a própria
   // TelaInflacaoClubes também bloqueia o acesso).
   const ehProprietario = currentUser?.cargo === 'PROPRIETARIO';
+
+  const podeAdvertir = currentUser && ['DIRETOR', 'PROPRIETARIO'].includes(currentUser.cargo);
 
   if (!isAdmin) {
     return <LoadingSpinner isLoading={true} />;
@@ -186,6 +189,14 @@ export function TelaAdmin() {
                 <div className="action-icon"><TrendingUp size={40} /></div>
                 <h4 className="action-title">Inflação de clubes</h4>
                 <p className="action-desc">Simule e aplique a inflação de mercado sobre o valor dos clubes</p>
+            </div>
+          )}
+
+          {podeAdvertir && (
+            <div className="action-card" onClick={() => navigate('/admin/advertencias')}>
+                <div className="action-icon"><ShieldAlert size={40} /></div>
+                <h4 className="action-title">Advertências</h4>
+                <p className="action-desc">Advirta jogadores, analise recursos e desfaça advertências</p>
             </div>
           )}
 
