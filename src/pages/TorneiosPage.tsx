@@ -160,42 +160,42 @@ export function TorneiosPage() {
 
   const [showDispPopup, setShowDispPopup] = useState(false);
 
-const userId = currentUser?.id;
-const avisoPossivel =
-  !!userId && avisoDispDentroDoPrazo() && !lerStorage('local', chaveNuncaMais(userId));
+  const userId = currentUser?.id;
+  const avisoPossivel =
+    !!userId && avisoDispDentroDoPrazo() && !lerStorage('local', chaveNuncaMais(userId));
 
-// Mesma queryKey da TelaDisponibilidade, então compartilha cache
-const { data: disponibilidadeAviso, isSuccess: disponibilidadeCarregada } = useQuery({
-  queryKey: ['disponibilidade', userId],
-  queryFn: () => fetchDisponibilidadeAvisoService(userId!),
-  enabled: avisoPossivel,
-  staleTime: 1000 * 60 * 5,
-});
+  // Mesma queryKey da TelaDisponibilidade, então compartilha cache
+  const { data: disponibilidadeAviso, isSuccess: disponibilidadeCarregada } = useQuery({
+    queryKey: ['disponibilidade', userId],
+    queryFn: () => fetchDisponibilidadeAvisoService(userId!),
+    enabled: avisoPossivel,
+    staleTime: 1000 * 60 * 5,
+  });
 
-useEffect(() => {
-  if (!userId || !disponibilidadeCarregada) return;
-  if (!avisoDispDentroDoPrazo()) return;
-  if (disponibilidadeAviso?.atualizadoEm) return;               // já preencheu
-  if (lerStorage('local', chaveNuncaMais(userId))) return;      // "não mostrar mais"
-  if (lerStorage('session', chaveSessao(userId))) return;       // já fechou nesta visita
-  setShowDispPopup(true);
-}, [userId, disponibilidadeCarregada, disponibilidadeAviso?.atualizadoEm]);
+  useEffect(() => {
+    if (!userId || !disponibilidadeCarregada) return;
+    if (!avisoDispDentroDoPrazo()) return;
+    if (disponibilidadeAviso?.atualizadoEm) return; // já preencheu
+    if (lerStorage('local', chaveNuncaMais(userId))) return; // "não mostrar mais"
+    if (lerStorage('session', chaveSessao(userId))) return; // já fechou nesta visita
+    setShowDispPopup(true);
+  }, [userId, disponibilidadeCarregada, disponibilidadeAviso?.atualizadoEm]);
 
-const fecharAvisoDepois = () => {
-  if (userId) gravarStorage('session', chaveSessao(userId));
-  setShowDispPopup(false);
-};
+  const fecharAvisoDepois = () => {
+    if (userId) gravarStorage('session', chaveSessao(userId));
+    setShowDispPopup(false);
+  };
 
-const fecharAvisoParaSempre = () => {
-  if (userId) gravarStorage('local', chaveNuncaMais(userId));
-  setShowDispPopup(false);
-};
+  const fecharAvisoParaSempre = () => {
+    if (userId) gravarStorage('local', chaveNuncaMais(userId));
+    setShowDispPopup(false);
+  };
 
-const irParaDisponibilidade = () => {
-  if (userId) gravarStorage('session', chaveSessao(userId));
-  setShowDispPopup(false);
-  navigate(`/jogador/${userId}/disponibilidade`);
-};
+  const irParaDisponibilidade = () => {
+    if (userId) gravarStorage('session', chaveSessao(userId));
+    setShowDispPopup(false);
+    navigate(`/jogador/${userId}/disponibilidade`);
+  };
 
   const destaque = useMemo(() => {
     if (!conquistas || conquistas.length === 0) return null;
@@ -320,6 +320,26 @@ const irParaDisponibilidade = () => {
       imagem: 'https://a.espncdn.com/photo/2020/0828/r737639_1296x729_16-9.jpg?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
       botao_texto: 'Ver Hall da Fama',
       link_destino: '/hall-da-fama',
+    },
+    {
+      id: 7,
+      nome: 'Ranking de Títulos',
+      descricao: 'Quem mais levantou troféus.',
+      status: 'disponivel',
+      imagem:
+        'https://images.unsplash.com/photo-1567427017947-545c5f8d16ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      botao_texto: 'Ver Ranking de Títulos',
+      link_destino: '/ranking-titulos',
+    },
+    {
+      id: 8,
+      nome: 'Transações Públicas',
+      descricao: 'Últimas movimentações financeiras.',
+      status: 'disponivel',
+      imagem:
+        'https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      botao_texto: 'Ver Transações',
+      link_destino: '/transacoes',
     },
   ];
 
@@ -1200,7 +1220,8 @@ const irParaDisponibilidade = () => {
           </div>
         </div>
       </div>
-            {showDispPopup && (
+
+      {showDispPopup && (
         <PopupAvisoDisponibilidade
           onPreencherAgora={irParaDisponibilidade}
           onDepois={fecharAvisoDepois}
